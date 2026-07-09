@@ -25,7 +25,7 @@
                     </div>
 
                     <nav class="hidden md:flex space-x-6 space-x-reverse">
-                        <a href="#" class="text-sm font-bold text-gray-600">صفحه اصلی</a>
+                        <a href="../index.html" class="text-sm font-bold text-gray-600">صفحه اصلی</a>
                         <a href="#packages" class="text-sm font-medium text-indigo-600 hover:text-indigo-600 transition">پکیج‌های آموزشی</a>
                         <a href="#" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">درباره ما</a>
                         <a href="#" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">تماس با ما</a>
@@ -49,8 +49,166 @@
         </div>
     </header>
 
-    <main class="container mx-auto px-4 py-8">
-        <p class="text-center text-gray-500">ساختار پایه صفحه جزئیات پکیج ایجاد شد.</p>
+    <main class="container mx-auto px-4 py-12 max-w-7xl">
+        
+        <div class="text-center mb-12">
+            <h1 class="text-3xl md:text-4xl font-black text-gray-900">فروشگاه محصولات آموزشی ریاضی مهدی عزیزی</h1>
+            <p class="text-gray-500 mt-3 text-sm md:text-base">دوره، جزوه یا کتاب مورد نظر خود را بر اساس پایه و رشته تحصیلی فیلتر و انتخاب کنید.</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-10 text-right">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-2">نوع محصول</label>
+                    <select id="filter-type" class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-indigo-500 transition">
+                        <option value="all">همه محصولات</option>
+                        <option value="course">دوره‌های ویدیویی</option>
+                        <option value="booklet">جزوات اختصاصی (PDF)</option>
+                        <option value="book">کتاب‌های کمک درسی (چاپی)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-2">پایه تحصیلی</label>
+                    <select id="filter-grade" class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-indigo-500 transition">
+                        <option value="all">همه پایه‌ها</option>
+                        <option value="10">دهم</option>
+                        <option value="11">یازدهم</option>
+                        <option value="12">دوازدهم</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-2">رشته تحصیلی</label>
+                    <select id="filter-field" class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-indigo-500 transition">
+                        <option value="all">همه رشته‌ها</option>
+                        <option value="math">ریاضی فیزیک</option>
+                        <option value="experimental">علوم تجربی</option>
+                        <option value="humanities">علوم انسانی</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-2">هدف آموزشی</label>
+                    <select id="filter-target" class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-indigo-500 transition">
+                        <option value="all">کنکور و نهایی</option>
+                        <option value="konkur">ویژه کنکور سراسری</option>
+                        <option value="final">ویژه امتحانات نهایی</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="products-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <div class="product-card bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition duration-300 text-right"
+                 data-type="course" data-grade="12" data-field="experimental" data-target="konkur">
+                
+                <div class="aspect-video bg-indigo-950 relative flex items-center justify-center text-white">
+                    <span class="text-xs font-bold bg-indigo-600 px-3 py-1 rounded-full absolute top-4 right-4">دوره آموزشی</span>
+                    <span class="text-xs font-bold bg-amber-500 text-gray-950 px-3 py-1 rounded-full absolute top-4 left-4">ویژه کنکور</span>
+                    <svg class="w-12 h-12 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+
+                <div class="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                        <div class="flex items-center gap-2 text-xs font-bold text-gray-400 mb-2">
+                            <span>پایه دوازدهم</span>
+                            <span>•</span>
+                            <span>رشته تجربی</span>
+                        </div>
+                        <h3 class="text-lg font-black text-gray-900 hover:text-indigo-600 transition">
+                            <a href="#">پکیج جامع ریاضی کنکور تجربی</a>
+                        </h3>
+                        <p class="text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">
+                            آموزش صفر تا صد ریاضیات تجربی دهم تا دوازدهم به همراه حل و تحلیل تمام تست‌های کنکور سال‌های اخیر.
+                        </p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
+                        <div>
+                            <span class="block text-xs text-gray-400 line-through">۳,۵۰۰,۰۰۰</span>
+                            <span class="text-lg font-black text-gray-950">۲,۸۰۰,۰۰۰ <span class="text-xs font-normal text-gray-500">تومان</span></span>
+                        </div>
+                        <a href="#" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm font-bold px-4 py-2.5 rounded-xl transition">
+                            توضیحات و خرید
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="product-card bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition duration-300 text-right"
+                 data-type="booklet" data-grade="10" data-field="math" data-target="final">
+                
+                <div class="aspect-video bg-emerald-950 relative flex items-center justify-center text-white">
+                    <span class="text-xs font-bold bg-emerald-600 px-3 py-1 rounded-full absolute top-4 right-4">جزوه (PDF)</span>
+                    <span class="text-xs font-bold bg-blue-500 text-white px-3 py-1 rounded-full absolute top-4 left-4">امتحان نهایی</span>
+                    <svg class="w-12 h-12 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                </div>
+
+                <div class="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                        <div class="flex items-center gap-2 text-xs font-bold text-gray-400 mb-2">
+                            <span>پایه دهم</span>
+                            <span>•</span>
+                            <span>رشته ریاضی فیزیک</span>
+                        </div>
+                        <h3 class="text-lg font-black text-gray-900 hover:text-emerald-600 transition">
+                            <a href="#">جزوه شب امتحان هندسه ۱ دهم</a>
+                        </h3>
+                        <p class="text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">
+                            خلاصه درسنامه کلاسی به همراه حل بانک سوالات شبیه‌ساز امتحانات نهایی آموزش و پرورش برای کسب نمره ۲۰.
+                        </p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
+                        <div>
+                            <span class="text-lg font-black text-gray-950">۲۵۰,۰۰۰ <span class="text-xs font-normal text-gray-500">تومان</span></span>
+                        </div>
+                        <a href="#" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-sm font-bold px-4 py-2.5 rounded-xl transition">
+                            دانلود جزوه
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="product-card bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition duration-300 text-right"
+                 data-type="book" data-grade="11" data-field="math" data-target="konkur">
+                
+                <div class="aspect-video bg-amber-950 relative flex items-center justify-center text-white">
+                    <span class="text-xs font-bold bg-amber-600 text-gray-950 px-3 py-1 rounded-full absolute top-4 right-4">کتاب چاپی</span>
+                    <span class="text-xs font-bold bg-gray-700 text-white px-3 py-1 rounded-full absolute top-4 left-4">ارسال پستی</span>
+                    <svg class="w-12 h-12 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                </div>
+
+                <div class="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                        <div class="flex items-center gap-2 text-xs font-bold text-gray-400 mb-2">
+                            <span>پایه یازدهم</span>
+                            <span>•</span>
+                            <span>رشته ریاضی</span>
+                            <span>•</span>
+                            <span class="text-amber-600 font-bold">موجود در انبار</span>
+                        </div>
+                        <h3 class="text-lg font-black text-gray-900 hover:text-amber-600 transition">
+                            <a href="#">کتاب تست پیشرفته حسابان ۱ یازدهم</a>
+                        </h3>
+                        <p class="text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">
+                            شامل درسنامه‌های درختی، ۱۲۰۰ تست دسته‌بندی شده از ساده به سخت و پاسخنامه کاملاً تشریحی و مفهومی.
+                        </p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
+                        <div>
+                            <span class="text-lg font-black text-gray-950">۳۸۰,۰۰۰ <span class="text-xs font-normal text-gray-500">تومان</span></span>
+                        </div>
+                        <a href="#" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm font-bold px-4 py-2.5 rounded-xl transition">
+                            خرید کتاب
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </main>
 
 </body>
