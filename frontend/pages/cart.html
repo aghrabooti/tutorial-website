@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سبد خرید - آکادمی عزیزی</title>
+    
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'Vazir', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between font-sans">
+
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                
+                <div class="flex items-center space-x-8 space-x-reverse">
+                    <div class="flex-shrink-0">
+                        <a href="../index.html" class="text-xl font-black text-gray-950 tracking-tight">
+                            آکادمی <span class="text-indigo-600">عزیزی</span>
+                        </a>
+                    </div>
+                    <nav class="hidden md:flex space-x-6 space-x-reverse">
+                        <a href="../index.html" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">صفحه اصلی</a>
+                        <a href="../index.html#packages" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">پکیج‌های آموزشی</a>
+                        <a href="#" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">درباره ما</a>
+                    </nav>
+                </div>
+
+                <div class="flex items-center">
+                    <a href="login.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm font-bold px-5 py-2.5 rounded-xl transition duration-300">
+                        ورود / ثبت‌نام
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8 md:py-12 w-full flex-grow">
+        <h1 class="text-2xl font-black text-gray-900 mb-8 flex items-center gap-2">
+            <i class="fa-solid fa-basket-shopping text-indigo-600 text-xl"></i>
+            سبد خرید شما
+        </h1>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <div class="lg:col-span-8 flex flex-col gap-6">
+                
+                <div class="bg-white border border-gray-200/80 rounded-2xl p-12 shadow-sm flex flex-col items-center justify-center text-center gap-4">
+                    <div class="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100 mb-2">
+                        <i class="fa-solid fa-cart-shopping text-gray-300 text-4xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900">سبد خرید شما خالی است!</h2>
+                    <p class="text-sm text-gray-400 max-w-sm leading-relaxed">
+                        شما هنوز هیچ محصولی را به سبد خرید خود اضافه نکرده‌اید. برای مشاهده دوره‌ها به صفحه پکیج‌ها مراجعه کنید.
+                    </p>
+                    <a href="courses.html" class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-6 py-3 rounded-xl transition duration-300 shadow-md shadow-indigo-600/10">
+                        مشاهده پکیج‌های آموزشی
+                    </a>
+                </div>
+
+                </div>
+
+            <div class="lg:col-span-4 flex flex-col gap-4 sticky top-24">
+                
+                <div class="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-sm">
+                    <label class="block text-xs font-bold text-gray-500 mb-2">کد تخفیف دارید؟</label>
+                    <div class="flex gap-2">
+                        <input type="text" placeholder="مثلاً: AZIZI20" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-center uppercase tracking-wider font-semibold placeholder:lowercase" disabled>
+                        <button class="bg-gray-200 text-gray-400 font-bold text-xs px-4 py-2.5 rounded-xl cursor-not-allowed whitespace-nowrap" disabled>
+                            اعمال کد
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-sm">
+                    <h2 class="text-base font-black text-gray-950 mb-4 pb-3 border-b border-gray-100">خلاصه فاکتور</h2>
+                    
+                    <div class="flex flex-col gap-3.5 mb-5 text-sm">
+                        <div class="flex justify-between items-center text-gray-500">
+                            <span>قیمت کل پکیج‌ها:</span>
+                            <span class="font-bold text-gray-800">۰ تومان</span>
+                        </div>
+                        <div class="flex justify-between items-center text-red-500">
+                            <span>سود شما از خرید:</span>
+                            <span class="font-bold">۰ تومان</span>
+                        </div>
+                        <div class="border-t border-dashed border-gray-200 my-1"></div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-950">مبلغ قابل پرداخت:</span>
+                            <div class="text-left">
+                                <span class="text-xl font-black text-blue-600">۰</span>
+                                <span class="text-xs text-gray-400 font-bold mr-1">تومان</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-5 flex items-start gap-2.5 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <input type="checkbox" id="terms" class="mt-1 w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer">
+                        <label for="terms" class="text-xs text-gray-600 leading-relaxed cursor-pointer select-none">
+                            <a href="#" class="text-indigo-600 font-bold hover:underline">شرایط و مقررات</a> را خوانده‌ام و آن‌ها را قبول دارم.
+                        </label>
+                    </div>
+
+                    <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl transition duration-300 shadow-md hover:shadow-lg hover:shadow-blue-600/20 flex items-center justify-center gap-2 active:scale-[0.98]">
+                        <i class="fa-solid fa-credit-card text-sm"></i>
+                        <span>تایید و انتقال به درگاه پرداخت</span>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="border-t border-gray-200 bg-white py-5 text-center text-xs text-gray-500 font-medium">
+        تمامی حقوق برای آکادمی آموزشی محفوظ است.
+    </footer>
+
+</body>
+</html>
