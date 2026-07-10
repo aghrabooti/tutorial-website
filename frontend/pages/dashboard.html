@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد کاربر - آکادمی عزیزی</title>
+
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'Vazir', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen font-sans">
+
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+
+                <div class="flex items-center space-x-8 space-x-reverse">
+                    <div class="flex-shrink-0">
+                        <a href="../index.html" class="text-xl font-black text-gray-950 tracking-tight">
+                            آکادمی <span class="text-indigo-600">عزیزی</span>
+                        </a>
+                    </div>
+
+                    <nav class="hidden md:flex space-x-6 space-x-reverse">
+                        <a href="../index.html" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">صفحه اصلی</a>
+                        <a href="courses.html" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">پکیج‌های آموزشی</a>
+                        <a href="cart.html" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">سبد خرید</a>
+                    </nav>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <a href="login.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm font-bold px-5 py-2.5 rounded-xl transition duration-300">
+                        خروج از حساب
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <section class="mb-8">
+            <div class="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-indigo-200">
+                        ع
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-black text-gray-950">سلام، <span id="user-first-name" data-dashboard-field="firstName">کاربر عزیز</span></h1>
+                        <p id="dashboard-welcome-message" data-dashboard-field="welcomeMessage" class="text-sm text-gray-500 mt-1">به داشبورد آموزشی خودت خوش آمدی.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl px-5 py-3">
+                        <div id="active-courses-count" data-dashboard-field="activeCoursesCount" class="text-xl font-black text-indigo-600">۰</div>
+                        <div class="text-xs text-gray-500 mt-1">پکیج فعال</div>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl px-5 py-3">
+                        <div id="downloads-count" data-dashboard-field="downloadsCount" class="text-xl font-black text-emerald-600">۰</div>
+                        <div class="text-xs text-gray-500 mt-1">فایل دانلودی</div>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl px-5 py-3">
+                        <div id="orders-count" data-dashboard-field="ordersCount" class="text-xl font-black text-amber-600">۰</div>
+                        <div class="text-xs text-gray-500 mt-1">سفارش</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <aside class="lg:col-span-3">
+                <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden sticky top-24">
+                    <nav class="p-3 space-y-1">
+                        <a href="#my-courses" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 text-indigo-600 text-sm font-bold">
+                            <i class="fa-solid fa-book-open w-5 text-center"></i>
+                            پکیج‌های من
+                        </a>
+                        <a href="#orders" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 text-sm font-bold transition">
+                            <i class="fa-solid fa-receipt w-5 text-center"></i>
+                            سفارش‌ها
+                        </a>
+                        <a href="#downloads" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 text-sm font-bold transition">
+                            <i class="fa-solid fa-download w-5 text-center"></i>
+                            دانلودها
+                        </a>
+                        <a href="#profile" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 text-sm font-bold transition">
+                            <i class="fa-solid fa-user w-5 text-center"></i>
+                            اطلاعات حساب
+                        </a>
+                        <a href="#support" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 text-sm font-bold transition">
+                            <i class="fa-solid fa-headset w-5 text-center"></i>
+                            پشتیبانی
+                        </a>
+                    </nav>
+                </div>
+            </aside>
+
+            <div class="lg:col-span-9 space-y-6">
+                <section id="my-courses" class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-5">
+                        <h2 class="text-lg font-black text-gray-950">پکیج‌های من</h2>
+                        <a href="courses.html" class="text-xs font-bold text-indigo-600 hover:underline">مشاهده فروشگاه</a>
+                    </div>
+
+                    <div id="my-courses-list" data-dashboard-list="courses" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <div id="empty-courses-message" data-empty-state="courses" class="md:col-span-2 xl:col-span-3 border border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                            <p class="text-sm font-bold text-gray-500">هنوز پکیجی برای نمایش وجود ندارد.</p>
+                            <a href="courses.html" class="inline-block mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition">مشاهده پکیج‌ها</a>
+                        </div>
+                    </div>
+
+                    <template id="course-card-template">
+                        <article class="border border-gray-100 rounded-2xl overflow-hidden">
+                            <div data-course-cover class="h-28 bg-indigo-950 text-white p-4 flex items-end">
+                                <h3 data-course-title class="font-black text-sm"></h3>
+                            </div>
+                            <div class="p-4 space-y-3">
+                                <div class="flex justify-between text-xs text-gray-500">
+                                    <span>پیشرفت دوره</span>
+                                    <span data-course-progress-text class="font-bold text-gray-700"></span>
+                                </div>
+                                <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                    <div data-course-progress-bar class="h-full w-0 bg-indigo-600 rounded-full"></div>
+                                </div>
+                                <a data-course-link href="courses-detail.html" class="block text-center bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-xl transition">ادامه یادگیری</a>
+                            </div>
+                        </article>
+                    </template>
+                </section>
+
+                <section id="orders" class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                    <h2 class="text-lg font-black text-gray-950 mb-5">آخرین سفارش‌ها</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-right">
+                            <thead class="text-xs text-gray-400 border-b border-gray-100">
+                                <tr>
+                                    <th class="py-3 font-bold">شماره سفارش</th>
+                                    <th class="py-3 font-bold">محصول</th>
+                                    <th class="py-3 font-bold">مبلغ</th>
+                                    <th class="py-3 font-bold">وضعیت</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-list" data-dashboard-list="orders" class="divide-y divide-gray-50">
+                                <tr id="empty-orders-message" data-empty-state="orders">
+                                    <td colspan="4" class="py-8 text-center text-sm font-bold text-gray-400">هنوز سفارشی ثبت نشده است.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <template id="order-row-template">
+                        <tr>
+                            <td data-order-code class="py-4 font-bold text-gray-700"></td>
+                            <td data-order-product class="py-4 text-gray-600"></td>
+                            <td data-order-price class="py-4 text-gray-600"></td>
+                            <td class="py-4"><span data-order-status class="bg-emerald-50 text-emerald-600 text-xs font-bold px-3 py-1 rounded-full"></span></td>
+                        </tr>
+                    </template>
+                </section>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <section id="downloads" class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                        <h2 class="text-lg font-black text-gray-950 mb-5">دانلودها</h2>
+                        <div id="downloads-list" data-dashboard-list="downloads" class="space-y-3">
+                            <div id="empty-downloads-message" data-empty-state="downloads" class="border border-dashed border-gray-200 rounded-xl px-4 py-6 text-center">
+                                <p class="text-sm font-bold text-gray-400">هنوز فایلی برای دانلود وجود ندارد.</p>
+                            </div>
+                        </div>
+
+                        <template id="download-link-template">
+                            <a href="#" data-download-link class="flex items-center justify-between border border-gray-100 rounded-xl px-4 py-3 hover:bg-gray-50 transition">
+                                <span data-download-title class="text-sm font-bold text-gray-700"></span>
+                                <i class="fa-solid fa-download text-indigo-600"></i>
+                            </a>
+                        </template>
+                    </section>
+
+                    <section id="profile" class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                        <h2 class="text-lg font-black text-gray-950 mb-5">اطلاعات حساب</h2>
+                        <dl class="space-y-4 text-sm">
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-gray-400">نام و نام خانوادگی</dt>
+                                <dd id="profile-full-name" data-dashboard-field="fullName" class="font-bold text-gray-800">-</dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-gray-400">شماره موبایل</dt>
+                                <dd id="profile-phone" data-dashboard-field="phone" class="font-bold text-gray-800" dir="ltr">-</dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-gray-400">پایه تحصیلی</dt>
+                                <dd id="profile-grade" data-dashboard-field="grade" class="font-bold text-gray-800">-</dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-gray-400">رشته</dt>
+                                <dd id="profile-field" data-dashboard-field="field" class="font-bold text-gray-800">-</dd>
+                            </div>
+                        </dl>
+                    </section>
+                </div>
+
+                <section id="support" class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-black text-gray-950">پشتیبانی آموزشی</h2>
+                            <p class="text-sm text-gray-500 mt-1">برای پیگیری سفارش یا سوال درباره دوره‌ها، درخواست پشتیبانی ثبت کنید.</p>
+                        </div>
+                        <a href="#" class="bg-gray-950 hover:bg-gray-800 text-white text-sm font-bold px-5 py-3 rounded-xl transition text-center">
+                            ثبت درخواست
+                        </a>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+</body>
+</html>
