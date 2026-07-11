@@ -13,6 +13,13 @@
         body {
             font-family: 'Vazirmatn', sans-serif;
         }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
     </style>
 </head>
 <body>
@@ -119,17 +126,19 @@
                 <p class="text-xs text-gray-500">مستقیم وارد مسیر یادگیری و رتبه برتر شدن شوید</p>
             </div>
             <div class="flex space-x-2 space-x-reverse">
-                <button class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-sm transition">
+                <button id="slide-next-btn" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-sm transition">
                     &rarr;
                 </button>
-                <button class="bg-indigo-600 hover:bg-indigo-700 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-sm transition">
+                <button id="slide-prev-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-sm transition">
                     &larr;
                 </button>
             </div>
         </div>
 
-        <div id="courses-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
-            <div class="col-span-full text-center py-8 text-gray-500">در حال بارگذاری دوره‌ها...</div>
+        <div class="relative w-full overflow-hidden">
+            <div id="courses-container" class="flex gap-6 overflow-x-auto scroll-smooth no-scrollbar snap-x snap-mandatory py-4">
+                <div class="w-full text-center py-8 text-gray-500">در حال بارگذاری دوره‌ها...</div>
+            </div>
         </div>
     </section>
 
@@ -308,7 +317,7 @@
                 }
 
                 const card = document.createElement('div');
-                card.className = "w-full max-w-[20rem] bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition flex flex-col justify-between";
+                card.className = "w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] flex-shrink-0 snap-start bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition flex flex-col justify-between";
                 
                 card.innerHTML = `
                     <div>
@@ -328,6 +337,21 @@
             });
         }
 
+        function initSlider() {
+            const container = document.getElementById('courses-container');
+            const prevBtn = document.getElementById('slide-prev-btn');
+            const nextBtn = document.getElementById('slide-next-btn');
+
+            if (container && prevBtn && nextBtn) {
+                prevBtn.addEventListener('click', () => {
+                    container.scrollLeft -= 320; 
+                });
+                nextBtn.addEventListener('click', () => {
+                    container.scrollLeft += 320;
+                });
+            }
+        }
+
         function initMobileMenu() {
             const toggleBtn = document.getElementById('menu-toggle-btn');
             const mobileMenu = document.getElementById('mobile-menu');
@@ -342,6 +366,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             fetchCourses();
             initMobileMenu();
+            initSlider();
         });
     </script>
 </body>
