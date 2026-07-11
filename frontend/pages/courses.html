@@ -147,7 +147,7 @@
                 const gradeMatch = currentFilters.grade === 'all' || itemGrade === currentFilters.grade;
                 
                 let majorMatch = true;
-                if (currentFilters.grade !== '10') {
+                if (currentFilters.grade !== '9' && currentFilters.grade !== '10') {
                     majorMatch = currentFilters.major === 'all' || itemMajor === currentFilters.major;
                 }
 
@@ -167,17 +167,25 @@
             }
 
             const cardsHtml = coursesList.map(c => {
+                const id = c.id || '';
                 const title = c.title || 'بدون نام';
                 const description = c.description || 'توضیحات این دوره به زودی اضافه خواهد شد.';
                 const price = c.price ? Number(c.price).toLocaleString('fa-IR') : '۰';
                 const imageUrl = c.image_url || 'https://via.placeholder.com/400x225?text=No+Image';
 
+                // ساخت لینک با شناسه منحصر به فرد هر محصول
+                const detailUrl = `courses-detail.html?id=${id}`;
+
                 return `
                     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden">
                         <div>
-                            <img src="${imageUrl}" alt="${title}" class="w-full h-48 object-cover">
+                            <a href="${detailUrl}">
+                                <img src="${imageUrl}" alt="${title}" class="w-full h-48 object-cover hover:opacity-95 transition-opacity">
+                            </a>
                             <div class="p-6">
-                                <h3 class="font-bold text-xl text-gray-900">${title}</h3>
+                                <a href="${detailUrl}" class="hover:text-indigo-600 transition-colors">
+                                    <h3 class="font-bold text-xl text-gray-900">${title}</h3>
+                                </a>
                                 <p class="text-gray-500 text-sm mt-3 leading-relaxed line-clamp-3">${description}</p>
                             </div>
                         </div>
@@ -187,9 +195,9 @@
                                 <span class="font-black text-2xl text-indigo-600">${price}</span>
                                 <span class="text-xs font-normal text-gray-400 mr-1">تومان</span>
                             </div>
-                            <button class="bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200">
+                            <a href="${detailUrl}" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 inline-block">
                                 مشاهده دوره
-                            </button>
+                            </a>
                         </div>
                     </div>
                 `;
