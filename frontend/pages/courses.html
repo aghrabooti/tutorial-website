@@ -31,14 +31,14 @@
             <p class="text-gray-500 mt-2 text-sm md:text-base">دوره‌ها و بسته‌های آموزشی آکادمی ریاضی مهدی عزیزی</p>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm max-w-4xl mx-auto mb-12">
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm max-w-3xl mx-auto mb-12">
             <div class="flex flex-wrap justify-center gap-4 mb-6 border-b border-gray-100 pb-6" id="type-buttons-container">
                 <button data-type="course" class="type-btn bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all">دوره‌های آموزشی</button>
                 <button data-type="book" class="type-btn bg-gray-100 text-gray-600 hover:bg-gray-200 px-6 py-2.5 rounded-xl text-sm font-bold transition-all">کتاب‌ها</button>
                 <button data-type="pamphlet" class="type-btn bg-gray-100 text-gray-600 hover:bg-gray-200 px-6 py-2.5 rounded-xl text-sm font-bold transition-all">جزوات</button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label for="grade-filter" class="block text-sm font-bold text-gray-700 mb-2">پایه تحصیلی:</label>
                     <select id="grade-filter" class="block w-full rounded-xl border-gray-300 bg-white px-4 py-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm font-medium text-gray-700 outline-none border">
@@ -54,18 +54,9 @@
                     <label for="field-filter" class="block text-sm font-bold text-gray-700 mb-2">رشته تحصیلی:</label>
                     <select id="field-filter" class="block w-full rounded-xl border-gray-300 bg-white px-4 py-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm font-medium text-gray-700 outline-none border">
                         <option value="all">همه رشته‌ها</option>
-                        <option value="math">ریاضی فیزیک</option>
-                        <option value="experimental">علوم تجربی</option>
-                        <option value="humanities">علوم انسانی</option>
-                    </select>
-                </div>
-
-                <div id="exam-filter-wrapper">
-                    <label for="exam-filter" class="block text-sm font-bold text-gray-700 mb-2">نوع دوره / آزمون:</label>
-                    <select id="exam-filter" class="block w-full rounded-xl border-gray-300 bg-white px-4 py-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm font-medium text-gray-700 outline-none border">
-                        <option value="all">همه موارد</option>
-                        <option value="konkur">کنکور</option>
-                        <option value="final">نهایی</option>
+                        <option value="ریاضی">ریاضی فیزیک</option>
+                        <option value="تجربی">علوم تجربی</option>
+                        <option value="انسانی">علوم انسانی</option>
                     </select>
                 </div>
             </div>
@@ -84,8 +75,7 @@
         let currentFilters = {
             productType: 'course',
             grade: 'all',
-            field: 'all',
-            examType: 'all'
+            major: 'all'
         };
 
         async function loadCourses() {
@@ -111,35 +101,22 @@
                 currentFilters.grade = e.target.value;
                 
                 const fieldWrapper = document.getElementById('field-filter-wrapper');
-                const examWrapper = document.getElementById('exam-filter-wrapper');
                 const fieldSelect = document.getElementById('field-filter');
-                const examSelect = document.getElementById('exam-filter');
 
-                if (currentFilters.grade === '9') {
+                if (currentFilters.grade === '9' || currentFilters.grade === '10') {
                     fieldWrapper.style.opacity = '0.5';
                     fieldSelect.disabled = true;
-                    examWrapper.style.opacity = '0.5';
-                    examSelect.disabled = true;
-                    currentFilters.field = 'all';
-                    currentFilters.examType = 'all';
+                    currentFilters.major = 'all';
                     fieldSelect.value = 'all';
-                    examSelect.value = 'all';
                 } else {
                     fieldWrapper.style.opacity = '1';
                     fieldSelect.disabled = false;
-                    examWrapper.style.opacity = '1';
-                    examSelect.disabled = false;
                 }
                 applyFilters();
             });
 
             document.getElementById('field-filter').addEventListener('change', (e) => {
-                currentFilters.field = e.target.value;
-                applyFilters();
-            });
-
-            document.getElementById('exam-filter').addEventListener('change', (e) => {
-                currentFilters.examType = e.target.value;
+                currentFilters.major = e.target.value;
                 applyFilters();
             });
 
@@ -162,12 +139,19 @@
             let filtered = allCourses;
 
             filtered = filtered.filter(c => {
-                const typeMatch = currentFilters.productType === 'all' || String(c.product_type || 'course') === currentFilters.productType;
-                const gradeMatch = currentFilters.grade === 'all' || String(c.grade) === currentFilters.grade;
-                const fieldMatch = currentFilters.field === 'all' || String(c.field) === currentFilters.field;
-                const examMatch = currentFilters.examType === 'all' || String(c.exam_type) === currentFilters.examType;
+                const itemProductType = c.product_type ? String(c.product_type).trim() : 'course';
+                const itemGrade = c.grade ? String(c.grade).trim() : '';
+                const itemMajor = c.major ? String(c.major).trim() : '';
 
-                return typeMatch && gradeMatch && fieldMatch && examMatch;
+                const typeMatch = currentFilters.productType === 'all' || itemProductType === currentFilters.productType;
+                const gradeMatch = currentFilters.grade === 'all' || itemGrade === currentFilters.grade;
+                
+                let majorMatch = true;
+                if (currentFilters.grade !== '10') {
+                    majorMatch = currentFilters.major === 'all' || itemMajor === currentFilters.major;
+                }
+
+                return typeMatch && gradeMatch && majorMatch;
             });
 
             renderCourses(filtered);
@@ -186,15 +170,19 @@
                 const title = c.title || 'بدون نام';
                 const description = c.description || 'توضیحات این دوره به زودی اضافه خواهد شد.';
                 const price = c.price ? Number(c.price).toLocaleString('fa-IR') : '۰';
+                const imageUrl = c.image_url || 'https://via.placeholder.com/400x225?text=No+Image';
 
                 return `
-                    <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between">
+                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden">
                         <div>
-                            <h3 class="font-bold text-xl text-gray-900">${title}</h3>
-                            <p class="text-gray-500 text-sm mt-3 leading-relaxed line-clamp-3">${description}</p>
+                            <img src="${imageUrl}" alt="${title}" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="font-bold text-xl text-gray-900">${title}</h3>
+                                <p class="text-gray-500 text-sm mt-3 leading-relaxed line-clamp-3">${description}</p>
+                            </div>
                         </div>
                         
-                        <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
+                        <div class="mx-6 mb-6 pt-4 border-t border-gray-50 flex items-center justify-between">
                             <div>
                                 <span class="font-black text-2xl text-indigo-600">${price}</span>
                                 <span class="text-xs font-normal text-gray-400 mr-1">تومان</span>
