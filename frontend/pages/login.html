@@ -64,318 +64,50 @@
     </div>
 
     <script>
-        const db = supabase.createClient(
-            'https://qbsfotperzzhuimnpmto.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA'
-        );
-
-        const USER_TABLE = 'site_users';
-        const SESSION_TABLE = 'user_sessions';
-
-        let currentMode = 'login';
-        let step = 1;
-        let dbUserForReset = null;
-
-        const authForm = document.getElementById('auth-form');
-        const phoneInput = document.getElementById('phone');
-        const passwordInput = document.getElementById('password');
-        const otpInput = document.getElementById('otp');
-        const newPasswordInput = document.getElementById('new-password');
-        
-        const phoneWrapper = document.getElementById('phone-wrapper');
-        const passwordWrapper = document.getElementById('password-wrapper');
-        const otpWrapper = document.getElementById('otp-wrapper');
-        const newPasswordWrapper = document.getElementById('new-password-wrapper');
-
-        const formTitle = document.getElementById('form-title');
-        const formDesc = document.getElementById('form-desc');
-        const submitBtn = document.getElementById('submit-btn');
-        const toggleModeBtn = document.getElementById('toggle-mode-btn');
-        const toggleText = document.getElementById('toggle-text');
-        const forgotPasswordBtn = document.getElementById('forgot-password-btn');
-        const forgotWrapper = document.getElementById('forgot-wrapper');
-        const toggleLinkWrapper = document.getElementById('toggle-link-wrapper');
-
-        function generateToken() {
-            const arr = new Uint8Array(24);
-            window.crypto.getRandomValues(arr);
-            return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        function convertToDbFormat(phone) {
-            let num = phone.trim();
-            if (num.startsWith('0')) {
-                num = num.substring(1);
-            }
-            return '+98' + num;
-        }
-
-        function switchMode(mode) {
-            currentMode = mode;
-            step = 1;
-            dbUserForReset = null;
-
-            phoneWrapper.classList.remove('hidden');
-            passwordWrapper.classList.remove('hidden');
-            otpWrapper.classList.add('hidden');
-            newPasswordWrapper.classList.add('hidden');
-            
-            phoneInput.required = true;
-            passwordInput.required = true;
-            otpInput.required = false;
-            newPasswordInput.required = false;
-            
-            forgotWrapper.classList.remove('hidden');
-            toggleLinkWrapper.classList.remove('hidden');
-
-            if (mode === 'login') {
-                formTitle.textContent = 'خوش آمدید';
-                formDesc.textContent = 'لطفاً شماره موبایل و رمز عبور خود را وارد کنید';
-                submitBtn.textContent = 'ورود به حساب';
-                toggleText.textContent = 'حساب کاربری ندارید؟';
-                toggleModeBtn.textContent = 'ثبت‌نام کنید';
-            } else if (mode === 'register') {
-                formTitle.textContent = 'ثبت‌نام دانش‌آموز';
-                formDesc.textContent = 'برای عضویت شماره موبایل و یک رمز عبور تعیین کنید';
-                submitBtn.textContent = 'ایجاد حساب کاربری';
-                toggleText.textContent = 'قبلاً ثبت‌نام کرده‌اید؟';
-                toggleModeBtn.textContent = 'وارد شوید';
-                forgotWrapper.classList.add('hidden');
-            }
-        }
-
-        toggleModeBtn.addEventListener('click', () => {
-            if (currentMode === 'login') {
-                switchMode('register');
-            } else {
-                switchMode('login');
-            }
-        });
-
-        forgotPasswordBtn.addEventListener('click', () => {
-            currentMode = 'forgot';
-            step = 1;
-            
-            formTitle.textContent = 'فراموشی رمز عبور';
-            formDesc.textContent = 'شماره موبایل خود را جهت بازیابی وارد کنید';
-            submitBtn.textContent = 'ارسال کد تایید';
-            
-            passwordWrapper.classList.add('hidden');
-            passwordInput.required = false;
-            forgotWrapper.classList.add('hidden');
-            toggleLinkWrapper.classList.add('hidden');
-        });
-
-        async function createSession(userId) {
-            const token = generateToken();
-            const expiresAt = new Date();
-            expiresAt.setDate(expiresAt.getDate() + 30);
-
-            const { error } = await db
-                .from(SESSION_TABLE)
-                .insert({
-                    user_id: userId,
-                    token: token,
-                    expires_at: expiresAt.toISOString()
-                });
-
-            if (error) {
-                console.error(error);
-                alert('خطا در ایجاد نشست امنیتی.');
-                return;
-            }
-
-            localStorage.setItem('session_token', token);
-            
-            const { data: userRow } = await db
-                .from(USER_TABLE)
-                .select('first_name, last_name, grade')
-                .eq('id', userId)
-                .maybeSingle();
-
-            if (userRow && userRow.first_name && userRow.last_name && userRow.grade) {
-                window.location.href = 'dashboard.html';
-            } else {
-                window.location.href = 'complete-profile.html';
-            }
-        }
+        const supabase = supabase.createClient('YOUR_URL', 'YOUR_KEY');
 
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
             const rawPhone = phoneInput.value.trim();
-            if (!rawPhone) return;
+            const dbPhone = '+98' + rawPhone.substring(1);
+            const pass = passwordInput.value;
+
+            submitBtn.disabled = true;
             
-            const dbPhone = convertToDbFormat(rawPhone);
-
-            if (currentMode === 'login') {
-                const pass = passwordInput.value;
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'در حال بررسی...';
-
-                console.log("مقدار خام ورودی فرم:", rawPhone);
-                console.log("final value: ", dbPhone);
-
-                const { data: userRow, error } = await db
-                    .from(USER_TABLE)
-                    .select('*')
-                    .eq('phone', dbPhone)
-                    .maybeSingle();
-
-                if (error) {
-                    alert('خطا در برقراری ارتباط با پایگاه داده.');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'ورود به حساب';
-                    return;
-                }
-
-                if (!userRow) {
-                    alert('خطا: شماره موبایل در سیستم یافت نشد.');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'ورود به حساب';
-                    return;
-                }
-
-                if (userRow.password !== pass) {
-                    alert('خطا: رمز عبور وارد شده صحیح نمی‌باشد.');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'ورود به حساب';
-                    return;
-                }
-
-                await createSession(userRow.id);
-
-            } else if (currentMode === 'register') {
-                const pass = passwordInput.value;
-                if (pass.length < 6) {
-                    alert('رمز عبور باید حداقل ۶ کاراکتر باشد.');
-                    return;
-                }
-
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'در حال ثبت‌نام...';
-
-                const { data: existUser } = await db
-                    .from(USER_TABLE)
-                    .select('id')
-                    .eq('phone', dbPhone)
-                    .maybeSingle();
-
-                if (existUser) {
-                    alert('این شماره موبایل قبلاً در سیستم ثبت شده است.');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'ایجاد حساب کاربری';
-                    return;
-                }
-
-                const { data: newUser, error: regError } = await db
-                    .from(USER_TABLE)
-                    .insert({
+            try {
+                if (currentMode === 'login') {
+                    const { data, error } = await supabase.auth.signInWithPassword({
                         phone: dbPhone,
                         password: pass
-                    })
-                    .select()
-                    .single();
-
-                if (regError || !newUser) {
-                    alert('خطا در ثبت‌نام مکرر. لطفا بعدا تلاش کنید.');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'ایجاد حساب کاربری';
-                    return;
+                    });
+                    if (error) throw error;
+                    window.location.href = 'dashboard.html';
+                } else if (currentMode === 'register') {
+                    const { data, error } = await supabase.auth.signUp({
+                        phone: dbPhone,
+                        password: pass
+                    });
+                    if (error) throw error;
+                    window.location.href = 'complete-profile.html';
                 }
-
-                await createSession(newUser.id);
-
-            } else if (currentMode === 'forgot') {
-                if (step === 1) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'در حال بررسی...';
-
-                    const { data: userRow, error } = await db
-                        .from(USER_TABLE)
-                        .select('*')
-                        .eq('phone', dbPhone)
-                        .maybeSingle();
-
-                    if (error || !userRow) {
-                        alert('شماره موبایل مورد نظر در سیستم یافت نشد.');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'ارسال کد تایید';
-                        return;
-                    }
-
-                    dbUserForReset = userRow;
-                    
-                    alert('کد تایید آزمایشی شما "1234" است.');
-                    
-                    phoneWrapper.classList.add('hidden');
-                    phoneInput.required = false;
-                    otpWrapper.classList.remove('hidden');
-                    otpInput.required = true;
-                    
-                    formTitle.textContent = 'تایید کد ارسالی';
-                    formDesc.textContent = 'کد ۴ رقمی ارسال شده را وارد کنید';
-                    submitBtn.textContent = 'بررسی کد تایید';
-                    step = 2;
-                    submitBtn.disabled = false;
-
-                } else if (step === 2) {
-                    const enteredOtp = otpInput.value.trim();
-                    if (enteredOtp !== '1234') {
-                        alert('کد تایید اشتباه است.');
-                        return;
-                    }
-
-                    otpWrapper.classList.add('hidden');
-                    otpInput.required = false;
-                    newPasswordWrapper.classList.remove('hidden');
-                    newPasswordInput.required = true;
-                    
-                    formTitle.textContent = 'تغییر رمز عبور';
-                    formDesc.textContent = 'رمز عبور جدید خود را وارد کنید';
-                    submitBtn.textContent = 'ثبت رمز عبور جدید';
-                    step = 3;
-
-                } else if (step === 3) {
-                    const newPass = newPasswordInput.value.trim();
-                    if (newPass.length < 6) {
-                        alert('رمز عبور باید حداقل ۶ کاراکتر باشد.');
-                        return;
-                    }
-
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'در حال بروزرسانی...';
-
-                    const { error: updateError } = await db
-                        .from(USER_TABLE)
-                        .update({ password: newPass })
-                        .eq('id', dbUserForReset.id);
-
-                    if (updateError) {
-                        alert('خطا در تغییر رمز عبور مجدد.');
-                    } else {
-                        alert('رمز عبور با موفقیت تغییر کرد.');
-                        switchMode('login');
-                    }
-                    submitBtn.disabled = false;
-                }
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                submitBtn.disabled = false;
             }
         });
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            const token = localStorage.getItem('session_token');
-            if (token) {
-                const { data } = await db
-                    .from(SESSION_TABLE)
-                    .select('user_id, expires_at')
-                    .eq('token', token)
-                    .maybeSingle();
+        forgotPasswordBtn.addEventListener('click', async () => {
+            const rawPhone = phoneInput.value.trim();
+            const dbPhone = '+98' + rawPhone.substring(1);
+            const { error } = await supabase.auth.resetPasswordForEmail(dbPhone + '@temporary.local');
+            alert('درخواست بازیابی ارسال شد');
+        });
 
-                if (data && new Date(data.expires_at) > new Date()) {
-                    window.location.href = 'dashboard.html';
-                } else {
-                    localStorage.clear();
-                }
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+                window.location.href = 'dashboard.html';
             }
         });
     </script>
