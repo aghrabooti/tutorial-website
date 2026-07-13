@@ -9,6 +9,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
         tailwind.config = {
@@ -42,7 +43,7 @@
                 </div>
 
                 <div class="flex items-center">
-                    <a href="login.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm font-bold px-5 py-2.5 rounded-xl transition duration-300">
+                    <a id="auth-btn" href="login.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm font-bold px-5 py-2.5 rounded-xl transition duration-300">
                         ورود / ثبت‌نام
                     </a>
                 </div>
@@ -79,7 +80,7 @@
             <div class="lg:col-span-4 flex flex-col gap-4 sticky top-24">
                 
                 <div class="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-sm">
-                    <label class="block text-xs font-bold text-gray-500 mb-2">کد تخفیف دارید؟</label>
+                    <label class="block text-xs font-bold text-gray-500 mb-2">کد تخفیف دارید?</label>
                     <div class="flex gap-2">
                         <input type="text" placeholder="مثلاً: AZIZI20" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-center uppercase tracking-wider font-semibold placeholder:lowercase" disabled>
                         <button class="bg-gray-200 text-gray-400 font-bold text-xs px-4 py-2.5 rounded-xl cursor-not-allowed whitespace-nowrap" disabled>
@@ -132,5 +133,34 @@
         تمامی حقوق برای آکادمی آموزشی محفوظ است.
     </footer>
 
+    <script>
+        const db = supabase.createClient(
+            'https://qbsfotperzzhuimnpmto.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA'
+        );
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const sessionToken = localStorage.getItem('session_token');
+            if (!sessionToken) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const { data: sessionData, error: sessionError } = await db
+                .from('user_sessions')
+                .select('user_id, expires_at')
+                .eq('token', sessionToken)
+                .maybeSingle();
+            if (sessionError || !sessionData || new Date(sessionData.expires_at) < new Date()) {
+                localStorage.clear();
+                window.location.href = 'login.html';
+                return;
+            }
+            const authBtn = document.getElementById('auth-btn');
+            if (authBtn) {
+                authBtn.textContent = 'داشبورد من';
+                authBtn.href = 'dashboard.html';
+            }
+        });
+    </script>
 </body>
 </html>
