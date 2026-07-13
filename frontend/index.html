@@ -22,7 +22,7 @@
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 antialiased selection:bg-indigo-500 selection:text-white">
 
     <header class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -35,16 +35,16 @@
                     </div>
                     <nav class="hidden md:flex space-x-6 space-x-reverse">
                         <a href="#" class="text-sm font-bold text-indigo-600">صفحه اصلی</a>
-                        <a href="pages/courses.html" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">پکیج‌های آموزشی</a>
+                        <a href="frontend/pages/courses.html" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">پکیج‌های آموزشی</a>
                         <a href="#" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">درباره ما</a>
                         <a href="#" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">تماس با ما</a>
                     </nav>
                 </div>
                 <div class="flex items-center gap-3">
-                    <a href="pages/login.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm font-bold px-5 py-2.5 rounded-xl transition duration-300">
+                    <a id="auth-btn" href="frontend/pages/login.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm font-bold px-5 py-2.5 rounded-xl transition duration-300">
                         ورود / ثبت‌نام
                     </a>
-                    <a href="pages/cart.html" aria-label="سبد خرید" title="سبد خرید" class="w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 flex items-center justify-center transition duration-300">
+                    <a href="frontend/pages/cart.html" aria-label="سبد خرید" title="سبد خرید" class="w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 flex items-center justify-center transition duration-300">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13 5.4 5M7 13l-2 4h13M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"></path>
                         </svg>
@@ -60,217 +60,67 @@
 
         <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-gray-100 px-4 pt-2 pb-4 space-y-3 shadow-inner">
             <a href="#" class="block text-sm font-bold text-indigo-600 bg-indigo-50/50 px-3 py-2 rounded-xl">صفحه اصلی</a>
-            <a href="pages/courses.html" class="block text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 px-3 py-2 rounded-xl transition">پکیج‌های آموزشی</a>
+            <a href="frontend/pages/courses.html" class="block text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 px-3 py-2 rounded-xl transition">پکیج‌های آموزشی</a>
             <a href="#" class="block text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 px-3 py-2 rounded-xl transition">درباره ما</a>
             <a href="#" class="block text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 px-3 py-2 rounded-xl transition">تماس با ما</a>
         </div>
     </header>
 
-    <main class="bg-gray-50 min-h-screen py-12">
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div class="lg:col-span-5 text-right space-y-6">
-                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 leading-tight">
-                    آکادمی تخصصی <span class="text-indigo-600">استاد مهدی عزیزی</span>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center mb-24">
+            <div class="lg:col-span-7 space-y-6 text-center lg:text-right">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-indigo-600 tracking-wide uppercase">⚡ آکادمی تخصصی ریاضیات عالی</span>
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-950 leading-[1.2] lg:leading-[1.15]">
+                    آموزش مفهومی ریاضی<br class="hidden sm:inline">
+                    با <span class="text-indigo-600 bg-clip-text">استاد مهدی عزیزی</span>
                 </h1>
-                <p class="text-base sm:text-lg text-gray-600 font-medium leading-relaxed">
-                    پلتفرم جامع آموزش ویدئویی و پکیج‌های کنکوری تخصصی. مسیر یادگیری خود را کوتاه و حرفه‌ای کنید.
+                <p class="text-gray-500 text-sm sm:text-base lg:text-lg font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                    دسترسی کامل به پکیج‌های ویدئویی تستی و تشریحی مقاطع نهم، دهم، یازدهم و دوازدهم رشته‌های ریاضی و تجربی به همراه درسنامه‌های روان و سیستم رفع اشکال هوشمند.
                 </p>
-                <div class="pt-2">
-                    <a href="#packages" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-indigo-200 transition duration-300">
-                        مشاهده پکیج‌ها
+                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
+                    <a href="frontend/pages/courses.html" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl transition duration-300 shadow-xl shadow-indigo-600/10 text-center text-sm">
+                        مشاهده پکیج‌های آموزشی
+                    </a>
+                    <a href="#" class="w-full sm:w-auto bg-white border border-gray-200 hover:border-gray-300 text-gray-700 font-bold px-8 py-4 rounded-2xl transition duration-300 text-center text-sm shadow-sm">
+                        مشاوره و پشتیبانی
                     </a>
                 </div>
             </div>
-            <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-xl shadow-gray-100 border border-gray-100">
-                <div class="flex space-x-4 space-x-reverse overflow-hidden pb-4">
-                    <div class="w-full sm:w-1/2 flex-shrink-0 bg-gray-100 h-80 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 font-bold">
-                        پکیج شماره ۱ (بزودی)
-                    </div>
-                    <div class="hidden sm:flex w-1/2 flex-shrink-0 bg-gray-100 h-80 rounded-xl border-2 border-dashed border-gray-300 items-center justify-center text-gray-400 font-bold">
-                        پکیج شماره ۲ (بزودی)
-                    </div>
+            
+            <div class="lg:col-span-5 relative flex justify-center">
+                <div class="absolute inset-0 bg-gradient-to-tr from-indigo-100 to-amber-100 rounded-full filter blur-3xl opacity-50 w-72 h-72 sm:w-96 sm:h-96 mx-auto my-auto -z-10 animate-pulse"></div>
+                <div class="w-72 h-72 sm:w-96 sm:h-96 rounded-[2.5rem] bg-gradient-to-br from-indigo-600 to-indigo-800 shadow-2xl flex items-center justify-center p-8 relative overflow-hidden transform rotate-2 hover:rotate-0 transition duration-500">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full transform translate-x-10 -translate-y-10"></div>
+                    <div class="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full transform -translate-x-12 translate-y-12"></div>
+                    <span class="text-white text-7xl font-black select-none tracking-tighter">𝝅 + 𝒙</span>
                 </div>
-                <div class="flex justify-end space-x-2 space-x-reverse mt-4">
-                    <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm transition">
-                        قبلی
+            </div>
+        </section>
+
+        <section class="space-y-6">
+            <div class="flex items-end justify-between border-b border-gray-100 pb-4">
+                <div class="space-y-1 text-right">
+                    <h2 class="text-xl sm:text-2xl font-black text-gray-950">جدیدترین دوره‌های آموزشی</h2>
+                    <p class="text-xs text-gray-400 font-medium">پکیج‌های تخصصی همراه با بروزرسانی سوالات کنکور</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="slide-prev-btn" aria-label="اسلاید قبلی" class="w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center transition shadow-sm active:scale-95">
+                        <svg class="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                     </button>
-                    <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition">
-                        بعدی
+                    <button id="slide-next-btn" aria-label="اسلاید بعدی" class="w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center transition shadow-sm active:scale-95">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                     </button>
                 </div>
+            </div>
+
+            <div id="courses-container" class="flex gap-6 overflow-x-auto no-scrollbar py-4 scroll-smooth snap-x snap-mandatory">
+                <div class="w-full text-center py-12 text-gray-400 font-bold text-sm">در حال دریافت لیست دوره‌ها...</div>
             </div>
         </section>
     </main>
 
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div class="bg-indigo-900 rounded-3xl text-white p-8 md:p-12 shadow-xl grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div class="space-y-2 border-b md:border-b-0 md:border-l border-indigo-800 pb-6 md:pb-0 md:pl-6">
-                <div class="text-4xl lg:text-5xl font-black text-amber-400">+۱۵,۰۰۰</div>
-                <div class="text-sm lg:text-base font-bold text-indigo-200">دانش‌آموز فعال و موفق</div>
-            </div>
-            <div class="space-y-2 border-b md:border-b-0 md:border-l border-indigo-800 pb-6 md:pb-0 md:pl-6">
-                <div class="text-4xl lg:text-5xl font-black text-amber-400">٪۹۴</div>
-                <div class="text-sm lg:text-base font-bold text-indigo-200">رضایت و قبولی در کنکور</div>
-            </div>
-            <div class="space-y-2">
-                <div class="text-4xl lg:text-5xl font-black text-amber-400">+۵۰۰ ساعت</div>
-                <div class="text-sm lg:text-base font-bold text-indigo-200">محتوای ویدئویی تخصصی</div>
-            </div>
-        </div>
-    </section>
-
-    <section id="packages" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-12">
-        <div class="flex justify-between items-center mb-6">
-            <div class="space-y-1 text-right">
-                <h2 class="text-2xl font-black text-gray-950">پکیج‌های آموزشی استاد عزیزی</h2>
-                <p class="text-xs text-gray-500">مستقیم وارد مسیر یادگیری و رتبه برتر شدن شوید</p>
-            </div>
-            <div class="flex space-x-2 space-x-reverse">
-                <button id="slide-next-btn" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-sm transition">
-                    &rarr;
-                </button>
-                <button id="slide-prev-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-sm transition">
-                    &larr;
-                </button>
-            </div>
-        </div>
-
-        <div class="relative w-full overflow-hidden">
-            <div id="courses-container" class="flex gap-6 overflow-x-auto scroll-smooth no-scrollbar snap-x snap-mandatory py-4">
-                <div class="w-full text-center py-8 text-gray-500">در حال بارگذاری دوره‌ها...</div>
-            </div>
-        </div>
-    </section>
-
-     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-16">
-        <div class="bg-gray-50 rounded-3xl p-8 md:p-12 border border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div class="space-y-6 text-right order-2 md:order-1">
-                <div class="space-y-2">
-                    <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">مدرس و بنیان‌گذار آکادمی</span>
-                    <h2 class="text-3xl font-black text-gray-950">استاد مهدی عزیزی</h2>
-                </div>
-                <p class="text-sm text-gray-600 leading-relaxed">
-                    با بیش از یک دهه سابقه تدریس تخصصی و پرورش صدها رتبه برتر در کنکور سراسری. هدف ما در این آکادمی، ساده‌سازی مفاهیم پیچیده و ارائه تکنیک‌های تست‌زنی فوق‌سریع است تا هر دانش‌آموزی در هر سطح علمی، بتواند به درصد‌های بالایی دست پیدا کند.
-                </p>
-                <div class="grid grid-cols-2 gap-4 pt-2">
-                    <div class="flex items-center space-x-2 space-x-reverse text-sm text-gray-700">
-                        <span class="text-indigo-600 font-bold">✓</span>
-                        <span>نویسنده کتاب‌های برتر کمک آموزشی</span>
-                    </div>
-                    <div class="flex items-center space-x-2 space-x-reverse text-sm text-gray-700">
-                        <span class="text-indigo-600 font-bold">✓</span>
-                        <span>طراح سوالات آزمون‌های آزمایشی کشوری</span>
-                    </div>
-                </div>
-            </div>
-            <div class="flex justify-center order-1 md:order-2">
-                <div class="relative w-72 h-80 lg:w-80 lg:h-96 bg-gradient-to-tr from-indigo-100 to-purple-100 rounded-2xl overflow-hidden shadow-sm border-4 border-white">
-                    <img src="assets/images/pic-about-me-section.jpg" alt="استاد مهدی عزیزی" class="w-full h-full object-cover transition duration-500 lg:grayscale hover:grayscale-0 grayscale-0 hover:scale-110">
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="results" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-16">
-        <div class="text-center space-y-2 mb-10">
-            <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">نتیجه اعتماد و تلاش</span>
-            <h2 class="text-2xl sm:text-3xl font-black text-gray-950">رتبه‌های برتر کنکور سال گذشته</h2>
-            <p class="text-xs sm:text-sm text-gray-500">دانش‌آموزانی که با پکیج‌های استاد عزیزی به رویای خود جامه عمل پوشاندند</p>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
-            <div class="w-full max-w-[20rem] bg-white border border-gray-100 rounded-2xl p-6 shadow-sm text-right flex flex-col justify-between space-y-4 hover:shadow-md transition">
-                <div class="space-y-3">
-                    <div class="flex items-center space-x-3 space-x-reverse">
-                        <div class="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-xl font-black text-amber-600">🥇</div>
-                        <div>
-                            <h3 class="font-bold text-gray-950 text-base">علیرضا صادقی</h3>
-                            <p class="text-xs text-gray-400">رشته تجربی</p>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-600 leading-relaxed italic">"پکیج ریاضی استاد عزیزی دید من رو به تست‌زنی عوض کرد. ریاضی رو از ۲۰ درصد به ۸۵ درصد رسوندم."</p>
-                </div>
-                <div class="bg-amber-50 text-amber-700 text-xs font-black px-3 py-1.5 rounded-xl inline-block self-start">
-                    رتبه ۱۴ کشوری
-                </div>
-            </div>
-            <div class="w-full max-w-[20rem] bg-white border border-gray-100 rounded-2xl p-6 shadow-sm text-right flex flex-col justify-between space-y-4 hover:shadow-md transition">
-                <div class="space-y-3">
-                    <div class="flex items-center space-x-3 space-x-reverse">
-                        <div class="w-12 h-12 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-xl font-black text-slate-500">🥈</div>
-                        <div>
-                            <h3 class="font-bold text-gray-950 text-base">سارا محمدی</h3>
-                            <p class="text-xs text-gray-400">رشته ریاضی</p>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-600 leading-relaxed italic">"فیزیک دوازدهم برام کابوس بود، اما آموزش‌های مفهومی استاد باعث شد بالاترین نمره رو در امتحانات نهایی بگیرم."</p>
-                </div>
-                <div class="bg-slate-100 text-slate-700 text-xs font-black px-3 py-1.5 rounded-xl inline-block self-start">
-                    رتبه ۴۲ منطقه
-                </div>
-            </div>
-            <div class="w-full max-w-[20rem] bg-white border border-gray-100 rounded-2xl p-6 shadow-sm text-right flex flex-col justify-between space-y-4 hover:shadow-md transition">
-                <div class="space-y-3">
-                    <div class="flex items-center space-x-3 space-x-reverse">
-                        <div class="w-12 h-12 rounded-full bg-amber-50/50 border border-amber-100 flex items-center justify-center text-xl font-black text-amber-700">🥉</div>
-                        <div>
-                            <h3 class="font-bold text-gray-950 text-base">امیرحسین کریمی</h3>
-                            <p class="text-xs text-gray-400">رشته تجربی</p>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-600 leading-relaxed italic">"ترکیبی خواندن زیست‌شناسی رو فقط مدیون این آکادمی هستم. تست‌های کنکور رو در کمترین زمان زدم."</p>
-                </div>
-                <div class="bg-amber-100/50 text-amber-800 text-xs font-black px-3 py-1.5 rounded-xl inline-block self-start">
-                    رتبه ۷۹ کشوری
-                </div>
-            </div>
-            <div class="w-full max-w-[20rem] bg-white border border-gray-100 rounded-2xl p-6 shadow-sm text-right flex flex-col justify-between space-y-4 hover:shadow-md transition">
-                <div class="space-y-3">
-                    <div class="flex items-center space-x-3 space-x-reverse">
-                        <div class="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-xl font-black text-indigo-600">🎯</div>
-                        <div>
-                            <h3 class="font-bold text-gray-950 text-base">زهرا راد</h3>
-                            <p class="text-xs text-gray-400">رشته تجربی</p>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-600 leading-relaxed italic">"خط به خط شیمی رو با ویدئوها خوندم؛ مسائلی که همیشه حذف می‌کردم، نقطه قوتم در کنکور شد."</p>
-                </div>
-                <div class="bg-indigo-50 text-indigo-700 text-xs font-black px-3 py-1.5 rounded-xl inline-block self-start">
-                    رتبه ۱۲۶ منطقه
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <footer class="bg-gray-950 text-gray-400 py-12 border-t border-gray-900">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-right">
-            <div class="space-y-4">
-                <a href="#" class="text-xl font-black text-white tracking-tight">
-                    آکادمی <span class="text-indigo-500">عزیزی</span>
-                </a>
-                <p class="text-xs text-gray-400 leading-relaxed max-w-sm">
-                    ارائه برترین راهکارهای آموزشی و پکیج‌های کنکوری تخصصی برای دانش‌آموزان سراسر کشور. آینده علمی خود را مطمئن بسازید.
-                </p>
-            </div>
-            <div class="space-y-3">
-                <h4 class="text-sm font-bold text-white">دسترسی سریع</h4>
-                <ul class="space-y-2 text-xs">
-                    <li><a href="#" class="hover:text-indigo-400 transition">صفحه اصلی</a></li>
-                    <li><a href="#packages" class="hover:text-indigo-400 transition">پکیج‌های آموزشی</a></li>
-                    <li><a href="#results" class="hover:text-indigo-400 transition">رتبه‌های برتر</a></li>
-                </ul>
-            </div>
-            <div class="space-y-3">
-                <h4 class="text-sm font-bold text-white">ارتباط با آکادمی</h4>
-                <p class="text-xs text-gray-400 leading-relaxed">همراه ما باشید تا از آخرین اخبار کنکور و تخفیف پکیج‌ها باخبر شوید.</p>
-                <div class="flex space-x-3 space-x-reverse pt-1">
-                    <a href="#" class="w-8 h-8 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-center text-sm text-gray-300 hover:bg-indigo-600 hover:text-white transition">✈</a>
-                    <a href="#" class="w-8 h-8 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-center text-sm text-gray-300 hover:bg-indigo-600 hover:text-white transition">📸</a>
-                </div>
-            </div>
-        </div>
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-6 border-t border-gray-900 text-center text-[10px] text-gray-600 font-medium">
-            <p>تمامی حقوق مادی و معنوی این وب‌سایت متعلق به آکادمی استاد مهدی عزیزی می‌باشد.</p>
-        </div>
+    <footer class="border-t border-gray-100 bg-white py-6 text-center text-xs text-gray-400 font-semibold">
+        تمامی حقوق قانونی و معنوی متعلق به آکادمی استاد مهدی عزیزی می‌باشد.
     </footer>
 
     <script>
@@ -279,57 +129,60 @@
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA'
         );
 
+        async function checkUserSession() {
+            const sessionToken = localStorage.getItem('session_token');
+            if (sessionToken) {
+                const { data: sessionData } = await db
+                    .from('user_sessions')
+                    .select('user_id, expires_at')
+                    .eq('token', sessionToken)
+                    .maybeSingle();
+
+                if (sessionData && new Date(sessionData.expires_at) > new Date()) {
+                    const authBtn = document.getElementById('auth-btn');
+                    if (authBtn) {
+                        authBtn.textContent = 'داشبورد من';
+                        authBtn.href = 'frontend/pages/dashboard.html';
+                    }
+                }
+            }
+        }
+
         async function fetchCourses() {
+            await checkUserSession();
+
             const container = document.getElementById('courses-container');
-            
+            if (!container) return;
+
             const { data: courses, error } = await db
                 .from('courses')
                 .select('*');
 
-            if (error) {
-                console.error(error);
-                container.innerHTML = `<div class="col-span-full text-center py-8 text-red-500 font-bold">خطا در بارگذاری اطلاعات از دیتابیس.</div>`;
-                return;
-            }
-
-            if (!courses || courses.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-8 text-gray-500">هیچ دوره‌ای یافت نشد.</div>`;
+            if (error || !courses || courses.length === 0) {
+                container.innerHTML = '<div class="w-full text-center py-12 text-red-400 font-bold text-sm">خطا در بارگذاری اطلاعات یا لیست دوره‌ها خالی است.</div>';
                 return;
             }
 
             container.innerHTML = '';
-
             courses.forEach(course => {
-                const priceText = course.price ? Number(course.price).toLocaleString('fa-IR') + ' تومان' : 'رایگان';
-                
-                let imageBlock = `<div class="bg-gradient-to-br from-indigo-500 to-purple-600 h-44 flex flex-col justify-between p-4 text-white">
-                                    <span class="bg-white/20 backdrop-blur-sm text-xs font-bold px-2 py-1 rounded-md self-start">دوره آموزشی</span>
-                                    <div class="font-black text-lg">${course.title}</div>
-                                 </div>`;
-                
-                if (course.image_url) {
-                    imageBlock = `<div class="h-44 w-full relative overflow-hidden">
-                                    <img src="${course.image_url}" alt="${course.title}" class="w-full h-full object-cover">
-                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4 text-white">
-                                        <div class="font-black text-lg">${course.title}</div>
-                                    </div>
-                                  </div>`;
-                }
-
                 const card = document.createElement('div');
-                card.className = "w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] flex-shrink-0 snap-start bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition flex flex-col justify-between";
+                card.className = 'w-72 sm:w-80 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0 snap-start flex flex-col justify-between hover:shadow-md transition duration-300';
                 
+                const imgUrl = course.image_url || 'https://via.placeholder.com/400x225?text=No+Image';
+                const formattedPrice = course.price ? Number(course.price).toLocaleString('fa-IR') + ' تومان' : 'رایگان';
+
                 card.innerHTML = `
-                    <div>
-                        ${imageBlock}
-                        <div class="p-5 text-right">
-                            <p class="text-xs text-gray-500 leading-relaxed font-medium line-clamp-3">${course.description || 'بدون توضیحات...'}</p>
-                        </div>
+                    <div class="relative aspect-video bg-gray-50 overflow-hidden">
+                        <img src="${imgUrl}" alt="${course.title || 'دوره'}" class="w-full h-full object-cover">
                     </div>
-                    <div class="p-5 pt-0 text-right">
-                        <div class="flex justify-between items-center pt-2 border-t border-gray-50">
-                            <div class="text-sm font-black text-indigo-600">${priceText}</div>
-                            <a href="pages/course-detail.html?id=${course.id}" class="bg-gray-950 hover:bg-gray-800 text-white text-xs font-bold px-3 py-2 rounded-xl transition">مشاهده</a>
+                    <div class="p-5 space-y-4 flex-grow flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <h3 class="font-black text-sm sm:text-base text-gray-950 line-clamp-1">${course.title || 'بدون نام'}</h3>
+                            <p class="text-xs text-gray-400 font-medium leading-relaxed line-clamp-2">${course.description || 'توضیحات این پکیج آموزشی به زودی تکمیل خواهد شد.'}</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-3 border-t border-gray-50">
+                            <span class="text-xs sm:text-sm font-black text-indigo-600">${formattedPrice}</span>
+                            <a href="frontend/pages/courses-detail.html?id=${course.id}" class="bg-gray-950 hover:bg-gray-800 text-white text-xs font-bold px-3 py-2 rounded-xl transition">مشاهده</a>
                         </div>
                     </div>
                 `;
