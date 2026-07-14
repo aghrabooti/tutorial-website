@@ -248,31 +248,25 @@ document.getElementById("page-heading");
 
 
 
-gradeSelect.addEventListener(
-"change",
-()=>{
+gradeSelect.addEventListener("change", () => {
 
+    if (gradeSelect.value === "9") {
 
-if(gradeSelect.value==="9"){
+        majorSelect.disabled = true;
+        majorSelect.value = "";
+        majorSelect.required = false;
 
+    } else {
 
-majorWrapper.classList.add("hidden");
+        majorSelect.disabled = false;
+        majorSelect.required = true;
 
-majorSelect.required=false;
+    }
 
-
-}
-else{
-
-
-majorWrapper.classList.remove("hidden");
-
-majorSelect.required=true;
-
-
-}
-
-
+    majorSelect.classList.toggle(
+    "opacity-50",
+    majorSelect.disabled
+);
 
 });
 
@@ -282,235 +276,35 @@ majorSelect.required=true;
 
 
 
-
-async function fetchExistingData(){
-
-
-    const token =
-    localStorage.getItem("session_token");
-
-
-    if(!token){
-
-        window.location.href="login.html";
+async function fetchExistingData() {
+    const token = localStorage.getItem("session_token");
+    if (!token) {
+        window.location.href = "login.html";
         return;
-
     }
 
 
-
-    const result =
-    await apiCall(
-        "check-session",
-        {
-            token
-        }
-    );
-
-
-
-    console.log(result);
-
-
-
-    if(!result.valid){
-
+    if (!result.valid) {
         localStorage.clear();
-
-        window.location.href="login.html";
-
+        window.location.href = "login.html";
         return;
-
     }
 
+    currentUser = result.user;
 
+    document.getElementById("first-name").value = currentUser.first_name || "";
+    document.getElementById("last-name").value = currentUser.last_name || "";
 
-    currentUser =
-    result.user;
+    if (currentUser.grade) {
+        gradeSelect.value = currentUser.grade;
+        
+        gradeSelect.dispatchEvent(new Event("change"));
 
-
-
-    if(currentUser.first_name){
-
-        pageHeading.textContent =
-        "ویرایش پروفایل تحصیلی";
-
-
-        saveBtn.textContent =
-        "بروزرسانی اطلاعات";
-
-    }
-
-
-
-    document
-    .getElementById("first-name")
-    .value =
-    currentUser.first_name || "";
-
-
-
-    document
-    .getElementById("last-name")
-    .value =
-    currentUser.last_name || "";
-
-
-
-
-    if(currentUser.grade){
-
-
-        gradeSelect.value =
-        currentUser.grade;
-
-
-        gradeSelect.dispatchEvent(
-            new Event("change")
-        );
-
-
-
-        if(
-            currentUser.major &&
-            currentUser.grade !== "9"
-        ){
-
-            majorSelect.value =
-            currentUser.major;
-
+        if (currentUser.grade !== "9" && currentUser.major) {
+            majorSelect.value = currentUser.major;
         }
-
     }
-
 }
-
-
-
-
-
-
-
-const result =
-await apiCall(
-"check-session",
-{
-token
-}
-);
-
-
-
-
-
-console.log(result);
-
-
-
-
-
-if(!result.success){
-
-
-localStorage.clear();
-
-window.location.href="login.html";
-
-return;
-
-
-}
-
-
-
-
-
-currentUser =
-result.user;
-
-
-
-
-
-
-
-
-if(currentUser.first_name){
-
-
-pageHeading.textContent =
-"ویرایش پروفایل تحصیلی";
-
-
-saveBtn.textContent =
-"بروزرسانی اطلاعات";
-
-
-}
-
-
-
-
-
-
-document.getElementById(
-"first-name"
-).value =
-currentUser.first_name || "";
-
-
-
-
-
-document.getElementById(
-"last-name"
-).value =
-currentUser.last_name || "";
-
-
-
-
-
-
-if(currentUser.grade){
-
-
-gradeSelect.value =
-currentUser.grade;
-
-
-gradeSelect.dispatchEvent(
-new Event("change")
-);
-
-
-
-
-if(
-currentUser.major &&
-currentUser.grade!=="9"
-){
-
-majorSelect.value =
-currentUser.major;
-
-
-}
-
-
-
-}
-
-
-
-
-}
-
-
-
-
-
-
 
 
 
@@ -568,7 +362,7 @@ gradeSelect.value,
 major:
 gradeSelect.value==="9"
 ?
-"سایر"
+"null"
 :
 majorSelect.value
 
