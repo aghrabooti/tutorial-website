@@ -7,7 +7,6 @@
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -116,155 +115,172 @@
     <footer class="border-t border-gray-200 bg-white py-5 text-center text-xs text-gray-500 font-medium">
         تمامی حقوق برای آکادمی آموزشی محفوظ است.
     </footer>
+    <script src="../js/api.js"></script>
+
 
     <script>
-        const db = supabase.createClient(
-            'https://qbsfotperzzhuimnpmto.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA'
+
+    async function loadDashboardData(){
+
+
+        const token =
+        localStorage.getItem("session_token");
+
+
+
+        if(!token){
+
+            window.location.href="login.html";
+            return;
+
+        }
+
+
+
+
+        const result =
+        await apiCall(
+            "check-session",
+            {
+                token
+            }
         );
 
-        async function loadDashboardData() {
-            const sessionToken = localStorage.getItem('session_token');
-            if (!sessionToken) {
-                window.location.href = 'login.html';
-                return;
-            }
 
-            const { data: sessionData, error: sessionError } = await db
-                .from('user_sessions')
-                .select('user_id, expires_at')
-                .eq('token', sessionToken)
-                .maybeSingle();
 
-            if (sessionError || !sessionData || new Date(sessionData.expires_at) < new Date()) {
-                localStorage.clear();
-                window.location.href = 'login.html';
-                return;
-            }
 
-            const currentUserId = sessionData.user_id;
+        console.log(result);
 
-            const { data: userRow, error: userError } = await db
-                .from('site_users')
-                .select('*')
-                .eq('id', currentUserId)
-                .maybeSingle();
 
-            if (userError || !userRow) {
-                localStorage.clear();
-                window.location.href = 'login.html';
-                return;
-            }
 
-            if (!userRow.first_name || !userRow.last_name || !userRow.grade) {
-                window.location.href = 'complete-profile.html';
-                return;
-            }
 
-            if (userRow.first_name) {
-                document.getElementById('user-first-name').textContent = userRow.first_name;
-            }
+        if(!result.success){
 
-            const fullName = (userRow.first_name || '') + ' ' + (userRow.last_name || '');
-            document.getElementById('profile-full-name').textContent = fullName.trim() !== '' ? fullName : 'ثبت نشده';
-            document.getElementById('profile-phone').textContent = userRow.phone || '-';
-            
-            let gradeText = '-';
-            if (userRow.grade === '9') gradeText = 'نهم';
-            else if (userRow.grade === '10') gradeText = 'دهم';
-            else if (userRow.grade === '11') gradeText = 'یازدهم';
-            else if (userRow.grade === '12') gradeText = 'دوازدهم';
-            document.getElementById('profile-grade').textContent = gradeText;
 
-            let majorText = userRow.major || '-';
-            if (userRow.major === 'ریاضی') majorText = 'ریاضی فیزیک';
-            else if (userRow.major === 'تجربی') majorText = 'علوم تجربی';
-            else if (userRow.major === 'انسانی') majorText = 'علوم انسانی';
-            document.getElementById('profile-field').textContent = majorText;
-
-            loadUserPurchasedCourses(currentUserId);
-        }
-
-        async function loadUserPurchasedCourses(userId) {
-            const container = document.getElementById('purchased-courses-container');
-            
-            const { data: purchases, error: purchaseError } = await db
-                .from('user_purchases')
-                .select('course_id')
-                .eq('user_id', userId);
-
-            if (purchaseError) {
-                container.innerHTML = `
-                    <div class="col-span-full py-8 text-center bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-bold">
-                        خطا در دریافت لیست دوره‌ها. لطفاً اتصال خود را بررسی کنید.
-                    </div>`;
-                return;
-            }
-
-            if (!purchases || purchases.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full py-12 flex flex-col items-center justify-center text-center gap-3 bg-gray-50 border border-gray-100 rounded-2xl">
-                        <div class="w-14 h-14 bg-white border border-gray-100 rounded-full flex items-center justify-center shadow-sm">
-                            <i class="fa-solid fa-graduation-cap text-gray-300 text-xl"></i>
-                        </div>
-                        <p class="text-sm font-bold text-gray-800">شما هنوز در هیچ دوره‌ای ثبت‌نام نکرده‌اید!</p>
-                        <a href="courses.html" class="mt-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition duration-300">
-                            مشاهده و تهیه پکیج‌های آموزشی
-                        </a>
-                    </div>`;
-                return;
-            }
-
-            const courseIds = purchases.map(p => p.course_id);
-
-            const { data: courses, error: coursesError } = await db
-                .from('courses')
-                .select('*')
-                .in('id', courseIds);
-
-            if (coursesError || !courses || courses.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full py-8 text-center bg-amber-50 border border-amber-100 rounded-2xl text-amber-700 text-sm font-bold">
-                        اطلاعات ساختاری دوره‌ها یافت نشد یا حذف شده است.
-                    </div>`;
-                return;
-            }
-
-            container.innerHTML = '';
-            courses.forEach(course => {
-                const card = document.createElement('div');
-                card.className = 'bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between';
-                
-                const imgUrl = course.image_url || 'https://via.placeholder.com/400x225?text=No+Image';
-                const detailUrl = `courses-detail.html?id=${course.id}`;
-
-                card.innerHTML = `
-                    <div class="relative aspect-video bg-gray-100 overflow-hidden">
-                        <img src="${imgUrl}" alt="${course.title || 'دوره'}" class="w-full h-full object-cover">
-                        <span class="absolute top-3 right-3 bg-emerald-500 text-white text-[10px] font-black px-2.5 py-1 rounded-md shadow-sm">
-                            فعال شده
-                        </span>
-                    </div>
-                    <div class="p-4 flex flex-col justify-between flex-grow gap-4">
-                        <h4 class="font-black text-sm text-gray-900 line-clamp-1">${course.title || 'بدون نام'}</h4>
-                        <div class="flex items-center justify-between pt-3 border-t border-gray-50">
-                            <span class="text-[11px] font-bold text-gray-400">دسترسی همیشگی</span>
-                            <a href="${detailUrl}" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-sm shadow-indigo-600/10">
-                                ورود به کلاس
-                            </a>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        document.getElementById('logout-btn').addEventListener('click', () => {
             localStorage.clear();
-            window.location.href = 'login.html';
-        });
 
-        document.addEventListener('DOMContentLoaded', loadDashboardData);
+            window.location.href="login.html";
+
+            return;
+
+        }
+
+
+
+
+
+        const user =
+        result.user;
+
+
+
+
+
+
+        // اسم در هدر
+
+        document
+        .getElementById("user-first-name")
+        .textContent =
+        user.first_name || "دانش‌آموز";
+
+
+
+
+
+
+        // نام کامل
+
+        const fullName =
+        `${user.first_name || ""}
+        ${user.last_name || ""}`;
+
+
+
+        document
+        .getElementById("profile-full-name")
+        .textContent =
+        fullName.trim() || "ثبت نشده";
+
+
+
+
+
+
+
+        document
+        .getElementById("profile-phone")
+        .textContent =
+        user.phone || "-";
+
+
+
+
+
+
+
+        let gradeText="-";
+
+
+        if(user.grade==="9")
+            gradeText="نهم";
+
+        else if(user.grade==="10")
+            gradeText="دهم";
+
+        else if(user.grade==="11")
+            gradeText="یازدهم";
+
+        else if(user.grade==="12")
+            gradeText="دوازدهم";
+
+
+
+        document
+        .getElementById("profile-grade")
+        .textContent =
+        gradeText;
+
+
+
+
+
+
+        let majorText =
+        user.major || "-";
+
+
+        if(user.major==="ریاضی")
+            majorText="ریاضی فیزیک";
+
+
+        else if(user.major==="تجربی")
+            majorText="علوم تجربی";
+
+
+        else if(user.major==="انسانی")
+            majorText="علوم انسانی";
+
+
+
+        document
+        .getElementById("profile-field")
+        .textContent =
+        majorText;
+
+
+
+
+
+
+        //loadUserPurchasedCourses(user.id);
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            loadDashboardData
+            );
+
+    }
     </script>
 </body>
 </html>
