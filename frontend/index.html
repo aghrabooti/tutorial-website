@@ -60,7 +60,7 @@
 
         <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-gray-100 px-4 pt-2 pb-4 space-y-3 shadow-inner">
             <a href="#" class="block text-sm font-bold text-indigo-600 bg-indigo-50/50 px-3 py-2 rounded-xl">صفحه اصلی</a>
-            <a href="frontend/pages/courses.html" class="block text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 px-3 py-2 rounded-xl transition">پکیج‌های آموزشی</a>
+            <a href="pages/courses.html" class="block text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 px-3 py-2 rounded-xl transition">پکیج‌های آموزشی</a>
             <a href="#" class="block text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 px-3 py-2 rounded-xl transition">درباره ما</a>
             <a href="#" class="block text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 px-3 py-2 rounded-xl transition">تماس با ما</a>
         </div>
@@ -78,7 +78,7 @@
                     دسترسی کامل به پکیج‌های ویدئویی تستی و تشریحی مقاطع نهم، دهم، یازدهم و دوازدهم رشته‌های ریاضی و تجربی به همراه درسنامه‌های روان و سیستم رفع اشکال هوشمند.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
-                    <a href="frontend/pages/courses.html" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl transition duration-300 shadow-xl shadow-indigo-600/10 text-center text-sm">
+                    <a href="pages/courses.html" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl transition duration-300 shadow-xl shadow-indigo-600/10 text-center text-sm">
                         مشاهده پکیج‌های آموزشی
                     </a>
                     <a href="#" class="w-full sm:w-auto bg-white border border-gray-200 hover:border-gray-300 text-gray-700 font-bold px-8 py-4 rounded-2xl transition duration-300 text-center text-sm shadow-sm">
@@ -123,104 +123,8 @@
         تمامی حقوق قانونی و معنوی متعلق به آکادمی استاد مهدی عزیزی می‌باشد.
     </footer>
 
-    <script>
-        const db = supabase.createClient(
-            'https://qbsfotperzzhuimnpmto.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA'
-        );
-
-        async function checkUserSession() {
-            const sessionToken = localStorage.getItem('session_token');
-            if (sessionToken) {
-                const { data: sessionData } = await db
-                    .from('user_sessions')
-                    .select('user_id, expires_at')
-                    .eq('token', sessionToken)
-                    .maybeSingle();
-
-                if (sessionData && new Date(sessionData.expires_at) > new Date()) {
-                    const authBtn = document.getElementById('auth-btn');
-                    if (authBtn) {
-                        authBtn.textContent = 'داشبورد من';
-                        authBtn.href = 'frontend/pages/dashboard.html';
-                    }
-                }
-            }
-        }
-
-        async function fetchCourses() {
-            await checkUserSession();
-
-            const container = document.getElementById('courses-container');
-            if (!container) return;
-
-            const { data: courses, error } = await db
-                .from('courses')
-                .select('*');
-
-            if (error || !courses || courses.length === 0) {
-                container.innerHTML = '<div class="w-full text-center py-12 text-red-400 font-bold text-sm">خطا در بارگذاری اطلاعات یا لیست دوره‌ها خالی است.</div>';
-                return;
-            }
-
-            container.innerHTML = '';
-            courses.forEach(course => {
-                const card = document.createElement('div');
-                card.className = 'w-72 sm:w-80 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0 snap-start flex flex-col justify-between hover:shadow-md transition duration-300';
-                
-                const imgUrl = course.image_url || 'https://via.placeholder.com/400x225?text=No+Image';
-                const formattedPrice = course.price ? Number(course.price).toLocaleString('fa-IR') + ' تومان' : 'رایگان';
-
-                card.innerHTML = `
-                    <div class="relative aspect-video bg-gray-50 overflow-hidden">
-                        <img src="${imgUrl}" alt="${course.title || 'دوره'}" class="w-full h-full object-cover">
-                    </div>
-                    <div class="p-5 space-y-4 flex-grow flex flex-col justify-between">
-                        <div class="space-y-2">
-                            <h3 class="font-black text-sm sm:text-base text-gray-950 line-clamp-1">${course.title || 'بدون نام'}</h3>
-                            <p class="text-xs text-gray-400 font-medium leading-relaxed line-clamp-2">${course.description || 'توضیحات این پکیج آموزشی به زودی تکمیل خواهد شد.'}</p>
-                        </div>
-                        <div class="flex items-center justify-between pt-3 border-t border-gray-50">
-                            <span class="text-xs sm:text-sm font-black text-indigo-600">${formattedPrice}</span>
-                            <a href="frontend/pages/courses-detail.html?id=${course.id}" class="bg-gray-950 hover:bg-gray-800 text-white text-xs font-bold px-3 py-2 rounded-xl transition">مشاهده</a>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function initSlider() {
-            const container = document.getElementById('courses-container');
-            const prevBtn = document.getElementById('slide-prev-btn');
-            const nextBtn = document.getElementById('slide-next-btn');
-
-            if (container && prevBtn && nextBtn) {
-                prevBtn.addEventListener('click', () => {
-                    container.scrollLeft -= 320; 
-                });
-                nextBtn.addEventListener('click', () => {
-                    container.scrollLeft += 320;
-                });
-            }
-        }
-
-        function initMobileMenu() {
-            const toggleBtn = document.getElementById('menu-toggle-btn');
-            const mobileMenu = document.getElementById('mobile-menu');
-
-            if (toggleBtn && mobileMenu) {
-                toggleBtn.addEventListener('click', () => {
-                    mobileMenu.classList.toggle('hidden');
-                });
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchCourses();
-            initMobileMenu();
-            initSlider();
-        });
-    </script>
+<script src="js/supabase-client.js"></script>
+<script src="js/api.js"></script>
+<script src="js/home.js"></script>
 </body>
 </html>
