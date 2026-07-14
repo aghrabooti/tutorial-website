@@ -133,34 +133,7 @@
         تمامی حقوق برای آکادمی آموزشی محفوظ است.
     </footer>
 
-    <script>
-        const db = supabase.createClient(
-            'https://qbsfotperzzhuimnpmto.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA'
-        );
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            const sessionToken = localStorage.getItem('session_token');
-            if (!sessionToken) {
-                window.location.href = 'login.html';
-                return;
-            }
-            const { data: sessionData, error: sessionError } = await db
-                .from('user_sessions')
-                .select('user_id, expires_at')
-                .eq('token', sessionToken)
-                .maybeSingle();
-            if (sessionError || !sessionData || new Date(sessionData.expires_at) < new Date()) {
-                localStorage.clear();
-                window.location.href = 'login.html';
-                return;
-            }
-            const authBtn = document.getElementById('auth-btn');
-            if (authBtn) {
-                authBtn.textContent = 'داشبورد من';
-                authBtn.href = 'dashboard.html';
-            }
-        });
-    </script>
+    <script src="../js/api.js"></script>
+    <script src="../js/cart.js"></script>
 </body>
 </html>
