@@ -139,7 +139,19 @@ function renderCourse(course){
         );
 
     }
+    const buyBtn =
+document.getElementById("buy-btn");
 
+
+if(buyBtn){
+
+    buyBtn.onclick = ()=>{
+
+        addToCart(course.id);
+
+    };
+
+}
 }
 
 
@@ -400,3 +412,47 @@ document.addEventListener(
     initMobileMenu();
 
 });
+
+async function addToCart(courseId){
+
+    const token =
+    localStorage.getItem("session_token");
+
+    if(!token){
+
+        window.location.href="login.html";
+        return;
+
+    }
+
+    try{
+
+        const result =
+        await apiCall(
+            "add-to-cart",
+            {
+                token,
+                course_id:courseId
+            }
+        );
+
+        if(!result.success){
+
+            alert(result.error);
+            return;
+
+        }
+
+        window.location.href="cart.html";
+
+    }
+    catch(err){
+
+        console.error(err);
+
+        alert("خطا در ارتباط با سرور");
+
+    }
+
+}
+
