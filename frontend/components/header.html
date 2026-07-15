@@ -17,7 +17,7 @@ class="text-xl font-black">
 
 
 
-<nav class="hidden md:flex gap-6">
+<nav class="flex gap-6">
 
 
 <a 
@@ -33,7 +33,7 @@ class="nav-link text-gray-600">
 
 <a 
 data-page="courses"
-href="courses.html"
+href="/frontend/pages/courses.html"
 class="nav-link text-gray-600">
 
 دوره‌ها
@@ -44,10 +44,10 @@ class="nav-link text-gray-600">
 
 <a 
 data-page="dashboard"
-href="dashboard.html"
+href="/frontend/pages/about-us.html"
 class="nav-link text-gray-600">
 
-داشبورد
+درباره ما
 
 </a>
 
@@ -58,26 +58,22 @@ class="nav-link text-gray-600">
 
 
 
-<a href="cart.html"
-class="relative">
+<a href="/frontend/pages/cart.html" class="relative w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-300 flex items-center justify-center transition-all duration-200">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+    </svg>
 
-<i class="fa-solid fa-cart-shopping text-xl"></i>
-
-
-<span
-id="cart-count-badge"
-class="hidden absolute -top-3 -right-3 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-
-</span>
-
-
+    <span
+        id="cart-count-badge"
+        class="hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+        0
+    </span>
 </a>
-
 
 
 <a
 id="auth-btn"
-href="login.html"
+href="/frontend/pages/login.html"
 class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl">
 
 ورود / ثبت‌نام
