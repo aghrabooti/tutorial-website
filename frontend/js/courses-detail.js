@@ -330,214 +330,126 @@ function hidePurchaseBox(){
 
 async function showPurchasedContent(course){
 
-
     const content =
     document.getElementById(
         "course-content"
     );
 
 
-
     if(!content)
         return;
 
 
-
+    document
+    .getElementById("purchase-view")
+    ?.classList.add("hidden");
 
 
     document
-    .getElementById(
-        "purchase-view"
-    )
-    ?.classList.add(
-        "hidden"
-    );
+    .getElementById("content-view")
+    ?.classList.remove("hidden");
 
 
 
-    document
-    .getElementById(
-        "content-view"
-    )
-    ?.classList.remove(
-        "hidden"
-    );
-
-
-
-
-
-
-
-    // دوره ویدیویی
-
-    if(course.type==="course"){
-
-
-
-        const token =
-        localStorage.getItem(
-            "session_token"
-        );
-
-
-
-        const result =
-        await apiCall(
-            "get-course-sessions",
-            {
-                token,
-                course_id:course.id
-            }
-        );
-
-
-
-        if(!result.success){
-
-
-            content.innerHTML = `
-
-            <div class="text-red-500 font-bold">
-
-            خطا در دریافت جلسات
-
-            </div>
-
-            `;
-
-
-            return;
-
-        }
-
-
-
-
-
-        if(!result.sessions ||
-           result.sessions.length===0){
-
-
-            content.innerHTML = `
-
-            <div class="text-gray-500">
-
-            هنوز جلسه‌ای برای این دوره ثبت نشده است.
-
-            </div>
-
-            `;
-
-
-            return;
-
-        }
-
-
-
-
-
-        let html="";
-
-
-
-        result.sessions.forEach(session=>{
-
-
-            html += `
-
-            <div class="bg-white border rounded-2xl p-5">
-
-
-                <h4 class="font-black text-lg">
-
-                    جلسه ${session.session_number}
-                    -
-                    ${session.title}
-
-                </h4>
-
-
-
-                <button
-
-                onclick="playVideo('${session.video_url}')"
-
-                class="mt-4 bg-indigo-600 text-white px-5 py-2 rounded-xl">
-
-                    پخش ویدیو
-
-                </button>
-
-
-            </div>
-
-
-            `;
-
-
-        });
-
-
-
-
+    if(course.type !== "course"){
 
         content.innerHTML = `
 
-
-        <div class="space-y-5">
-
+        <div class="bg-white border rounded-2xl p-6">
 
             <h3 class="text-xl font-black">
-
-            جلسات دوره
-
+                فایل آموزشی
             </h3>
 
+            <button
+            class="mt-5 bg-green-600 text-white px-6 py-2 rounded-xl">
 
-            ${html}
+                دانلود فایل
 
+            </button>
 
         </div>
 
-
         `;
 
-
+        return;
 
     }
 
 
 
+    const token =
+    localStorage.getItem(
+        "session_token"
+    );
+
+
+    const result =
+    await apiCall(
+        "get-course-sessions",
+        {
+            token,
+            course_id:course.id
+        }
+    );
 
 
 
+    if(!result.success){
 
-    // فایل آموزشی
+        content.innerHTML =
+        `
+        <div class="text-red-500 font-bold">
+        خطا در دریافت جلسات
+        </div>
+        `;
 
-    else{
+        return;
+
+    }
 
 
-        content.innerHTML = `
+
+    let sessionsHTML = "";
 
 
-        <div class="bg-white border rounded-2xl p-6">
+
+    result.sessions.forEach(
+        session=>{
 
 
-            <h3 class="font-black text-xl">
+        sessionsHTML += `
 
-            فایل آموزشی
 
-            </h3>
+        <div 
+        class="bg-gray-50 border rounded-xl p-4">
+
+
+            <h4 class="font-bold text-gray-800">
+
+                جلسه ${session.session_number}
+                -
+                ${session.title}
+
+            </h4>
 
 
 
             <button
 
-            class="mt-5 bg-green-600 text-white px-6 py-3 rounded-xl">
+            onclick="playVideo('${session.video_url}')"
 
-            دانلود فایل
+            class="
+            mt-3
+            bg-indigo-600
+            text-white
+            px-4
+            py-2
+            rounded-xl
+            text-sm
+            hover:bg-indigo-700">
+
+                مشاهده
 
             </button>
 
@@ -548,91 +460,61 @@ async function showPurchasedContent(course){
         `;
 
 
-    }
+    });
 
 
 
-}
+    content.innerHTML = `
 
 
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
 
+        <!-- Player -->
+
+        <div 
+        class="lg:col-span-2 bg-black rounded-3xl overflow-hidden aspect-video flex items-center justify-center">
 
 
+            <div id="video-player"
+            class="w-full h-full flex items-center justify-center text-white">
 
 
-
-async function addToCart(courseId){
-
-
-    const token =
-    localStorage.getItem(
-        "session_token"
-    );
+                یک جلسه را برای مشاهده انتخاب کنید
 
 
-
-    if(!token){
-
-        window.location.href="login.html";
-        return;
-
-    }
+            </div>
 
 
-
-    const result =
-    await apiCall(
-        "add-to-cart",
-        {
-            token,
-            course_id:courseId
-        }
-    );
-
-
-
-    if(!result.success){
-
-        alert(result.error);
-        return;
-
-    }
-
-
-
-    window.location.href="cart.html";
-
-
-}
+        </div>
 
 
 
 
+        <!-- Sessions -->
+
+
+        <div class="space-y-4">
+
+
+            <h3 class="text-xl font-black">
+
+                جلسات دوره
+
+            </h3>
 
 
 
+            ${sessionsHTML}
 
 
-function showError(message){
+        </div>
 
 
-    const box =
-    document.getElementById(
-        "description"
-    );
+    </div>
 
 
-    if(box){
-
-        box.textContent =
-        message;
-
-
-        box.className =
-        "text-red-500 font-bold";
-
-    }
+    `;
 
 
 }
