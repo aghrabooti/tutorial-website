@@ -8,13 +8,16 @@
 
 <title>ثبت نام | آکادمی استاد مهدی عزیزی</title>
 
+
 <link
 href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
 rel="stylesheet">
 
+
 <link
 href="https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/font-face.css"
 rel="stylesheet">
+
 
 <style>
 body{
@@ -22,13 +25,20 @@ font-family:Vazir,sans-serif;
 }
 </style>
 
+
 </head>
+
 
 <body class="bg-gray-50 min-h-screen flex items-center justify-center">
 
+
+
 <div class="bg-white w-full max-w-md mx-4 p-8 rounded-3xl shadow-xl border border-gray-100">
 
+
+
 <div class="text-center mb-8">
+
 
 <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center mb-4">
 
@@ -38,43 +48,32 @@ font-family:Vazir,sans-serif;
 
 </div>
 
+
+
 <h1 class="text-2xl font-bold text-gray-900">
 ایجاد حساب کاربری
 </h1>
 
+
 <p class="text-gray-500 text-sm mt-2">
-اطلاعات خود را وارد کنید
+شماره موبایل خود را ثبت کنید
 </p>
 
+
+
 </div>
+
+
+
+
 
 <div class="space-y-5">
 
-<div>
 
-<label class="block text-sm font-bold text-gray-700 mb-2">
-نام
-</label>
 
-<input
-id="first-name"
-type="text"
-class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
 
-</div>
 
-<div>
-
-<label class="block text-sm font-bold text-gray-700 mb-2">
-نام خانوادگی
-</label>
-
-<input
-id="last-name"
-type="text"
-class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
-
-</div>
+<!-- Phone -->
 
 <div>
 
@@ -82,14 +81,102 @@ class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outl
 شماره موبایل
 </label>
 
+
 <input
 id="phone"
 type="tel"
 dir="ltr"
 placeholder="09123456789"
-class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500">
+class="
+w-full
+px-4
+py-3
+bg-gray-50
+border
+border-gray-200
+rounded-2xl
+text-center
+tracking-widest
+focus:outline-none
+focus:ring-2
+focus:ring-indigo-500
+">
+
 
 </div>
+
+
+
+
+
+<!-- Send OTP -->
+
+<button
+id="send-otp-btn"
+class="
+w-full
+bg-gray-800
+hover:bg-gray-900
+text-white
+font-bold
+py-3
+rounded-2xl
+transition
+">
+
+ارسال کد تایید
+
+</button>
+
+
+
+
+
+
+
+<!-- OTP -->
+
+<div class="hidden" id="otp-box">
+
+
+<label class="block text-sm font-bold text-gray-700 mb-2">
+کد تایید
+</label>
+
+
+<input
+id="otp"
+type="text"
+dir="ltr"
+maxlength="6"
+placeholder="123456"
+class="
+w-full
+px-4
+py-3
+bg-gray-50
+border
+border-gray-200
+rounded-2xl
+text-center
+tracking-widest
+focus:outline-none
+focus:ring-2
+focus:ring-indigo-500
+">
+
+
+</div>
+
+
+
+
+
+
+
+
+<!-- Password -->
+
 
 <div>
 
@@ -97,12 +184,35 @@ class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-cente
 رمز عبور
 </label>
 
+
 <input
 id="password"
 type="password"
-class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+placeholder="حداقل ۶ کاراکتر"
+class="
+w-full
+px-4
+py-3
+bg-gray-50
+border
+border-gray-200
+rounded-2xl
+focus:outline-none
+focus:ring-2
+focus:ring-indigo-500
+">
+
 
 </div>
+
+
+
+
+
+
+
+<!-- Confirm Password -->
+
 
 <div>
 
@@ -110,24 +220,65 @@ class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outl
 تکرار رمز عبور
 </label>
 
+
 <input
 id="confirm-password"
 type="password"
-class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+placeholder="تکرار رمز عبور"
+class="
+w-full
+px-4
+py-3
+bg-gray-50
+border
+border-gray-200
+rounded-2xl
+focus:outline-none
+focus:ring-2
+focus:ring-indigo-500
+">
+
 
 </div>
 
+
+
+
+
+
+
+
+
 <button
 id="register-btn"
-class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl transition">
+class="
+hidden
+w-full
+bg-indigo-600
+hover:bg-indigo-700
+text-white
+font-bold
+py-3.5
+rounded-2xl
+transition
+">
 
 ثبت نام
 
 </button>
 
+
+
+
+
+
+
+
 <div class="text-center text-sm">
 
+
 قبلاً حساب دارید؟
+
 
 <a
 href="login.html"
@@ -137,19 +288,37 @@ class="text-indigo-600 font-bold">
 
 </a>
 
-</div>
 
 </div>
+
+
+
+
+</div>
+
+
+
+
 
 <p
 id="message"
 class="text-center text-sm mt-5 text-gray-500">
 </p>
 
+
+
+
+
 </div>
 
+
+
+
+
 <script src="../js/api.js"></script>
+
 <script src="../js/register.js"></script>
+
 
 </body>
 
