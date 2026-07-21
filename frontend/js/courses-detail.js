@@ -573,3 +573,48 @@ function playVideo(url){
     `;
 
 }
+
+async function addToCart(courseId){
+
+    const token =
+    localStorage.getItem("session_token");
+
+    if(!token){
+
+        window.location.href = "login.html";
+        return;
+
+    }
+
+    try{
+
+        const result =
+        await apiCall(
+            "add-to-cart",
+            {
+                token,
+                course_id: courseId
+            }
+        );
+
+        console.log(result);
+
+        if(!result.success){
+
+            alert(result.error || "خطا در افزودن به سبد خرید");
+            return;
+
+        }
+
+        window.location.href = "cart.html";
+
+    }
+    catch(error){
+
+        console.error(error);
+
+        alert("خطا در ارتباط با سرور");
+
+    }
+
+}
