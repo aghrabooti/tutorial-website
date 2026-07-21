@@ -398,7 +398,6 @@ async()=>{
 
 
 
-// با Enter وارد شود
 
 document.addEventListener(
 "keydown",
@@ -417,7 +416,27 @@ document.addEventListener(
 });
 
 
+const registerBtn =
+document.getElementById("register-btn");
 
+const forgotBtn =
+document.getElementById("forgot-btn");
+
+registerBtn.addEventListener(
+    "click",
+    ()=>{
+        window.location.href =
+        "register.html";
+    }
+);
+
+forgotBtn.addEventListener(
+    "click",
+    ()=>{
+        window.location.href =
+        "forgot-password.html";
+    }
+);
 
 
 
