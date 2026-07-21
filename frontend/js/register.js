@@ -211,11 +211,10 @@ async()=>{
 
 
 
-        // تایید OTP
 
         const verify =
         await apiCall(
-            "verify-otp",
+            "otp-verify",
             {
                 phone,
                 code:otp,
