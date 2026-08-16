@@ -388,7 +388,7 @@ function applyFilters(){
 
 
         const type =
-        c.product_type || "course";
+        c.type || "course";
 
 
         const grade =
