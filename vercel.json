@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/test-vercel",
+      "source": "/",
       "destination": "/frontend/index.html"
     }
   ]
