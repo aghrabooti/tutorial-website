@@ -221,3 +221,95 @@ async function removeFromCart(cartItemId){
     }
 
 }
+
+
+// ──────────────────────────────────────────────
+// پرداخت: اتصال به درگاه زرین‌پال
+// ──────────────────────────────────────────────
+
+document.addEventListener("DOMContentLoaded", ()=>{
+
+    const checkoutBtn =
+    document.getElementById("checkout-btn");
+
+    const termsBox =
+    document.getElementById("terms");
+
+    if(!checkoutBtn)
+        return;
+
+    checkoutBtn.addEventListener(
+    "click",
+    async()=>{
+
+        const token =
+        localStorage.getItem("session_token");
+
+        if(!token){
+
+            window.location.href = "login.html";
+            return;
+
+        }
+
+        if(termsBox && !termsBox.checked){
+
+            alert(
+                "لطفاً ابتدا شرایط و مقررات را بپذیرید"
+            );
+
+            return;
+
+        }
+
+        checkoutBtn.disabled = true;
+
+        const originalText =
+        checkoutBtn.innerText;
+
+        checkoutBtn.innerText =
+        "در حال اتصال به درگاه پرداخت...";
+
+        try{
+
+            const result =
+            await apiCall(
+                "payment-request",
+                { token }
+            );
+
+            if(!result.success){
+
+                alert(
+                    result.error ||
+                    "خطا در شروع پرداخت"
+                );
+
+                return;
+
+            }
+
+            // هدایت کاربر به درگاه زرین‌پال
+            window.location.href =
+            result.pay_url;
+
+        }
+        catch(error){
+
+            console.error(error);
+
+            alert("خطا در ارتباط با سرور");
+
+        }
+        finally{
+
+            checkoutBtn.disabled = false;
+
+            checkoutBtn.innerText =
+            originalText;
+
+        }
+
+    });
+
+});

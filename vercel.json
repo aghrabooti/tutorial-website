@@ -33,6 +33,10 @@
       "destination": "/frontend/pages/login.html"
     },
     {
+      "source": "/payment-result",
+      "destination": "/frontend/pages/payment-result.html"
+    },
+    {
       "source": "/register",
       "destination": "/frontend/pages/register.html"
     }
