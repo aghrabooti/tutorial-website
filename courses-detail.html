@@ -15,149 +15,11 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased">
+<body id="courses" class="bg-gray-50 text-gray-800 antialiased">
 
-<header class="bg-white border-b sticky top-0 z-50 shadow-sm">
+    <div id="header"></div>
 
-<div class="max-w-7xl mx-auto px-4">
-
-<div class="h-16 flex items-center justify-between">
-
-
-<div class="flex items-center gap-4">
-
-<a href="/"
-class="text-xl font-black">
-
-آکادمی
-<span class="text-indigo-600">
-عزیزی
-</span>
-
-</a>
-
-
-<a id="auth-btn"
-href="/login"
-class="hidden sm:block bg-indigo-50 text-indigo-600 px-5 py-2 rounded-xl font-bold text-sm">
-
-ورود / ثبت‌نام
-
-</a>
-
-</div>
-
-
-
-<nav class="hidden md:flex gap-6">
-
-<a href="/">
-صفحه اصلی
-</a>
-
-<a href="/courses"
-class="text-indigo-600">
-پکیج‌ها
-</a>
-
-<a href="#">
-درباره ما
-</a>
-
-
-<a href="#">
-تماس
-</a>
-
-
-</nav>
-
-
-
-<div class="flex items-center gap-2">
-
-
-<a href="/cart"
-class="w-10 h-10 border rounded-xl flex items-center justify-center">
-
-🛒
-
-</a>
-
-
-<button id="menu-toggle-btn"
-class="md:hidden p-2 rounded-lg hover:bg-gray-100">
-
-
-<svg class="w-6 h-6"
-fill="none"
-stroke="currentColor"
-viewBox="0 0 24 24">
-
-<path stroke-linecap="round"
-stroke-linejoin="round"
-stroke-width="2"
-d="M4 6h16M4 12h16M4 18h16"/>
-
-</svg>
-
-
-</button>
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-
-<div id="mobile-menu"
-class="hidden md:hidden bg-white border-t p-4 space-y-3">
-
-
-<a href="/"
-class="block p-3 rounded-xl hover:bg-gray-50">
-صفحه اصلی
-</a>
-
-
-<a href="/courses"
-class="block p-3 rounded-xl bg-indigo-50 text-indigo-600">
-پکیج‌های آموزشی
-</a>
-
-
-<a href="#"
-class="block p-3 rounded-xl hover:bg-gray-50">
-درباره ما
-</a>
-
-
-<a href="#"
-class="block p-3 rounded-xl hover:bg-gray-50">
-تماس با ما
-</a>
-
-
-<a href="/dashboard"
-class="block sm:hidden p-3 rounded-xl bg-indigo-600 text-white text-center">
-
-پنل کاربری
-
-</a>
-
-
-</div>
-
-
-</header>
-
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div class="space-y-1">
                 <a href="/courses" class="text-indigo-600 hover:text-indigo-700 flex items-center gap-2 font-bold text-sm transition">
@@ -243,7 +105,10 @@ class="block sm:hidden p-3 rounded-xl bg-indigo-600 text-white text-center">
         </div>
     </main>
     <script src="/js/api.js"></script>
-    <script src="/js/courses-detail.js"></script>
+    <script src="/js/auth-state.js"></script>
+<script src="/js/header.js"></script>
+<script src="/js/cart-badge.js"></script>
+<script src="/js/courses-detail.js"></script>
 
 </body>
 </html>

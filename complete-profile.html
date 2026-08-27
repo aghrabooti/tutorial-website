@@ -31,9 +31,15 @@ body{
 </head>
 
 
-<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+<body id="complete-profile" class="bg-gray-50 min-h-screen flex flex-col">
 
 
+<div id="header"></div>
+
+
+
+
+<main class="flex-1 flex items-center justify-center w-full py-10">
 
 <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md mx-4 border border-gray-100">
 
@@ -205,13 +211,15 @@ class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold">
 
 </div>
 
-
-
+</main>
 
 
 <script src="/js/api.js"></script>
 
 
+<script src="/js/auth-state.js"></script>
+<script src="/js/header.js"></script>
+<script src="/js/cart-badge.js"></script>
 <script src="/js/complete-profile.js"></script>
 
 

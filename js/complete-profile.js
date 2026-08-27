@@ -66,7 +66,7 @@ async function fetchExistingData(){
 
 
 
-    if(!sessionResult.valid){
+    if(!(sessionResult.valid === true || sessionResult.success === true)){
 
         console.log("SESSION FAILED:", sessionResult);
 

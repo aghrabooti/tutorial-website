@@ -31,7 +31,12 @@
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center font-sans text-gray-800">
+<body id="payment-result" class="bg-gray-50 min-h-screen flex flex-col font-sans text-gray-800">
+
+<div id="header"></div>
+
+
+<main class="flex-1 flex items-center justify-center w-full py-10">
 
 <div class="bg-white w-full max-w-md mx-4 p-8 rounded-3xl shadow-xl border border-gray-100 text-center">
 
@@ -98,7 +103,13 @@
 
 </div>
 
+</main>
+
+
 <script src="/js/api.js"></script>
+<script src="/js/auth-state.js"></script>
+<script src="/js/header.js"></script>
+<script src="/js/cart-badge.js"></script>
 <script src="/js/payment-result.js"></script>
 </body>
 </html>

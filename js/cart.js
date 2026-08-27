@@ -1,67 +1,28 @@
 document.addEventListener("DOMContentLoaded", async ()=>{
 
-    const token =
-    localStorage.getItem("session_token");
+    const token = localStorage.getItem("session_token");
 
-    const authBtn =
-    document.getElementById("auth-btn");
-
-    if(!token){
-
-        if(authBtn){
-
-            authBtn.textContent =
-            "ورود / ثبت‌نام";
-
-            authBtn.href =
-            "/login";
-
-        }
-
+    if(!token)
         return;
-
-    }
 
     try{
 
-        const result =
-        await apiCall(
+        const result = await apiCall(
             "check-session",
-            {
-                token
-            }
+            { token }
         );
 
-        if(!result.valid){
+        if(!(result.valid === true || result.success === true)){
 
-            localStorage.removeItem(
-                "session_token"
-            );
-
-            authBtn.textContent =
-            "ورود / ثبت‌نام";
-
-            authBtn.href =
-            "/login";
+            localStorage.removeItem("session_token");
 
             return;
 
         }
 
-        authBtn.textContent =
-        "داشبورد من";
-
-        authBtn.href =
-        "/dashboard";
-
-
-
-        const cart =
-        await apiCall(
+        const cart = await apiCall(
             "get-cart",
-            {
-                token
-            }
+            { token }
         );
 
         renderCart(cart.items || []);

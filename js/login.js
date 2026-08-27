@@ -45,7 +45,7 @@ async function checkExistingSession(){
 
 
 
-        if(result.valid){
+        if(result.valid === true || result.success === true){
 
 
             window.location.href =
