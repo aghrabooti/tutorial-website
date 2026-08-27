@@ -17,8 +17,7 @@ const MERCHANT_ID = Deno.env.get("ZARINPAL_MERCHANT_ID") ?? "";
 const SANDBOX = (Deno.env.get("ZARINPAL_SANDBOX") ?? "true") === "true";
 
 // ⚠️ باید دقیقاً مثل payment-request باشد:
-const CART_TABLE      = "cart_items";
-const PURCHASES_TABLE = "purchases";
+const CART_TABLE = "cart_items";
 
 const ZP_BASE = SANDBOX
   ? "https://sandbox.zarinpal.com/pg"
@@ -140,40 +139,21 @@ Deno.serve(async (req) => {
         });
       }
 
-      // ۳) اعطای دوره‌ها (بدون تکرار)
+      // ۳) اعطای دوره‌ها = همین رکورد سفارش با وضعیت paid.
+      //    جدول جداگانه‌ای برای خرید وجود ندارد؛ check-course-access
+      //    هم از همین جدول می‌خواند.
       const items = Array.isArray(order.items) ? order.items : [];
-      const courseIds = items.map((i: any) => i.course_id).filter((v: any) => v != null);
+      const courseIds = items
+        .map((i: any) => i.course_id)
+        .filter((v: any) => v != null);
 
-      if (courseIds.length > 0) {
-        const { data: existing } = await supabaseAdmin
-          .from(PURCHASES_TABLE)
-          .select("course_id")
+      // ۴) خالی کردن سبد برای آیتم‌های خریداری‌شده
+      if (order.source === "cart" && courseIds.length > 0) {
+        await supabaseAdmin
+          .from(CART_TABLE)
+          .delete()
           .eq("user_id", order.user_id)
           .in("course_id", courseIds);
-
-        const have = new Set(
-          (existing ?? []).map((r: any) => String(r.course_id))
-        );
-
-        const toInsert = courseIds
-          .filter((id: any) => !have.has(String(id)))
-          .map((id: any) => ({ user_id: order.user_id, course_id: id }));
-
-        if (toInsert.length > 0) {
-          const { error: grantErr } = await supabaseAdmin
-            .from(PURCHASES_TABLE)
-            .insert(toInsert);
-          if (grantErr) console.error("grant error:", grantErr);
-        }
-
-        // ۴) خالی کردن سبد برای آیتم‌های خریداری‌شده
-        if (order.source === "cart") {
-          await supabaseAdmin
-            .from(CART_TABLE)
-            .delete()
-            .eq("user_id", order.user_id)
-            .in("course_id", courseIds);
-        }
       }
 
       return jsonResponse({ success: true, ref_id: refId, code });

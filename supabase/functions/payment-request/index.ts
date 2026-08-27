@@ -15,9 +15,8 @@ const SANDBOX       = (Deno.env.get("ZARINPAL_SANDBOX") ?? "true") === "true";
 const CALLBACK_URL  = Deno.env.get("ZARINPAL_CALLBACK_URL") ?? ""; // مثال: https://your-site.vercel.app/payment-result
 const PRICE_TO_RIAL = Number(Deno.env.get("PRICE_TO_RIAL_FACTOR") ?? "10"); // قیمت‌های دیتابیس اگر تومان‌اند: 10 — اگر ریال‌اند: 1
 
-// ⚠️ اگر نام جدول‌های واقعی شما فرق دارد فقط همین دو خط را تغییر دهید:
-const CART_TABLE      = "cart_items";
-const PURCHASES_TABLE = "purchases";
+// ⚠️ اگر نام جدول سبد خرید شما فرق دارد فقط همین خط را تغییر دهید:
+const CART_TABLE = "cart_items";
 
 const ZP_BASE = SANDBOX
   ? "https://sandbox.zarinpal.com/pg"
@@ -121,12 +120,16 @@ Deno.serve(async (req) => {
     const user = await getSessionUser(token);
     if (!user) return jsonResponse({ error: "نشست معتبر نیست" }, 401);
 
-    // ۱) دوره‌هایی که کاربر قبلاً خریده (برای جلوگیری از پرداخت دوباره)
-    const { data: bought } = await supabaseAdmin
-      .from(PURCHASES_TABLE)
-      .select("course_id")
-      .eq("user_id", user.id);
-    const owned = new Set((bought ?? []).map((p: any) => String(p.course_id)));
+    // ۱) دوره‌هایی که کاربر قبلاً خریده — منبع حقیقت: سفارش‌های paid
+    const { data: paidOrders } = await supabaseAdmin
+      .from("orders")
+      .select("course_ids")
+      .eq("user_id", String(user.id))
+      .eq("status", "paid");
+
+    const owned = new Set(
+      (paidOrders ?? []).flatMap((o: any) => o.course_ids ?? [])
+    );
 
     // ۲) جمع‌آوری آیتم‌های قابل پرداخت — همیشه با قیمتِ دیتابیس
     let items: any[] = [];
@@ -206,6 +209,7 @@ Deno.serve(async (req) => {
         status: "init",
         source,
         items: snapshot,
+        course_ids: snapshot.map((i: any) => String(i.course_id)),
       })
       .select("id")
       .single();

@@ -26,6 +26,7 @@ create table if not exists public.orders (
     status      text not null default 'init',  -- init | pending | paid | failed
     source      text not null default 'cart',  -- cart | direct
     items       jsonb not null default '[]',   -- [{course_id, title, unit_price_rial}]
+    course_ids  text[] not null default '{}',  -- برای کوئری مالکیت
     ref_id      bigint,
     card_pan    text,
     created_at  timestamptz not null default now(),
@@ -34,6 +35,29 @@ create table if not exists public.orders (
 
 -- سرویس‌رول RLS را دور می‌زند؛ برای بقیه کاملاً بسته است
 alter table public.orders enable row level security;
+```
+
+اگر جدول را قبلاً ساخته‌اید، فقط ستون جدید را اضافه کنید:
+
+```sql
+alter table public.orders add column if not exists course_ids text[] not null default '{}';
+```
+
+> **مدل داده:** سفارشِ `paid` خودِِ سند خرید است — جدول جداگانه‌ای برای
+> «خریدهای کاربر» وجود ندارد. توابع `check-course-access` و `get-my-courses`
+> هم از همین جدول می‌خوانند.
+>
+> اگر قبل از این سیستم خریدهایی با جدول `purchases` ثبت شده‌اند و می‌خواهید
+> حفظ شوند، یک‌بار این مهاجرت را اجرا کنید:
+
+```sql
+insert into public.orders
+  (user_id, amount_rial, description, status, source, items, course_ids, created_at, verified_at)
+select
+  user_id::text, 0, 'انتقال خریدهای قبلی', 'paid', 'legacy',
+  jsonb_build_array(jsonb_build_object('course_id', course_id)),
+  array[course_id::text], now(), now()
+from public.purchases;
 ```
 
 ---
@@ -64,7 +88,14 @@ supabase secrets set ZARINPAL_MERCHANT_ID="<مرچنت‌کد-۳۶-کاراکت�
 ```bash
 supabase functions deploy payment-request
 supabase functions deploy payment-verify
+supabase functions deploy check-course-access
+supabase functions deploy get-my-courses
 ```
+
+⚠️ دو تابع آخر ممکن است قبلاً (خارج از ریپو) دیپلوی شده باشند — دیپلوی مجدد،
+نسخه‌ی فعلی را با نسخه‌ی مبتنی‌بر `orders` جایگزین می‌کند. این همان تغییری است
+که می‌خواهیم؛ کافی است هر ۴ تابع را یک‌بار دیپلوی کنید تا همه‌ی بخش‌ها روی
+مدل تک‌جدولی کار کنند.
 
 ---
 
@@ -94,14 +125,13 @@ supabase functions deploy payment-verify
 
 ## ⚠️ نکته: نام جدول‌ها
 
-تابع‌های `get-cart` و `check-course-access` در ریپو نیستند، پس نام پیش‌فرض زیر
-در بالای هر دو فانکشن به‌صورت ثابت تعریف شده است:
+تنها نام ثابتی که فانکشن‌های فعلی فرض می‌کنند جدول سبد خرید است:
 
 ```ts
-const CART_TABLE      = "cart_items";
-const PURCHASES_TABLE = "purchases";
+const CART_TABLE = "cart_items";   // با ستون‌های user_id و course_id
 ```
 
-اگر نام‌های واقعی متفاوت‌اند، فقط همین دو خط را در **هر دو** فانکشن اصلاح کنید.
-پ.ن: `payment-verify` به ساختار `cart_items(user_id, course_id)` و
-`purchases(user_id, course_id)` فرض می‌کند.
+اگر نام واقعی فرق دارد، همین خط را در **هر سه** فانکشن `payment-request`،
+`payment-verify` و (در صورت نیاز) توابع کارت اصلاح کنید.
+جدول `orders` برای همه توسط همین پکیج ساخته می‌شود و فرضی درباره‌ی
+جدول خرید مجزایی وجود ندارد (مدل تک‌جدولی).
