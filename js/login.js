@@ -49,7 +49,7 @@ async function checkExistingSession(){
 
 
             window.location.href =
-            "dashboard.html";
+            "/dashboard";
 
 
         }
@@ -334,7 +334,7 @@ async()=>{
 
 
                 window.location.href =
-                "complete-profile.html";
+                "/complete-profile";
 
 
             }
@@ -342,7 +342,7 @@ async()=>{
 
 
                 window.location.href =
-                "dashboard.html";
+                "/dashboard";
 
 
             }
@@ -426,7 +426,7 @@ registerBtn.addEventListener(
     "click",
     ()=>{
         window.location.href =
-        "register.html";
+        "/register";
     }
 );
 

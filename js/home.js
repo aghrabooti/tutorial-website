@@ -19,7 +19,7 @@ async function updateAuthButton(){
         "ورود / ثبت‌نام";
 
         authBtn.href =
-        "pages/login.html";
+        "/login";
 
         return;
 
@@ -43,7 +43,7 @@ async function updateAuthButton(){
         "پنل کاربری";
 
         authBtn.href =
-        "pages/dashboard.html";
+        "/dashboard";
 
     }
     else{
@@ -58,7 +58,7 @@ async function updateAuthButton(){
 
 
         authBtn.href =
-        "pages/login.html";
+        "/login";
 
     }
 
@@ -168,7 +168,7 @@ async function fetchCourses(){
                 </span>
 
 
-                <a href="pages/courses-detail.html?id=${course.id}"
+                <a href="/courses-detail?id=${course.id}"
                 class="bg-gray-950 text-white text-xs font-bold px-3 py-2 rounded-xl">
 
                 مشاهده

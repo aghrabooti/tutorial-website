@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
             "ورود / ثبت‌نام";
 
             authBtn.href =
-            "login.html";
+            "/login";
 
         }
 
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
             "ورود / ثبت‌نام";
 
             authBtn.href =
-            "login.html";
+            "/login";
 
             return;
 
@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
         "داشبورد من";
 
         authBtn.href =
-        "dashboard.html";
+        "/dashboard";
 
 
 
@@ -247,7 +247,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
         if(!token){
 
-            window.location.href = "login.html";
+            window.location.href = "/login";
             return;
 
         }

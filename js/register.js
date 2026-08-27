@@ -272,7 +272,7 @@ async()=>{
 
 
                 window.location.href =
-                "login.html";
+                "/login";
 
 
             },1000);

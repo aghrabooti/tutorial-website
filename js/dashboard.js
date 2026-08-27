@@ -8,7 +8,7 @@ async function loadDashboardData(){
     if(!token){
 
         window.location.href =
-        "login.html";
+        "/login";
 
         return;
 
@@ -35,7 +35,7 @@ async function loadDashboardData(){
             localStorage.clear();
 
             window.location.href =
-            "login.html";
+            "/login";
 
             return;
 
@@ -291,7 +291,7 @@ function renderPurchasedCourses(items){
 
 
             <a
-            href="/frontend/pages/courses-detail.html?id=${course.id}"
+            href="/courses-detail?id=${course.id}"
             class="block mt-4 text-indigo-600 font-bold text-sm">
 
             مشاهده
@@ -358,7 +358,7 @@ async function logout(){
 
 
     window.location.href =
-    "login.html";
+    "/login";
 
 
 }

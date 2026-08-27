@@ -50,7 +50,7 @@ async function fetchExistingData(){
 
     if(!token){
 
-        window.location.href="login.html";
+        window.location.href="/login";
         return;
 
     }
@@ -211,7 +211,7 @@ async(e)=>{
 
 
         window.location.href =
-        "dashboard.html";
+        "/dashboard";
 
 
     }

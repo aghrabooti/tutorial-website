@@ -581,7 +581,7 @@ async function addToCart(courseId){
 
     if(!token){
 
-        window.location.href = "login.html";
+        window.location.href = "/login";
         return;
 
     }
@@ -606,7 +606,7 @@ async function addToCart(courseId){
 
         }
 
-        window.location.href = "cart.html";
+        window.location.href = "/cart";
 
     }
     catch(error){

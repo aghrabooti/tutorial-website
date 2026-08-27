@@ -15,7 +15,7 @@ async function loadCourses(){
 
 if(!token){
 
-window.location.href="login.html";
+window.location.href="/login";
 return;
 
 }
@@ -463,7 +463,7 @@ localStorage.removeItem("session_token");
 localStorage.removeItem("user");
 
 
-window.location.href="login.html";
+window.location.href="/login";
 
 
 }

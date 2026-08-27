@@ -48,7 +48,7 @@ async function checkUserSession(){
 
 
         authBtn.href =
-        "login.html";
+        "/login";
 
 
         return;
@@ -87,7 +87,7 @@ async function checkUserSession(){
 
 
             authBtn.href =
-            "dashboard.html";
+            "/dashboard";
 
 
         }
@@ -104,7 +104,7 @@ async function checkUserSession(){
 
 
             authBtn.href =
-            "login.html";
+            "/login";
 
 
         }
@@ -542,7 +542,7 @@ function renderCourses(list){
 
 
                     <a 
-                    href="courses-detail.html?id=${course.id}"
+                    href="/courses-detail?id=${course.id}"
                     class="bg-indigo-600 text-white px-4 py-2 rounded-xl">
 
                     مشاهده

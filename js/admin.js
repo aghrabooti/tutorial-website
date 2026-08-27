@@ -10,7 +10,7 @@ localStorage.getItem(
 
 if(!token){
 
-window.location.href="login.html";
+window.location.href="/login";
 
 return;
 
@@ -33,7 +33,7 @@ alert(
 );
 
 
-window.location.href="dashboard.html";
+window.location.href="/dashboard";
 
 
 return;
