@@ -683,13 +683,13 @@ window.uploadCoursePdf = async () => {
     }
 };
 
-// دکمه‌ی آپلود PDF فقط برای جزوه/کتاب نمایش داده شود
+// دکمه‌ی آپلود PDF برای همه‌ی انواع محصول فعال است
+// (دوره‌ها هم می‌توانند فایل جزوه داشته باشند)
 function updateUploadVisibility() {
-    const type = document.getElementById("edit-type");
     const btn = document.getElementById("pdf-upload-btn");
 
-    if (type && btn) {
-        btn.classList.toggle("hidden", type.value === "course");
+    if (btn) {
+        btn.classList.remove("hidden");
     }
 
     setUploadStatus("", null);

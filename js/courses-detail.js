@@ -599,6 +599,35 @@ async function showPurchasedContent(course){
     content.innerHTML = `
 
 
+    <div class="bg-white border rounded-2xl p-5 mb-6 flex items-center justify-between flex-wrap gap-3">
+
+
+        <div>
+
+            <h3 class="font-black">
+                فایل جزوه / پیوست دوره
+            </h3>
+
+            <p class="text-xs text-gray-500 mt-1">
+                در صورت بارگذاری توسط استاد، از اینجا دانلود کنید
+            </p>
+
+        </div>
+
+
+        <button
+        id="download-file-btn"
+        onclick="downloadCourseFile()"
+        class="bg-green-600 text-white px-6 py-2 rounded-xl hover:bg-green-700">
+
+            دانلود فایل PDF
+
+        </button>
+
+    </div>
+
+
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
 
