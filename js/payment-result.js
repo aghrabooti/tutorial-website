@@ -43,6 +43,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         const result = await apiCall("payment-verify", { authority });
 
         if (result.success) {
+            // اگر سفارش شامل محصول فیزیکی (کتاب / جزوه) است،
+            // کاربر را به فرم ثبت آدرس ارسال می‌بریم
+            if (result.needs_shipping && result.order_id) {
+                window.location.replace(
+                    "/shipping-address?order=" +
+                    encodeURIComponent(result.order_id)
+                );
+                return;
+            }
+
             document.getElementById("ref-id").textContent =
                 result.ref_id ?? "—";
             showState("success");

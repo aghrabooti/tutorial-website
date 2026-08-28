@@ -54,6 +54,22 @@ const ZP_ERRORS: Record<number, string> = {
   "-54": "شناسه‌ی تراکنش نامعتبر یا منقضی است",
 };
 
+// تشخیص نیاز به ارسال پستی — اگر حتی یکی از اقلام سفارش
+// محصول فیزیکی (کتاب/جزوه) باشد true برمی‌گرداند.
+// اگر ستون requires_shipping هنوز به courses اضافه نشده باشد، خطایی نمی‌دهد.
+async function orderNeedsShipping(order: any) {
+  const courseIds = Array.isArray(order?.course_ids) ? order.course_ids : [];
+  if (courseIds.length === 0) return false;
+
+  const { data: phys } = await supabaseAdmin
+    .from("courses")
+    .select("id")
+    .in("id", courseIds)
+    .eq("requires_shipping", true);
+
+  return (phys ?? []).length > 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -82,6 +98,8 @@ Deno.serve(async (req) => {
         success: true,
         ref_id: order.ref_id,
         already: true,
+        order_id: order.id,
+        needs_shipping: await orderNeedsShipping(order),
       });
     }
     if (order.status !== "pending") {
@@ -136,6 +154,8 @@ Deno.serve(async (req) => {
           success: true,
           ref_id: fresh?.ref_id ?? refId,
           already: true,
+          order_id: order.id,
+          needs_shipping: await orderNeedsShipping(order),
         });
       }
 
@@ -156,7 +176,13 @@ Deno.serve(async (req) => {
           .in("course_id", courseIds);
       }
 
-      return jsonResponse({ success: true, ref_id: refId, code });
+      return jsonResponse({
+        success: true,
+        ref_id: refId,
+        code,
+        order_id: order.id,
+        needs_shipping: await orderNeedsShipping(order),
+      });
     }
 
     // پرداخت تأیید نشد
