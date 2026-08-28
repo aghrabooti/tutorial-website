@@ -5,6 +5,93 @@ new URLSearchParams(
 
 
 
+
+// دانلود فایل PDF جزوه/کتاب — فقط برای خریداران (لینک موقعت امضاشده)
+window.downloadCourseFile = async () => {
+
+    const btn =
+    document.getElementById(
+        "download-file-btn"
+    );
+
+
+    const token =
+    localStorage.getItem(
+        "session_token"
+    );
+
+
+    if(!token){
+
+        window.location.href = "/login";
+
+        return;
+
+    }
+
+
+    if(btn){
+
+        btn.disabled = true;
+
+        btn.innerText =
+        "در حال آماده‌سازی لینک...";
+
+    }
+
+
+    try{
+
+        const result =
+        await apiCall(
+            "get-course-file",
+            {
+                token,
+                course_id:courseId
+            }
+        );
+
+
+        if(result.success && result.url){
+
+            window.open(
+                result.url,
+                "_blank"
+            );
+
+        }else{
+
+            alert(
+                result.error ||
+                "خطا در دریافت فایل"
+            );
+
+        }
+
+    }
+    catch(error){
+
+        console.error(error);
+
+        alert("خطا در ارتباط با سرور");
+
+    }
+    finally{
+
+        if(btn){
+
+            btn.disabled = false;
+
+            btn.innerText = "دانلود فایل";
+
+        }
+
+    }
+
+};
+
+
+
 async function loadCourseDetail(){
 
 
@@ -361,8 +448,14 @@ async function showPurchasedContent(course){
                 فایل آموزشی
             </h3>
 
+            <p class="mt-2 text-sm text-gray-500">
+                فایل PDF این محصول مخصوص خریداران است.
+            </p>
+
             <button
-            class="mt-5 bg-green-600 text-white px-6 py-2 rounded-xl">
+            id="download-file-btn"
+            onclick="downloadCourseFile()"
+            class="mt-5 bg-green-600 text-white px-6 py-2 rounded-xl hover:bg-green-700">
 
                 دانلود فایل
 
