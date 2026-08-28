@@ -511,10 +511,64 @@ async function showPurchasedContent(course){
         session=>{
 
 
+        let actionBlock = "";
+
+        if(session.is_online){
+
+            const when =
+            session.scheduled_at
+            ?
+            new Date(session.scheduled_at).toLocaleString(
+                "fa-IR",
+                { dateStyle:"medium", timeStyle:"short" }
+            )
+            :
+            "به‌زودی اعلام می‌شود";
+
+            if(session.online_available && session.online_url){
+
+                actionBlock = `
+            <p class="mt-2 text-xs text-gray-500">🕐 شروع کلاس: ${when}</p>
+
+            <a href="${session.online_url}" target="_blank" rel="noopener"
+            class="inline-block mt-3 bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700">
+
+                ورود به کلاس آنلاین 🎥
+
+            </a>`;
+
+            }else{
+
+                actionBlock = `
+            <p class="mt-2 text-xs text-gray-500">🕐 شروع کلاس: ${when}</p>
+
+            <button disabled
+            class="mt-3 bg-gray-300 text-gray-500 px-4 py-2 rounded-xl text-sm cursor-not-allowed">
+
+                لینک ۵ دقیقه قبل از کلاس فعال می‌شود
+
+            </button>`;
+
+            }
+
+        }else{
+
+            actionBlock = `
+            <button
+            onclick="playVideo('${session.video_url}')"
+            class="mt-3 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-indigo-700">
+
+                مشاهده
+
+            </button>`;
+
+        }
+
+
         sessionsHTML += `
 
 
-        <div 
+        <div
         class="bg-gray-50 border rounded-xl p-4">
 
 
@@ -524,27 +578,12 @@ async function showPurchasedContent(course){
                 -
                 ${session.title}
 
+                ${session.is_online ? '<span class="bg-red-100 text-red-600 text-xs rounded-full px-2 py-1 mr-2">آنلاین</span>' : ""}
+
             </h4>
 
 
-
-            <button
-
-            onclick="playVideo('${session.video_url}')"
-
-            class="
-            mt-3
-            bg-indigo-600
-            text-white
-            px-4
-            py-2
-            rounded-xl
-            text-sm
-            hover:bg-indigo-700">
-
-                مشاهده
-
-            </button>
+            ${actionBlock}
 
 
         </div>

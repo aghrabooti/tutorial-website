@@ -94,6 +94,12 @@ class="mb-5 text-sm text-gray-500">
 
 </h2>
 
+<input
+id="course-search"
+type="text"
+placeholder="جستجو: عنوان، دسته‌بندی یا توضیح دوره..."
+class="w-full mb-5 border rounded-2xl px-4 py-3 bg-white text-sm">
+
 <div
 id="courses-list"
 class="space-y-5">
@@ -324,6 +330,27 @@ class="mt-2 w-full border rounded-xl p-3">
 id="edit-image"
 class="mt-2 w-full border rounded-xl p-3">
 
+<div class="mt-3 flex flex-wrap gap-3">
+
+<button
+type="button"
+onclick="uploadCourseImage()"
+class="bg-gray-800 text-white px-4 py-2 rounded-xl text-sm">
+آپلود عکس جدید
+</button>
+
+<button
+type="button"
+id="pdf-upload-btn"
+onclick="uploadCoursePdf()"
+class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hidden">
+آپلود PDF جزوه/کتاب
+</button>
+
+</div>
+
+<p id="upload-status" class="mt-2 text-xs text-gray-500"></p>
+
 </div>
 
 </div>
@@ -377,6 +404,58 @@ class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl">
 
 
 
+
+
+<!-- Sessions Modal -->
+<div
+id="sessions-modal"
+class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+
+<div
+class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-8"
+style="max-height:90vh; overflow-y:auto;">
+
+<div class="flex justify-between items-center mb-2">
+<h2 class="text-xl font-black">
+مدیریت جلسات — <span id="sessions-course-title"></span>
+</h2>
+<button
+onclick="closeSessionsModal()"
+class="text-gray-400 text-3xl font-black leading-none">×</button>
+</div>
+
+<p class="text-xs text-gray-500 mb-5 leading-relaxed">
+برای هر جلسه «لینک ویدیو» = ویدیوی ضبط‌شده است. اگر جلسه «آنلاین» باشد، لینک ورود و ساعت شروع را وارد کنید؛
+لینک کلاس فقط از ۵ دقیقه قبل از شروع، برای خریداران فعال می‌شود و تا بعد از کلاس در دسترس می‌ماند.
+</p>
+
+<div id="sessions-list" class="space-y-4"></div>
+
+<button
+onclick="addSessionRow()"
+class="mt-4 bg-gray-100 hover:bg-gray-200 px-5 py-2 rounded-xl font-bold text-sm">
+＋ افزودن جلسه
+</button>
+
+<div class="flex justify-end gap-3 mt-8 items-center">
+<p id="sessions-status" class="text-sm"></p>
+
+<button
+onclick="closeSessionsModal()"
+class="bg-gray-200 px-6 py-3 rounded-xl">
+انصراف
+</button>
+
+<button
+onclick="saveSessions()"
+class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl">
+ذخیره جلسات
+</button>
+</div>
+
+</div>
+
+</div>
 
 
 <script src="/js/api.js"></script>
