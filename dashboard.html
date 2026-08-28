@@ -91,6 +91,34 @@
                 <i class="fa-solid fa-user-gear"></i>
                 ویرایش اطلاعات پروفایل
             </a>
+
+            <div class="border-t border-gray-100 pt-5">
+                <h3 class="text-sm font-black text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-key text-indigo-500"></i>
+                    تغییر رمز عبور
+                </h3>
+
+                <form id="change-password-form" class="flex flex-col gap-3">
+                    <input id="current-password" type="password" required autocomplete="current-password"
+                           placeholder="رمز عبور فعلی"
+                           class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+                    <input id="new-password" type="password" required minlength="8" autocomplete="new-password"
+                           placeholder="رمز عبور جدید (حداقل ۸ کاراکتر)"
+                           class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+                    <input id="new-password-confirm" type="password" required autocomplete="new-password"
+                           placeholder="تکرار رمز عبور جدید"
+                           class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+                    <button id="change-password-btn"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-xs transition duration-300">
+                        ثبت رمز جدید
+                    </button>
+
+                    <p id="change-password-msg" class="text-xs hidden"></p>
+                </form>
+            </div>
         </aside>
 
         <section class="lg:col-span-8 flex flex-col gap-6">
@@ -118,5 +146,6 @@
     </footer>
     <script src="/js/api.js"></script>
     <script src="/js/dashboard.js"></script>
+    <script src="/js/change-password.js"></script>
 </body>
 </html>
