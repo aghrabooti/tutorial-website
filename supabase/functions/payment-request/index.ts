@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, course_id } = await req.json();
+    const { token, course_id, address_confirmed } = await req.json();
 
     if (!token) return jsonResponse({ error: "توکن ارسال نشده" }, 401);
     if (!MERCHANT_ID)
@@ -190,8 +190,9 @@ Deno.serve(async (req) => {
       );
 
     // ۲-الف) نشانی قبل از پول! اگر سفارش شامل محصول فیزیکی (کتاب/جزوه) است،
-    // کاربر باید از قبل نشانی پستی ثبت کرده باشد؛ در غیر این صورت سایت
-    // او را به فرم آدرس می‌برد و هیچ پرداختی شروع نمی‌شود.
+    // قبل از هر پرداختی کاربر باید یک بار فرم نشانی را دیده و تأیید کرده باشد
+    // (فرم با نشانی قبلی پر می‌شود و قابل اصلاح است؛ address_confirmed فقط
+    // وقتی true است که کاربر مستقیم از همان فرم برگشته باشد).
     const hasPhysical = items.some((i: any) => i.requires_shipping);
 
     if (hasPhysical) {
@@ -201,11 +202,11 @@ Deno.serve(async (req) => {
         .eq("user_id", String(user.id))
         .maybeSingle();
 
-      if (!addr) {
+      if (!addr || !address_confirmed) {
         return jsonResponse(
           {
             error:
-              "این سفارش شامل محصول فیزیکی است؛ لطفاً ابتدا نشانی ارسال را ثبت کنید",
+              "این سفارش شامل محصول فیزیکی است؛ لطفاً ابتدا نشانی ارسال را بررسی و ثبت کنید",
             needs_address: true,
           },
           400

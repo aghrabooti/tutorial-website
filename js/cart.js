@@ -223,6 +223,12 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
         }
 
+        // اگر کاربر مستقیم از فرم نشانی آمده (نشانی را دیده و ثبت کرده)
+        const addrConfirmed =
+        new URLSearchParams(
+            window.location.search
+        ).get("addr") === "ok";
+
         checkoutBtn.disabled = true;
 
         const originalText =
@@ -236,7 +242,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
             const result =
             await apiCall(
                 "payment-request",
-                { token }
+                { token, address_confirmed: addrConfirmed }
             );
 
             if(!result.success){

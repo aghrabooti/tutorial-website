@@ -128,6 +128,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 hideError();
                 document.getElementById("page-heading").parentElement.classList.add("hidden");
                 document.getElementById("state-done").classList.remove("hidden");
+
+                // بازگشت خودکار به سبد با تأیید نشانی → ادامه‌ی پرداخت
+                setTimeout(() => {
+                    window.location.href = "/cart?addr=ok";
+                }, 1500);
             } else {
                 showError(result.error || "خطا در ذخیره آدرس");
             }
