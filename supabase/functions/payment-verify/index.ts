@@ -176,6 +176,34 @@ Deno.serve(async (req) => {
           .in("course_id", courseIds);
       }
 
+      // ۵) اگر سفارش شامل محصول فیزیکی است، نشانی پستیِ ثبت‌شده‌ی کاربر
+      //    به‌عنوان مقصد همین مرسوله کنار سفارش اسنپ‌شات می‌شود
+      //    (آدرس همیشه قبل از پرداخت در پروفایل کاربر ثبت شده است)
+      if (await orderNeedsShipping(order)) {
+        const { data: addr } = await supabaseAdmin
+          .from("user_addresses")
+          .select("*")
+          .eq("user_id", String(order.user_id))
+          .maybeSingle();
+
+        if (addr) {
+          await supabaseAdmin.from("shipments").upsert(
+            {
+              order_id: order.id,
+              user_id: String(order.user_id),
+              full_name: addr.full_name,
+              phone: addr.phone,
+              province: addr.province,
+              city: addr.city,
+              address: addr.address,
+              postal_code: addr.postal_code,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "order_id" }
+          );
+        }
+      }
+
       return jsonResponse({
         success: true,
         ref_id: refId,

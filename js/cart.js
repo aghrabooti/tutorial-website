@@ -241,6 +241,17 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
             if(!result.success){
 
+                // سفارش شامل محصول فیزیکی است و هنوز نشانی پستی ثبت نشده
+                // → اول آدرس، بعد پول
+                if(result.needs_address){
+
+                    window.location.href =
+                    "/shipping-address";
+
+                    return;
+
+                }
+
                 alert(
                     result.error ||
                     "خطا در شروع پرداخت"

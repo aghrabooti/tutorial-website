@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
       source = "direct";
       const { data: course } = await supabaseAdmin
         .from("courses")
-        .select("id, title, price, discount_price")
+        .select("id, title, price, discount_price, requires_shipping")
         .eq("id", course_id)
         .maybeSingle();
 
@@ -159,12 +159,13 @@ Deno.serve(async (req) => {
           course_id: course.id,
           title: course.title,
           unit_price: effectivePrice(course),
+          requires_shipping: Boolean(course.requires_shipping),
         },
       ];
     } else {
       const { data: rows, error: cartErr } = await supabaseAdmin
         .from(CART_TABLE)
-        .select("id, course_id, courses(id, title, price, discount_price)")
+        .select("id, course_id, courses(id, title, price, discount_price, requires_shipping)")
         .eq("user_id", user.id);
 
       if (cartErr) {
@@ -178,6 +179,7 @@ Deno.serve(async (req) => {
           course_id: r.courses.id,
           title: r.courses.title,
           unit_price: effectivePrice(r.courses),
+          requires_shipping: Boolean(r.courses.requires_shipping),
         }));
     }
 
@@ -186,6 +188,30 @@ Deno.serve(async (req) => {
         { error: "آیتمی برای پرداخت وجود ندارد؛ شاید همه را قبلاً خریده‌اید" },
         400
       );
+
+    // ۲-الف) نشانی قبل از پول! اگر سفارش شامل محصول فیزیکی (کتاب/جزوه) است،
+    // کاربر باید از قبل نشانی پستی ثبت کرده باشد؛ در غیر این صورت سایت
+    // او را به فرم آدرس می‌برد و هیچ پرداختی شروع نمی‌شود.
+    const hasPhysical = items.some((i: any) => i.requires_shipping);
+
+    if (hasPhysical) {
+      const { data: addr } = await supabaseAdmin
+        .from("user_addresses")
+        .select("user_id")
+        .eq("user_id", String(user.id))
+        .maybeSingle();
+
+      if (!addr) {
+        return jsonResponse(
+          {
+            error:
+              "این سفارش شامل محصول فیزیکی است؛ لطفاً ابتدا نشانی ارسال را ثبت کنید",
+            needs_address: true,
+          },
+          400
+        );
+      }
+    }
 
     const amountRial =
       items.reduce((sum, i) => sum + i.unit_price, 0) * PRICE_TO_RIAL;

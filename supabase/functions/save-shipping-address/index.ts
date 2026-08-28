@@ -1,9 +1,11 @@
 // @ts-nocheck
 // ─────────────────────────────────────────────────────────────────────────────
 // save-shipping-address
-// ورودی: { token, order_id, full_name, phone, province, city, address, postal_code }
-//   آدرس پستی را برای سفارشِ paid ثبت/به‌روز می‌کند — فقط اگر سفارش متعلق به
-//   خود کاربر باشد و حداقل یکی از اقلامش محصول فیزیکی (requires_shipping) باشد.
+// ورودی: { token, full_name, phone, province, city, address, postal_code }
+//   نشانی پستیِ کاربر را در پروفایل او ذخیره/به‌روز می‌کند.
+//   این نشانی «قبل از پرداخت» گرفته می‌شود: payment-request برای سفارش‌هایی که
+//   محصول فیزیکی دارند، بدون وجود این نشانی اجازه‌ی شروع پرداخت نمی‌دهد.
+//   بعد از پرداخت موفق، payment-verify از همین نشانی کنار سفارش اسنپ‌شات می‌گیرد.
 // خروجی: { success: true }
 // ─────────────────────────────────────────────────────────────────────────────
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -78,7 +80,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { token, order_id } = body;
+    const { token } = body;
 
     const full_name   = String(body.full_name ?? "").trim();
     const phone       = toLatinDigits(String(body.phone ?? "").trim()).replace(/[\s-]/g, "");
@@ -92,7 +94,7 @@ Deno.serve(async (req) => {
     const user = await getSessionUser(token);
     if (!user) return jsonResponse({ error: "نشست معتبر نیست" }, 401);
 
-    if (!order_id || !full_name || !phone || !province || !city || !address || !postal_code) {
+    if (!full_name || !phone || !province || !city || !address || !postal_code) {
       return jsonResponse({ error: "لطفاً همه‌ی فیلدها را کامل کنید" }, 400);
     }
 
@@ -104,45 +106,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "کد پستی باید ۱۰ رقم باشد" }, 400);
     }
 
-    // ۱) سفارش باید وجود داشته باشد، متعلق به همین کاربر باشد و paid باشد
-    const { data: order } = await supabaseAdmin
-      .from("orders")
-      .select("*")
-      .eq("id", order_id)
-      .maybeSingle();
-
-    if (!order) return jsonResponse({ error: "سفارش پیدا نشد" }, 404);
-
-    if (String(order.user_id) !== String(user.id)) {
-      return jsonResponse({ error: "این سفارش متعلق به شما نیست" }, 403);
-    }
-
-    if (order.status !== "paid") {
-      return jsonResponse({ error: "این سفارش هنوز پرداخت نشده است" }, 400);
-    }
-
-    // ۲) فقط برای سفارش‌هایی که محصول فیزیکی دارند
-    const courseIds = Array.isArray(order.course_ids) ? order.course_ids : [];
-    let needsShipping = false;
-    if (courseIds.length > 0) {
-      const { data: phys } = await supabaseAdmin
-        .from("courses")
-        .select("id")
-        .in("id", courseIds)
-        .eq("requires_shipping", true);
-      needsShipping = (phys ?? []).length > 0;
-    }
-
-    if (!needsShipping) {
-      return jsonResponse({ error: "این سفارش نیازی به ارسال پستی ندارد" }, 400);
-    }
-
-    // ۳) ثبت یا به‌روزرسانی آدرس (هر سفارش فقط یک آدرس)
+    // هر کاربر یک نشانی — ذخیره‌ی جدید جایگزین قبلی می‌شود
     const { error: upErr } = await supabaseAdmin
-      .from("shipments")
+      .from("user_addresses")
       .upsert(
         {
-          order_id: order.id,
           user_id: String(user.id),
           full_name,
           phone,
@@ -152,7 +120,7 @@ Deno.serve(async (req) => {
           postal_code,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "order_id" }
+        { onConflict: "user_id" }
       );
 
     if (upErr) {
