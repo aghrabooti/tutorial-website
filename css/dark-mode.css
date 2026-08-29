@@ -89,3 +89,6 @@ html.dark .hover\:bg-indigo-700:hover { background-color: #4f46e5; }
 
 /* عکس‌ها و رسانه کمی نرم‌تر */
 html.dark img { filter: brightness(.92); }
+
+/* فوتر مشترک — اندازه‌ی لوگوی اینماد (مستقل از نسخه‌ی تیلویند صفحه) */
+.enamad-logo img { max-height: 96px; width: auto; display: block; }
