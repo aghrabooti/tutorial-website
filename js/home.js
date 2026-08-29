@@ -45,32 +45,50 @@ async function fetchCourses(){
 
 
         card.className =
-        "w-72 sm:w-80 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0 snap-start flex flex-col justify-between hover:shadow-md transition duration-300";
+        "group w-72 sm:w-80 bg-white rounded-3xl border border-gray-100 overflow-hidden flex-shrink-0 snap-start flex flex-col justify-between hover:-translate-y-1.5 hover:shadow-xl transition duration-300";
 
 
 
         const imgUrl =
         course.image_url ||
-        "https://via.placeholder.com/400x225?text=No+Image";
+        "https://placehold.co/400x225?text=No+Image";
 
 
+
+        const TYPE_FA = {
+            course: "دوره",
+            lecture: "جزوه",
+            book: "کتاب"
+        };
+
+        const hasDiscount =
+        course.discount_price &&
+        Number(course.discount_price) > 0;
 
         const formattedPrice =
+        hasDiscount
+        ?
+        `<span class="text-gray-300 line-through text-[11px] font-bold ml-1.5">${Number(course.price).toLocaleString("fa-IR")}</span><span class="text-indigo-600">${Number(course.discount_price).toLocaleString("fa-IR")} تومان</span>`
+        :
         course.price
         ?
-        Number(course.price).toLocaleString("fa-IR")+" تومان"
+        `<span class="text-indigo-600">${Number(course.price).toLocaleString("fa-IR")} تومان</span>`
         :
-        "رایگان";
+        `<span class="text-emerald-600">رایگان</span>`;
 
 
 
         card.innerHTML =
         `
-        <div class="relative aspect-video bg-gray-50 overflow-hidden">
+        <div class="relative aspect-video bg-gray-100 overflow-hidden">
 
-            <img 
+            <img
             src="${imgUrl}"
-            class="w-full h-full object-cover">
+            class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+
+            <span class="absolute top-3 right-3 bg-white/85 backdrop-blur text-[10px] font-black text-gray-800 px-2.5 py-1 rounded-full">
+                ${TYPE_FA[course.type] || "دوره"}
+            </span>
 
         </div>
 
@@ -84,7 +102,7 @@ async function fetchCourses(){
                 </h3>
 
 
-                <p class="text-xs text-gray-400">
+                <p class="text-xs text-gray-400 leading-relaxed mt-1.5" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
                     ${course.description || ""}
                 </p>
 
@@ -93,13 +111,13 @@ async function fetchCourses(){
 
             <div class="flex items-center justify-between">
 
-                <span class="text-xs font-black text-indigo-600">
+                <span class="text-xs font-black">
                     ${formattedPrice}
                 </span>
 
 
                 <a href="/courses-detail?id=${course.id}"
-                class="bg-gray-950 text-white text-xs font-bold px-3 py-2 rounded-xl">
+                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
 
                 مشاهده
 
