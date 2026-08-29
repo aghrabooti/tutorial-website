@@ -21,6 +21,16 @@ async function loadHeader(){
 
         updateActivePage();
 
+        // دکمه‌ی منوی موبایل
+        const menuBtn = container.querySelector("#menu-btn");
+        const mobileMenu = container.querySelector("#mobile-menu");
+
+        if(menuBtn && mobileMenu){
+            menuBtn.addEventListener("click", () => {
+                mobileMenu.classList.toggle("hidden");
+            });
+        }
+
         // این دو تابع اگر در صفحه تعریف شده باشند صدا زده می‌شوند
         if(typeof updateAuthButton === "function")
             updateAuthButton();

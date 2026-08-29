@@ -6,7 +6,7 @@
 
 
 <a href="/"
-class="text-xl font-black">
+class="text-xl font-black" style="flex-shrink:0;">
 
 آکادمی
 <span class="text-indigo-600">
@@ -17,7 +17,7 @@ class="text-xl font-black">
 
 
 
-<nav class="flex gap-6">
+<nav class="hidden md:flex gap-6">
 
 
 <a
@@ -57,6 +57,16 @@ class="nav-link text-gray-600">
 
 
 
+<div class="flex items-center gap-2" style="flex-shrink:0;">
+
+
+<button
+data-theme-toggle
+aria-label="تغییر حالت تاریک/روشن"
+class="w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-all duration-200 text-lg">
+<span data-theme-icon>🌙</span>
+</button>
+
 
 <a href="/cart" class="relative w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-300 flex items-center justify-center transition-all duration-200">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -74,12 +84,74 @@ class="nav-link text-gray-600">
 <a
 id="auth-btn"
 href="/login"
-class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl">
+class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl"
+style="white-space:nowrap;">
 
 ورود / ثبت‌نام
 
 </a>
 
+
+<button
+id="menu-btn"
+aria-label="منو"
+class="md:hidden w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-all duration-200">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+    </svg>
+</button>
+
+
+</div>
+
+
+</div>
+
+</div>
+
+
+<!-- منوی موبایل -->
+<div id="mobile-menu" class="hidden md:hidden border-t">
+
+<div class="max-w-7xl mx-auto px-4">
+
+<nav class="flex flex-col py-2">
+
+
+<a
+data-page="home"
+href="/"
+class="nav-link text-gray-600 py-3 border-b border-gray-100">
+
+صفحه اصلی
+
+</a>
+
+
+
+<a
+data-page="courses"
+href="/courses"
+class="nav-link text-gray-600 py-3 border-b border-gray-100">
+
+دوره‌ها
+
+</a>
+
+
+
+<a
+data-page="about-us"
+href="/about-us"
+class="nav-link text-gray-600 py-3">
+
+درباره ما
+
+</a>
+
+
+
+</nav>
 
 </div>
 

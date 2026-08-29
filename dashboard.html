@@ -19,6 +19,12 @@
             }
         }
     </script>
+
+<script>
+(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}}catch(e){}})();
+</script>
+<link href="/css/dark-mode.css" rel="stylesheet">
+<script src="/js/theme.js" defer></script>
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between font-sans">
 
@@ -40,6 +46,9 @@
                 </div>
 
                 <div class="flex items-center gap-4">
+                    <button data-theme-toggle aria-label="تغییر حالت تاریک/روشن" class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition text-lg">
+                        <span data-theme-icon>🌙</span>
+                    </button>
                     <span class="text-sm font-bold text-gray-700 hidden sm:inline">
                         خوش آمدی، <span id="user-first-name" class="text-indigo-600">دانش‌آموز</span> عزیز 👋
                     </span>
