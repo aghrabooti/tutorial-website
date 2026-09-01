@@ -513,6 +513,18 @@ async function showPurchasedContent(course){
 
         let actionBlock = "";
 
+        // دکمه‌ی ویدیو — برای هر جلسه‌ای که ویدیو دارد (آنلاین یا ضبط‌شده)
+        const videoBtn = session.video_url
+            ? `
+            <button
+            onclick="playVideo('${normalizeAparatVideoUrl(session.video_url)}')"
+            class="mt-3 ml-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-indigo-700">
+
+                ${session.is_online ? "مشاهده‌ی ضبط جلسه 🎬" : "مشاهده"}
+
+            </button>`
+            : "";
+
         if(session.is_online){
 
             const when =
@@ -531,11 +543,11 @@ async function showPurchasedContent(course){
             <p class="mt-2 text-xs text-gray-500">🕐 شروع کلاس: ${when}</p>
 
             <a href="${session.online_url}" target="_blank" rel="noopener"
-            class="inline-block mt-3 bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700">
+            class="inline-block mt-3 ml-2 bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700">
 
                 ورود به کلاس آنلاین 🎥
 
-            </a>`;
+            </a>` + videoBtn;
 
             }else{
 
@@ -543,22 +555,22 @@ async function showPurchasedContent(course){
             <p class="mt-2 text-xs text-gray-500">🕐 شروع کلاس: ${when}</p>
 
             <button disabled
-            class="mt-3 bg-gray-300 text-gray-500 px-4 py-2 rounded-xl text-sm cursor-not-allowed">
+            class="mt-3 ml-2 bg-gray-300 text-gray-500 px-4 py-2 rounded-xl text-sm cursor-not-allowed">
 
                 لینک ۵ دقیقه قبل از کلاس فعال می‌شود
 
-            </button>`;
+            </button>` + videoBtn;
 
             }
 
         }else{
 
-            actionBlock = `
-            <button
-            onclick="playVideo('${normalizeAparatVideoUrl(session.video_url)}')"
-            class="mt-3 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-indigo-700">
 
-                مشاهده
+            actionBlock = videoBtn || `
+            <button disabled
+            class="mt-3 bg-gray-100 text-gray-400 px-4 py-2 rounded-xl text-sm cursor-not-allowed">
+
+                به‌زودی
 
             </button>`;
 
