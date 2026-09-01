@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نتیجه پرداخت | آکادمی استاد مهدی عزیزی</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .spinner {
+            width: 56px;
+            height: 56px;
+            border: 5px solid #e0e7ff;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+
+<script>
+(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}}catch(e){}})();
+</script>
+<link href="/css/dark-mode.css" rel="stylesheet">
+<script src="/js/theme.js" defer></script>
+</head>
+<body id="payment-result" class="bg-gray-50 min-h-screen flex flex-col font-sans text-gray-800">
+
+<div id="header"></div>
+
+
+<main class="flex-1 flex items-center justify-center w-full py-10">
+
+<div class="bg-white w-full max-w-md mx-4 p-8 rounded-3xl shadow-xl border border-gray-100 text-center">
+
+    <!-- در حال پردازش -->
+    <div id="state-processing">
+        <div class="spinner mx-auto"></div>
+        <h1 class="text-xl font-black mt-6">در حال بررسی پرداخت...</h1>
+        <p class="text-sm text-gray-400 mt-2">لطفاً این صفحه را نبندید</p>
+    </div>
+
+    <!-- موفق -->
+    <div id="state-success" class="hidden">
+        <div class="w-16 h-16 rounded-full bg-green-100 mx-auto flex items-center justify-center">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+        <h1 class="text-xl font-black mt-5 text-green-700">پرداخت با موفقیت انجام شد</h1>
+        <p class="text-sm text-gray-500 mt-2">دوره‌های شما به حساب‌تان اضافه شد.</p>
+        <div class="bg-gray-50 rounded-2xl py-3 px-4 mt-5 text-sm">
+            <span class="text-gray-400">شماره پیگیری:</span>
+            <span id="ref-id" class="font-black text-gray-800" dir="ltr"></span>
+        </div>
+        <a href="/dashboard"
+           class="block mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl transition">
+            رفتن به داشبورد و مشاهده دوره‌ها
+        </a>
+    </div>
+
+    <!-- ناموفق -->
+    <div id="state-failed" class="hidden">
+        <div class="w-16 h-16 rounded-full bg-red-100 mx-auto flex items-center justify-center">
+            <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </div>
+        <h1 class="text-xl font-black mt-5 text-red-600">پرداخت ناموفق بود</h1>
+        <p id="error-text" class="text-sm text-gray-500 mt-2 leading-relaxed"></p>
+        <a href="/cart"
+           class="block mt-6 bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-2xl transition">
+            بازگشت به سبد خرید
+        </a>
+    </div>
+
+    <!-- لغو شده -->
+    <div id="state-canceled" class="hidden">
+        <div class="w-16 h-16 rounded-full bg-amber-100 mx-auto flex items-center justify-center">
+            <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M12 21a9 9 0 100-18 9 9 0 000 18z"/>
+            </svg>
+        </div>
+        <h1 class="text-xl font-black mt-5 text-amber-600">پرداخت لغو شد</h1>
+        <p class="text-sm text-gray-500 mt-2">شما پرداخت را ناتمام رها کردید؛ سبد خریدتان دست‌نخورده باقی مانده است.</p>
+        <a href="/cart"
+           class="block mt-6 bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-2xl transition">
+            بازگشت به سبد خرید
+        </a>
+    </div>
+
+    <p class="text-[11px] text-gray-400 mt-6 leading-relaxed">
+        اگر مبلغی از حساب شما کسر شده اما پرداخت تأیید نشده است، طبق قوانین شاپرک مبلغ
+        حداکثر طی ۷۲ ساعت به‌صورت خودکار به حساب‌تان برمی‌گردد.
+    </p>
+
+</div>
+
+</main>
+
+
+<script src="/js/api.js"></script>
+<script src="/js/auth-state.js"></script>
+<script src="/js/header.js"></script>
+<script src="/js/cart-badge.js"></script>
+<script src="/js/payment-result.js"></script>
+    <div id="footer"></div>
+    <script src="/js/footer.js"></script>
+</body>
+</html>

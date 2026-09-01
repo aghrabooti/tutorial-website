@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">جزئیات دوره | آکادمی ریاضی مهدی عزیزی</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+        }
+    </style>
+
+<script>
+(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}}catch(e){}})();
+</script>
+<link href="/css/dark-mode.css" rel="stylesheet">
+<script src="/js/theme.js" defer></script>
+</head>
+<body id="courses" class="bg-gray-50 text-gray-800 antialiased">
+
+    <div id="header"></div>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div class="space-y-1">
+                <a href="/courses" class="text-indigo-600 hover:text-indigo-700 flex items-center gap-2 font-bold text-sm transition">
+                    &rarr; بازگشت به پکیج‌های آموزشی
+                </a>
+                <h1 id="course-title" class="text-2xl sm:text-3xl font-black text-gray-950 mt-2"></h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full">تضمین کیفیت آموزش</span>
+                <span id="course-type-badge" class="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full">دوره آموزشی</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div class="lg:col-span-8 space-y-6">
+                <div id="purchase-view">
+                    <div class="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-xl shadow-gray-100/70 border border-gray-100/80">
+                        <div id="course-image-container" class="w-full h-64 sm:h-80 lg:h-[26rem] rounded-2xl mb-8 overflow-hidden bg-gray-100 relative shadow-inner">
+                            <img id="course-image" src="" alt="" class="w-full h-full object-cover hidden">
+                            <div id="course-image-placeholder" class="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 font-bold border-2 border-dashed border-gray-200 rounded-2xl">تصویری برای این دوره ثبت نشده است</div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <h2 class="text-xl font-black text-gray-950 flex items-center gap-2">
+                                <span class="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
+                                توضیحات و معرفی دوره
+                            </h2>
+                            <div class="prose max-w-none leading-relaxed text-sm sm:text-base text-gray-600 font-medium" id="description"></div>
+                        </div>
+                        
+                        <div class="mt-8 bg-amber-50 border border-amber-100 rounded-2xl p-5 flex flex-col sm:flex-row items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-xl shrink-0">🔒</div>
+                            <div class="space-y-1">
+                                <h3 class="font-bold text-amber-900 text-base">این پکیج آموزشی هنوز برای شما فعال نیست</h3>
+                                <p class="text-amber-700 text-xs leading-relaxed">برای دسترسی آنلاین و آنی به تمام جلسات، ویدئوها، جزوات اختصاصی و سیستم رفع اشکال، لطفاً اقدام به تهیه دوره کنید.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="content-view" class="hidden">
+                    <div class="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-xl shadow-gray-100/70 border border-gray-100/80">
+                        <h2 class="text-xl font-black mb-6 text-gray-950 flex items-center gap-2">
+                            <span class="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
+                            محتوا و پنل تماشای جلسات دوره
+                        </h2>
+                        <div id="course-content" class="space-y-6"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 lg:sticky lg:top-24">
+                <div class="bg-white rounded-3xl p-6 shadow-xl shadow-gray-100/70 border border-gray-100/80 space-y-6">
+                    <div class="bg-gray-50 rounded-2xl p-4 flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-500">سرمایه‌گذاری شما:</span>
+                        <div class="text-2xl font-black text-indigo-600" id="price">۰ تومان</div>
+                    </div>
+                    
+                    <button id="buy-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-base transition duration-300 shadow-lg shadow-indigo-100">
+                        افزودن به سبد خرید
+                    </button>
+
+                    <div id="purchased-info" class="hidden bg-emerald-50 border border-emerald-100 text-emerald-700 py-4 px-5 rounded-2xl text-center font-bold flex items-center justify-center gap-2 text-sm">
+                        <span>✨</span> شما این پکیج را خریداری کرده‌اید
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-5 space-y-3">
+                        <div class="flex items-center gap-3 text-xs font-bold text-gray-600">
+                            <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">⏳</span>
+                            <span>دسترسی همیشگی و بدون محدودیت زمانی</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs font-bold text-gray-600">
+                            <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">💬</span>
+                            <span>پشتیبانی و رفع اشکال مستقیم توسط استاد</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs font-bold text-gray-600">
+                            <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">💎</span>
+                            <span>به‌روزرسانی رایگان سوالات و تست‌های جدید</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth-state.js"></script>
+<script src="/js/header.js"></script>
+<script src="/js/cart-badge.js"></script>
+<script src="/js/courses-detail.js"></script>
+
+    <div id="footer"></div>
+    <script src="/js/footer.js"></script>
+</body>
+</html>

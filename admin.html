@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>پنل مدیریت | آکادمی عزیزی</title>
+
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<link
+href="https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/font-face.css"
+rel="stylesheet">
+
+<style>
+body{ font-family:Vazir,sans-serif; }
+</style>
+
+
+<script>
+(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}}catch(e){}})();
+</script>
+<link href="/css/dark-mode.css" rel="stylesheet">
+<script src="/js/theme.js" defer></script>
+</head>
+
+<body id="admin" class="bg-gray-100 min-h-screen flex flex-col">
+
+<div id="header"></div>
+
+<main class="flex-1 w-full max-w-6xl mx-auto p-4 md:p-8">
+
+<div class="flex items-center justify-between flex-wrap gap-4 mb-8">
+  <h1 class="text-2xl md:text-3xl font-black">پنل مدیریت</h1>
+  <a href="/admin-courses"
+     class="bg-white border rounded-full px-5 py-2 font-bold text-indigo-700 hover:shadow">
+     مدیریت دوره‌ها و جلسات ←
+  </a>
+</div>
+
+<!-- تب‌ها -->
+<div class="flex gap-2 overflow-x-auto mb-8" id="tabs">
+  <button data-tab="overview"  class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-indigo-600 text-white">داشبورد</button>
+  <button data-tab="orders"    class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">سفارش‌ها</button>
+  <button data-tab="shipments" class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">مرسوله‌های پستی</button>
+  <button data-tab="users"     class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">کاربران</button>
+  <button data-tab="files"     class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">فایل و تصویر</button>
+</div>
+
+<!-- ── داشبورد ── -->
+<section id="sec-overview">
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+    <div class="bg-white rounded-3xl shadow p-6">
+      <p class="text-gray-500 text-sm">فروش کل (تومان)</p>
+      <p id="stat-revenue" class="text-2xl font-black mt-2 text-green-700">—</p>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow p-6">
+      <p class="text-gray-500 text-sm">سفارش‌های موفق</p>
+      <p id="stat-orders" class="text-2xl font-black mt-2">—</p>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow p-6">
+      <p class="text-gray-500 text-sm">کاربران سایت</p>
+      <p id="stat-users" class="text-2xl font-black mt-2">—</p>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow p-6">
+      <p class="text-gray-500 text-sm">مرسوله‌های در انتظار ارسال</p>
+      <p id="stat-shipments" class="text-2xl font-black mt-2 text-amber-600">—</p>
+    </div>
+
+  </div>
+
+  <div class="mt-6 bg-indigo-50 border border-indigo-100 rounded-3xl p-6 text-sm leading-relaxed text-indigo-900">
+    راهنما: جزئیات خریدها در تب «سفارش‌ها»، نشانی‌های پستی و ثبت کد رهگیری در تب «مرسوله‌های پستی»،
+    و آپلود PDF جزوه/کتاب و عکس کاورها در تب «فایل و تصویر» است.
+  </div>
+
+</section>
+
+<!-- ── سفارش‌ها ── -->
+<section id="sec-orders" class="hidden">
+
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-black">۱۰۰ سفارش اخیر</h2>
+    <button id="orders-refresh" class="bg-white border rounded-full px-4 py-2 text-sm font-bold">↻ تازه‌سازی</button>
+  </div>
+
+  <div class="bg-white rounded-3xl shadow overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b text-gray-500">
+          <th class="p-4 text-right">تاریخ</th>
+          <th class="p-4 text-right">مشتری</th>
+          <th class="p-4 text-right">اقلام</th>
+          <th class="p-4 text-right">مبلغ (تومان)</th>
+          <th class="p-4 text-right">وضعیت</th>
+          <th class="p-4 text-right">کد پیگیری</th>
+        </tr>
+      </thead>
+      <tbody id="orders-body"></tbody>
+    </table>
+  </div>
+
+</section>
+
+<!-- ── مرسوله‌ها ── -->
+<section id="sec-shipments" class="hidden">
+
+  <div class="flex justify-between items-center flex-wrap gap-3 mb-4">
+    <h2 class="text-xl font-black">مرسوله‌های پستی (کتاب / جزوه)</h2>
+    <div class="flex gap-2 items-center">
+      <select id="shipments-filter" class="bg-white border rounded-full px-4 py-2 text-sm font-bold">
+        <option value="pending">در انتظار ارسال</option>
+        <option value="sent">ارسال‌شده</option>
+        <option value="all">همه</option>
+      </select>
+      <button id="shipments-refresh" class="bg-white border rounded-full px-4 py-2 text-sm font-bold">↻ تازه‌سازی</button>
+    </div>
+  </div>
+
+  <div id="shipments-list" class="space-y-4"></div>
+
+</section>
+
+<!-- ── کاربران ── -->
+<section id="sec-users" class="hidden">
+
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-black">کاربران سایت</h2>
+    <button id="users-refresh" class="bg-white border rounded-full px-4 py-2 text-sm font-bold">↻ تازه‌سازی</button>
+  </div>
+
+  <div class="bg-white rounded-3xl shadow overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b text-gray-500">
+          <th class="p-4 text-right">نام</th>
+          <th class="p-4 text-right">موبایل</th>
+          <th class="p-4 text-right">نقش</th>
+        </tr>
+      </thead>
+      <tbody id="users-body"></tbody>
+    </table>
+  </div>
+
+</section>
+
+<!-- ── فایل و تصویر ── -->
+<section id="sec-files" class="hidden">
+
+  <div class="grid md:grid-cols-2 gap-6">
+
+    <!-- آپلود PDF -->
+    <div class="bg-white rounded-3xl shadow p-6">
+      <h2 class="text-xl font-black">آپلود PDF جزوه / کتاب</h2>
+      <p class="text-gray-500 text-sm mt-2 leading-relaxed">
+        فایل به‌صورت خودکار با نامِ شناسه‌ی محصول ذخیره می‌شود و نسخه‌ی قبلی را جایگزین می‌کند؛
+        خریداران از صفحه‌ی محصول دکمه‌ی «دانلود فایل» را می‌بینند.
+      </p>
+
+      <label class="block text-sm font-semibold text-gray-700 mt-5 mb-2">محصول</label>
+      <select id="pdf-course" class="w-full px-4 py-3 bg-gray-50 border rounded-2xl">
+        <option value="" disabled selected>در حال بارگذاری...</option>
+      </select>
+
+      <label class="block text-sm font-semibold text-gray-700 mt-4 mb-2">فایل PDF</label>
+      <input id="pdf-file" type="file" accept="application/pdf,.pdf"
+             class="w-full px-4 py-3 bg-gray-50 border rounded-2xl text-sm">
+
+      <button id="pdf-upload-btn"
+              class="mt-5 w-full bg-green-600 text-white py-3 rounded-2xl font-bold hover:bg-green-700">
+        آپلود فایل
+      </button>
+
+      <p id="pdf-status" class="mt-3 text-sm"></p>
+    </div>
+
+    <!-- آپلود عکس -->
+    <div class="bg-white rounded-3xl shadow p-6">
+      <h2 class="text-xl font-black">آپلود عکس کاور دوره</h2>
+      <p class="text-gray-500 text-sm mt-2 leading-relaxed">
+        بعد از آپلود، لینک عمومی عکس را از اینجا کپی کنید و در فرم «مدیریت دوره‌ها»
+        داخل فیلد آدرس تصویر قرار دهید.
+      </p>
+
+      <label class="block text-sm font-semibold text-gray-700 mt-5 mb-2">فایل تصویر</label>
+      <input id="img-file" type="file" accept="image/*"
+             class="w-full px-4 py-3 bg-gray-50 border rounded-2xl text-sm">
+
+      <button id="img-upload-btn"
+              class="mt-5 w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold hover:bg-indigo-700">
+        آپلود عکس
+      </button>
+
+      <p id="img-status" class="mt-3 text-sm"></p>
+
+      <div id="img-url-box" class="hidden mt-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">لینک عمومی تصویر</label>
+        <div class="flex gap-2">
+          <input id="img-url" type="text" readonly dir="ltr"
+                 class="flex-1 px-4 py-2 bg-gray-50 border rounded-2xl text-xs text-left">
+          <button id="img-copy-btn"
+                  class="bg-gray-800 text-white px-4 rounded-2xl text-sm font-bold">
+            کپی
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth-state.js"></script>
+<script src="/js/header.js"></script>
+<script src="/js/cart-badge.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/supabase-client.js"></script>
+<script src="/js/admin.js"></script>
+
+    <div id="footer"></div>
+    <script src="/js/footer.js"></script>
+</body>
+
+</html>

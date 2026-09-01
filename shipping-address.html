@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ثبت آدرس ارسال | آکادمی عزیزی</title>
+
+
+<link
+href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
+rel="stylesheet">
+
+
+<link
+href="https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/font-face.css"
+rel="stylesheet">
+
+
+<style>
+
+body{
+    font-family: Vazir,sans-serif;
+}
+
+</style>
+
+
+
+<script>
+(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}}catch(e){}})();
+</script>
+<link href="/css/dark-mode.css" rel="stylesheet">
+<script src="/js/theme.js" defer></script>
+</head>
+
+
+<body id="shipping-address" class="bg-gray-50 min-h-screen flex flex-col">
+
+
+<div id="header"></div>
+
+
+
+
+<main class="flex-1 flex items-center justify-center w-full py-10">
+
+<div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md mx-4 border border-gray-100">
+
+
+<div class="text-center mb-6">
+
+<h1
+id="page-heading"
+class="text-2xl font-bold text-gray-900">
+
+آدرس ارسال مرسوله
+
+</h1>
+
+
+<p class="text-gray-500 mt-2 text-sm leading-relaxed">
+سفارش شما شامل کتاب / جزوه است؛ لطفاً «قبل از پرداخت» نشانی دقیق دریافت مرسوله را وارد کنید.
+</p>
+
+
+</div>
+
+
+
+
+<div
+id="form-error"
+class="hidden mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+</div>
+
+
+
+
+<form
+id="shipping-form"
+class="space-y-5">
+
+
+
+
+<div>
+
+<label class="block text-sm font-semibold text-gray-700 mb-2">
+نام و نام خانوادگی گیرنده
+</label>
+
+
+<input
+id="full-name"
+type="text"
+required
+placeholder="مثال: علی محمدی"
+class="w-full px-4 py-3 bg-gray-50 border rounded-2xl">
+
+
+</div>
+
+
+
+
+<div>
+
+<label class="block text-sm font-semibold text-gray-700 mb-2">
+شماره تماس (موبایل)
+</label>
+
+
+<input
+id="phone"
+type="tel"
+required
+dir="ltr"
+placeholder="09123456789"
+class="w-full px-4 py-3 bg-gray-50 border rounded-2xl text-left">
+
+
+</div>
+
+
+
+
+<div>
+
+<label class="block text-sm font-semibold text-gray-700 mb-2">
+استان
+</label>
+
+
+<select
+id="province"
+required
+class="w-full px-4 py-3 bg-gray-50 border rounded-2xl">
+
+
+<option value="" disabled selected>
+انتخاب کنید...
+</option>
+
+<option value="آذربایجان شرقی">آذربایجان شرقی</option>
+<option value="آذربایجان غربی">آذربایجان غربی</option>
+<option value="اردبیل">اردبیل</option>
+<option value="اصفهان">اصفهان</option>
+<option value="البرز">البرز</option>
+<option value="ایلام">ایلام</option>
+<option value="بوشهر">بوشهر</option>
+<option value="تهران">تهران</option>
+<option value="چهارمحال و بختیاری">چهارمحال و بختیاری</option>
+<option value="خراسان جنوبی">خراسان جنوبی</option>
+<option value="خراسان رضوی">خراسان رضوی</option>
+<option value="خراسان شمالی">خراسان شمالی</option>
+<option value="خوزستان">خوزستان</option>
+<option value="زنجان">زنجان</option>
+<option value="سمنان">سمنان</option>
+<option value="سیستان و بلوچستان">سیستان و بلوچستان</option>
+<option value="فارس">فارس</option>
+<option value="قزوین">قزوین</option>
+<option value="قم">قم</option>
+<option value="کردستان">کردستان</option>
+<option value="کرمان">کرمان</option>
+<option value="کرمانشاه">کرمانشاه</option>
+<option value="کهگیلویه و بویراحمد">کهگیلویه و بویراحمد</option>
+<option value="گلستان">گلستان</option>
+<option value="گیلان">گیلان</option>
+<option value="لرستان">لرستان</option>
+<option value="مازندران">مازندران</option>
+<option value="مرکزی">مرکزی</option>
+<option value="هرمزگان">هرمزگان</option>
+<option value="همدان">همدان</option>
+<option value="یزد">یزد</option>
+
+
+</select>
+
+
+</div>
+
+
+
+
+<div>
+
+<label class="block text-sm font-semibold text-gray-700 mb-2">
+شهر
+</label>
+
+
+<input
+id="city"
+type="text"
+required
+placeholder="مثال: تبریز"
+class="w-full px-4 py-3 bg-gray-50 border rounded-2xl">
+
+
+</div>
+
+
+
+
+<div>
+
+<label class="block text-sm font-semibold text-gray-700 mb-2">
+آدرس دقیق پستی
+</label>
+
+
+<textarea
+id="address"
+rows="3"
+required
+placeholder="خیابان، کوچه، پلاک، واحد..."
+class="w-full px-4 py-3 bg-gray-50 border rounded-2xl"></textarea>
+
+
+</div>
+
+
+
+
+<div>
+
+<label class="block text-sm font-semibold text-gray-700 mb-2">
+کد پستی (۱۰ رقم)
+</label>
+
+
+<input
+id="postal-code"
+type="text"
+required
+dir="ltr"
+maxlength="10"
+placeholder="1234567890"
+class="w-full px-4 py-3 bg-gray-50 border rounded-2xl text-left">
+
+
+</div>
+
+
+
+
+<button
+id="save-btn"
+class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold">
+
+
+ثبت آدرس
+
+
+</button>
+
+
+
+
+</form>
+
+
+
+
+<div id="state-done" class="hidden text-center py-6">
+
+<div class="text-5xl mb-4">✅</div>
+
+<h2 class="text-xl font-bold text-gray-900">
+نشانی با موفقیت ثبت شد
+</h2>
+
+<p class="text-gray-500 mt-2 text-sm leading-relaxed">
+در حال بازگشت به سبد خرید؛ مرسوله به همین نشانی ارسال می‌شود.
+</p>
+
+<a
+href="/cart?addr=ok"
+class="inline-block mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold">
+ادامه‌ی پرداخت
+</a>
+
+</div>
+
+
+
+
+</div>
+
+</main>
+
+
+<script src="/js/api.js"></script>
+
+
+<script src="/js/auth-state.js"></script>
+<script src="/js/header.js"></script>
+<script src="/js/cart-badge.js"></script>
+<script src="/js/shipping-address.js"></script>
+
+
+    <div id="footer"></div>
+    <script src="/js/footer.js"></script>
+</body>
+
+</html>

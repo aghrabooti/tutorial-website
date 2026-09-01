@@ -1,0 +1,94 @@
+/* ═══════════════════════════════════════════════════════════════════
+   دارک‌مود سراسری — با کلاس dark روی <html> فعال می‌شود
+   این فایل بعد از Tailwind بارگذاری می‌شود و با specificity بالاتر
+   (html.dark) رنگ‌های کلاس‌های رایج را در حالت تاریک بازنویسی می‌کند.
+   روی همه‌ی صفحات — چه Tailwind v2 و چه v3 — کار می‌کند.
+   ═══════════════════════════════════════════════════════════════════ */
+
+html.dark body {
+    background-color: #0b1220;
+    color: #e2e8f0;
+}
+
+/* پس‌زمینه‌ها */
+html.dark .bg-white { background-color: #1e293b; }
+html.dark .bg-gray-50 { background-color: #0f172a; }
+html.dark .bg-gray-100 { background-color: #1e293b; }
+html.dark .bg-indigo-50 { background-color: rgba(99, 102, 241, .16); }
+html.dark .bg-gray-200 { background-color: #334155; }
+
+/* نوشته‌ها */
+html.dark .text-gray-950,
+html.dark .text-gray-900,
+html.dark .text-gray-800 { color: #f1f5f9; }
+html.dark .text-gray-700 { color: #e2e8f0; }
+html.dark .text-gray-600 { color: #cbd5e1; }
+html.dark .text-gray-500,
+html.dark .text-gray-400 { color: #94a3b8; }
+html.dark .text-indigo-600 { color: #a5b4fc; }
+html.dark .text-indigo-900 { color: #c7d2fe; }
+
+/* کادرها و خط‌های مرزی */
+html.dark .border,
+html.dark .border-t,
+html.dark .border-b,
+html.dark .border-r,
+html.dark .border-l,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark [class*="border-gray-200/"] { border-color: #334155; }
+html.dark .border-white { border-color: #1e293b; }
+html.dark .border-indigo-100 { border-color: rgba(99, 102, 241, .35); }
+
+/* فیلدهای فرم */
+html.dark input,
+html.dark textarea,
+html.dark select {
+    color: #e2e8f0;
+    background-color: transparent;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #64748b; }
+html.dark select option { background-color: #1e293b; color: #e2e8f0; }
+
+/* فیلدهای gray-50 در حالت تاریک کمی روشن‌تر از بک‌گراند صفحه */
+html.dark .bg-gray-50 input,
+html.dark input.bg-gray-50,
+html.dark select.bg-gray-50,
+html.dark textarea.bg-gray-50 { background-color: #16213a; }
+
+/* مخفی‌کردن سایه‌ها در تاریکی */
+html.dark .shadow-sm,
+html.dark .shadow,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+    box-shadow: 0 10px 25px -8px rgba(0, 0, 0, .55);
+}
+
+/* حالت‌های hover رایج */
+html.dark .hover\:bg-gray-100:hover { background-color: #334155; }
+html.dark .hover\:text-gray-900:hover { color: #f1f5f9; }
+html.dark .hover\:border-gray-300:hover { border-color: #475569; }
+html.dark .hover\:bg-indigo-50:hover { background-color: rgba(99, 102, 241, .14); }
+html.dark .hover\:text-indigo-600:hover { color: #a5b4fc; }
+html.dark .hover\:shadow-xl:hover { box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .65); }
+
+/* پنل‌های وضعیت رنگی (موفق/هشدار/خطا) */
+html.dark .bg-green-50 { background-color: rgba(34, 197, 94, .12); }
+html.dark .bg-amber-50,
+html.dark .bg-amber-100 { background-color: rgba(245, 158, 11, .14); }
+html.dark .bg-red-50,
+html.dark .bg-red-100 { background-color: rgba(239, 68, 68, .13); }
+html.dark .bg-gray-800 { background-color: #243350; }
+
+/* دکمه‌ی احراز در هدر و کارت‌های تیره‌ی موجود */
+html.dark .bg-indigo-600:hover,
+html.dark .hover\:bg-indigo-700:hover { background-color: #4f46e5; }
+
+/* عکس‌ها و رسانه کمی نرم‌تر */
+html.dark img { filter: brightness(.92); }
+
+/* فوتر مشترک — اندازه‌ی لوگوی اینماد (مستقل از نسخه‌ی تیلویند صفحه) */
+.enamad-logo img { max-height: 96px; width: auto; display: block; }
