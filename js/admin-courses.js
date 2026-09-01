@@ -725,13 +725,16 @@ function normalizeAparatVideoUrl(raw) {
 
     const hashMatch =
         s.match(/videohash=([A-Za-z0-9]+)/i) ||
-        s.match(/aparat\.com\/(?:v|video)\/([A-Za-z0-9]+)/i);
+        s.match(/\/videohash\/([A-Za-z0-9]+)/i) ||
+        s.match(/aparat\.com\/v\/([A-Za-z0-9]+)/i);
 
     if (!hashMatch) return s;
 
+    // قالب رسمی امبد آپارات (همان چیزی که خود آپارات صادر می‌کند)
     return (
-        "https://www.aparat.com/video/video/embed?hidetitle=true&recom=self&videohash=" +
-        hashMatch[1]
+        "https://www.aparat.com/video/video/embed/videohash/" +
+        hashMatch[1] +
+        "/vt/frame?recom=self"
     );
 }
 let sessionsCourseId = null;
