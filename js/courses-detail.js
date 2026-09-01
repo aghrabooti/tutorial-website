@@ -555,7 +555,7 @@ async function showPurchasedContent(course){
 
             actionBlock = `
             <button
-            onclick="playVideo('${session.video_url}')"
+            onclick="playVideo('${normalizeAparatVideoUrl(session.video_url)}')"
             class="mt-3 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-indigo-700">
 
                 مشاهده
@@ -696,6 +696,29 @@ document.addEventListener(
 
 
 });
+
+// لینک‌های آپارات (کد امبد کامل / لینک صفحه / لینک امبد) به لینک امبد
+// استاندارد تبدیل می‌شوند؛ لینک‌های دیگر دست‌نخورده می‌مانند.
+function normalizeAparatVideoUrl(raw) {
+    if (!raw) return raw;
+    let s = String(raw).trim();
+
+    const srcMatch = s.match(/src\s*=\s*["']([^"']+)["']/i);
+    if (srcMatch) s = srcMatch[1];
+
+    if (!/aparat\.com/i.test(s)) return s;
+
+    const hashMatch =
+        s.match(/videohash=([A-Za-z0-9]+)/i) ||
+        s.match(/aparat\.com\/(?:v|video)\/([A-Za-z0-9]+)/i);
+
+    if (!hashMatch) return s;
+
+    return (
+        "https://www.aparat.com/video/video/embed?hidetitle=true&recom=self&videohash=" +
+        hashMatch[1]
+    );
+}
 
 function playVideo(url){
 

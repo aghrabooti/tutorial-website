@@ -711,6 +711,29 @@ window.openEditModal = function () {
 // ── مدیریت جلسات ──
 
 window.sessionsCache = [];
+
+// لینک آپارات: کد امبد کامل iframe، لینک صفحه‌ی ویدیو یا لینک امبد — هر سه
+// به لینک امبد استاندارد تبدیل می‌شوند. لینک‌های غیر آپاراتی دست‌نخورده می‌مانند.
+function normalizeAparatVideoUrl(raw) {
+    if (!raw) return raw;
+    let s = String(raw).trim();
+
+    const srcMatch = s.match(/src\s*=\s*["']([^"']+)["']/i);
+    if (srcMatch) s = srcMatch[1];
+
+    if (!/aparat\.com/i.test(s)) return s;
+
+    const hashMatch =
+        s.match(/videohash=([A-Za-z0-9]+)/i) ||
+        s.match(/aparat\.com\/(?:v|video)\/([A-Za-z0-9]+)/i);
+
+    if (!hashMatch) return s;
+
+    return (
+        "https://www.aparat.com/video/video/embed?hidetitle=true&recom=self&videohash=" +
+        hashMatch[1]
+    );
+}
 let sessionsCourseId = null;
 
 function toLocalInputValue(iso) {
@@ -772,7 +795,7 @@ function renderSessions() {
 
         <input type="text" dir="ltr"
             value="${escAttr(s.video_url)}"
-            placeholder="https:// — لینک ویدیوی ضبط‌شده‌ی جلسه"
+            placeholder="لینک یا کد امبد آپارات — خودکار تبدیل به پلیر می‌شود"
             onchange="window.sessionsCache[${i}].video_url=this.value"
             class="w-full border rounded-xl p-2 text-sm text-left">
 
@@ -887,6 +910,8 @@ window.saveSessions = async () => {
     if (!sessionsCourseId) return;
 
     for (const s of window.sessionsCache) {
+
+        s.video_url = normalizeAparatVideoUrl(s.video_url);
 
         if (!s.title || !s.session_number) {
             status.className = "text-sm text-red-500";
