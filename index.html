@@ -63,6 +63,10 @@
             50%      { transform: translateY(-14px); }
         }
 
+        /* سایه‌ی نرم برش تصویر استاد */
+        .hero-cutout { filter: drop-shadow(0 24px 40px rgba(67,56,202,.35)); }
+        html.dark .hero-cutout { filter: drop-shadow(0 24px 48px rgba(99,102,241,.45)); }
+
         /* کارت شیشه‌ای */
         .glass {
             background: rgba(255,255,255,.72);
@@ -176,42 +180,44 @@
 
                 </div>
 
-                <!-- ترکیب‌بندی کارت‌های شناور -->
+                <!-- تصویر استاد + کارت‌های شناور -->
                 <div class="lg:col-span-5 relative flex justify-center reveal" style="--d:.35s">
-                    <div class="relative w-full max-w-sm">
+                    <div class="relative w-full max-w-md">
 
-                        <!-- کارت اصلی -->
-                        <div class="glass border border-white/60 shadow-2xl rounded-3xl p-6 space-y-5 float-slow rotate-2">
-                            <div class="flex items-center gap-3">
-                                <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30">
-                                    <i class="fa-solid fa-play text-sm"></i>
+                        <!-- هاله‌ی نور پشت استاد -->
+                        <div class="absolute inset-8 -bottom-2 rounded-[45%] bg-gradient-to-br from-indigo-400/35 via-violet-400/25 to-amber-300/25 blur-3xl" aria-hidden="true"></div>
+
+                        <!-- برش بدون پس‌زمینه‌ی عکس استاد -->
+                        <img
+                            src="/assets/images/professor-cutout.webp"
+                            alt="استاد مهدی عزیزی — دبیر ریاضیات"
+                            fetchpriority="high"
+                            class="relative z-10 w-full h-auto object-contain select-none pointer-events-none float-slow hero-cutout">
+
+                        <!-- کارت کوچک پیشرفت دوره -->
+                        <div class="absolute z-20 top-1/3 -left-3 sm:-left-10 w-44 sm:w-52 glass border border-white/60 shadow-2xl rounded-2xl p-3.5 space-y-2.5 float-slower -rotate-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 flex-shrink-0">
+                                    <i class="fa-solid fa-play text-[10px]"></i>
                                 </div>
                                 <div>
-                                    <p class="text-sm font-black text-gray-950">جلسه ۱۲ — تابع و نمودار</p>
-                                    <p class="text-[11px] text-gray-400 font-bold">ریاضی دوازدهم تجربی</p>
+                                    <p class="text-[11px] font-black text-gray-950">جلسه ۱۲ — تابع و نمودار</p>
+                                    <p class="text-[9px] text-gray-400 font-bold">ریاضی دوازدهم تجربی</p>
                                 </div>
                             </div>
-
-                            <div class="space-y-2">
-                                <div class="flex justify-between text-[11px] font-bold text-gray-400">
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-[9px] font-bold text-gray-400">
                                     <span>پیشرفت دوره</span>
                                     <span>٪۷۲</span>
                                 </div>
-                                <div class="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                                     <div class="h-full w-[72%] rounded-full bg-gradient-to-l from-indigo-500 to-violet-500"></div>
                                 </div>
                             </div>
-
-                            <div class="flex items-center justify-between bg-indigo-50 rounded-2xl px-4 py-3">
-                                <span class="text-xs font-black text-indigo-600">تست‌های این جلسه</span>
-                                <span class="text-xs font-black text-gray-950">۲۴ تست</span>
-                            </div>
-
-                            <div class="text-center text-4xl font-black text-indigo-200 select-none tracking-tight">𝝅 𝒙 ∫ Δ</div>
                         </div>
 
                         <!-- چیپ کلاس آنلاین -->
-                        <div class="absolute -top-6 -left-4 sm:-left-8 float-slower">
+                        <div class="absolute z-20 top-4 -right-2 sm:-right-6 float-slower">
                             <div class="glass border border-white/60 shadow-xl rounded-2xl px-4 py-3 flex items-center gap-2.5 -rotate-3">
                                 <span class="live-dot w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
                                 <span class="text-xs font-black text-gray-950">کلاس آنلاین — همین حالا</span>
@@ -219,11 +225,17 @@
                         </div>
 
                         <!-- چیپ جزوه -->
-                        <div class="absolute -bottom-6 -right-4 sm:-right-8 float-slow" style="animation-delay:-1.5s">
+                        <div class="absolute z-20 bottom-24 -right-3 sm:-right-8 float-slow" style="animation-delay:-1.5s">
                             <div class="glass border border-white/60 shadow-xl rounded-2xl px-4 py-3 flex items-center gap-2.5 rotate-2">
                                 <i class="fa-solid fa-file-pdf text-rose-500"></i>
                                 <span class="text-xs font-black text-gray-950">جزوه‌ی جدید منتشر شد</span>
                             </div>
+                        </div>
+
+                        <!-- پلاک نام استاد -->
+                        <div class="absolute z-30 -bottom-4 right-1/2 translate-x-1/2 glass border border-white/60 shadow-xl rounded-2xl px-6 py-2.5 text-center whitespace-nowrap">
+                            <p class="text-sm font-black text-gray-950">استاد مهدی عزیزی</p>
+                            <p class="text-[10px] font-bold text-indigo-600 mt-0.5">آموزش مفهومی ریاضیات | نهم تا دوازدهم</p>
                         </div>
 
                     </div>
@@ -438,6 +450,7 @@
     <div id="footer"></div>
 
 <script src="/js/supabase-client.js"></script>
+<script src="/js/course-cover.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/auth-state.js"></script>
 <script src="/js/home.js"></script>

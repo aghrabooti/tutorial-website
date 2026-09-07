@@ -383,8 +383,7 @@ function renderCourses(list){
 
 
         const image =
-        course.image_url ||
-        "https://placehold.co/400x225?text=No+Image";
+        resolveCourseImage(course);
 
 
 
@@ -394,6 +393,9 @@ function renderCourses(list){
 
             <img 
             src="${image}"
+            onerror="courseCoverError(this)"
+            loading="lazy"
+            alt="${course.title || ""}"
             class="w-full h-48 object-cover">
 
 
