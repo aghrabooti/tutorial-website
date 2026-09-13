@@ -92,3 +92,10 @@ html.dark img { filter: brightness(.92); }
 
 /* فوتر مشترک — اندازه‌ی لوگوی اینماد (مستقل از نسخه‌ی تیلویند صفحه) */
 .enamad-logo img { max-height: 96px; width: auto; display: block; }
+
+/* ── هدر و منوی موبایل ── */
+html.dark .site-header { border-color: #334155; }
+html.dark .mobile-menu { border-color: #334155; }
+html.dark .nav-link:hover { background-color: rgba(148, 163, 184, .12); color: #f1f5f9; }
+html.dark .nav-link.bg-indigo-50 { background-color: rgba(99, 102, 241, .18); color: #a5b4fc; }
+html.dark #auth-btn-mobile { background-color: #4f46e5; color: #fff; }

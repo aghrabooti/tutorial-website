@@ -5,7 +5,7 @@
     {
       "source": "/",
       "has": [{ "type": "host", "value": "admin.mahdiazizi.com" }],
-      "destination": "/admin"
+      "destination": "/admin-login"
     }
   ]
 }

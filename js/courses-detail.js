@@ -634,7 +634,7 @@ async function showPurchasedContent(course){
         <button
         id="download-file-btn"
         onclick="downloadCourseFile()"
-        class="bg-green-600 text-white px-6 py-2 rounded-xl hover:bg-green-700">
+        class="w-full sm:w-auto bg-green-600 text-white px-6 py-2.5 rounded-xl hover:bg-green-700">
 
             دانلود فایل PDF
 
@@ -671,7 +671,7 @@ async function showPurchasedContent(course){
         <!-- Sessions -->
 
 
-        <div class="space-y-4">
+        <div class="space-y-4 lg:max-h-[70vh] lg:overflow-y-auto lg:pl-1">
 
 
             <h3 class="text-xl font-black">

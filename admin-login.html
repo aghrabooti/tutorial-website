@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+
+<title>ورود مدیر | پنل مدیریت آکادمی عزیزی</title>
+
+<link
+href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
+rel="stylesheet">
+
+<link
+href="https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/font-face.css"
+rel="stylesheet">
+
+<style>
+body {
+    font-family: Vazir, sans-serif;
+}
+.admin-bg {
+    background:
+        radial-gradient(900px 400px at 90% -10%, rgba(99,102,241,.18), transparent 60%),
+        radial-gradient(700px 380px at 0% 110%, rgba(16,185,129,.12), transparent 55%);
+}
+</style>
+
+<script>
+(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}}catch(e){}})();
+</script>
+<link href="/css/dark-mode.css" rel="stylesheet">
+<link href="/css/responsive.css" rel="stylesheet">
+<script src="/js/theme.js" defer></script>
+</head>
+
+
+<body id="admin-login" class="bg-gray-50 admin-bg min-h-screen flex flex-col">
+
+<!-- نوار بالایی ساده — بدون هدر و سبد خرید سایت -->
+<div class="w-full max-w-md mx-auto px-4 pt-6 flex items-center justify-between">
+    <a href="https://mahdiazizi.com" class="text-xs text-gray-500 hover:text-indigo-600 transition">
+        ← بازگشت به سایت اصلی
+    </a>
+    <button data-theme-toggle type="button"
+        class="w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-sm shadow-sm"
+        title="تغییر حالت روشن/تاریک">
+        <span data-theme-icon>🌙</span>
+    </button>
+</div>
+
+
+<main class="flex-1 flex items-center justify-center w-full py-10">
+
+<div class="bg-white w-full max-w-md mx-4 p-8 rounded-3xl shadow-xl border border-gray-100">
+
+
+<div class="text-center mb-8">
+
+    <div class="w-16 h-16 bg-gray-900 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg">
+        <span class="text-white text-2xl">🛡️</span>
+    </div>
+
+    <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full mb-3">
+        پنل مدیریت
+    </span>
+
+    <h1 class="text-2xl font-black text-gray-900">
+        ورود مدیر
+    </h1>
+
+    <p class="text-gray-500 text-sm mt-2">
+        فقط حساب‌های دارای نقش مدیر می‌توانند وارد شوند
+    </p>
+
+</div>
+
+
+<form id="admin-login-form" class="space-y-5" autocomplete="on">
+
+    <div>
+        <label for="phone" class="block text-sm font-bold text-gray-700 mb-2">
+            شماره موبایل
+        </label>
+        <input
+            id="phone"
+            name="username"
+            type="tel"
+            dir="ltr"
+            inputmode="numeric"
+            autocomplete="username"
+            placeholder="09123456789"
+            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-center font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+
+    <div>
+        <label for="password" class="block text-sm font-bold text-gray-700 mb-2">
+            رمز عبور
+        </label>
+        <input
+            id="password"
+            name="password"
+            type="password"
+            dir="ltr"
+            autocomplete="current-password"
+            placeholder="******"
+            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-center font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+
+    <button
+        id="login-btn"
+        type="submit"
+        class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 rounded-2xl transition shadow-sm">
+        ورود به پنل مدیریت
+    </button>
+
+</form>
+
+
+<p id="message" class="text-center text-sm mt-5 text-gray-500 min-h-[1.25rem]"></p>
+
+
+<p class="text-center text-xs text-gray-400 mt-6 leading-relaxed">
+    این صفحه مخصوص مدیران آکادمی است.<br>
+    دانش‌آموزان از
+    <a href="https://mahdiazizi.com/login" class="text-indigo-600 font-bold">صفحه‌ی ورود سایت</a>
+    وارد شوند.
+</p>
+
+
+</div>
+
+</main>
+
+
+<script src="/js/api.js"></script>
+<script src="/js/admin-login.js"></script>
+
+</body>
+
+</html>

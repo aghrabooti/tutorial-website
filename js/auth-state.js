@@ -2,19 +2,28 @@
 // بعد از اینکه header.js هدر را تزریق کرد، این تابع را صدا می‌زند.
 // نکته: بک‌اند field موفقیت را گاهی success و گاهی valid می‌فرستد؛
 // هر دو را قبول می‌کنیم.
+// دو دکمه داریم: #auth-btn (دسکتاپ/تبلت) و #auth-btn-mobile (داخل منوی موبایل)
+
+function setAuthButtons(text, href){
+
+    ["auth-btn", "auth-btn-mobile"].forEach((id) => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.textContent = text;
+        el.href = href;
+    });
+
+}
 
 async function updateAuthButton(){
 
-    const authBtn = document.getElementById("auth-btn");
-
-    if(!authBtn)
+    if(!document.getElementById("auth-btn") && !document.getElementById("auth-btn-mobile"))
         return;
 
     const token = localStorage.getItem("session_token");
 
     if(!token){
-        authBtn.textContent = "ورود / ثبت‌نام";
-        authBtn.href = "/login";
+        setAuthButtons("ورود / ثبت‌نام", "/login");
         return;
     }
 
@@ -23,13 +32,11 @@ async function updateAuthButton(){
         const result = await apiCall("check-session", { token });
 
         if(result && (result.valid === true || result.success === true)){
-            authBtn.textContent = "پنل کاربری";
-            authBtn.href = "/dashboard";
+            setAuthButtons("پنل کاربری", "/dashboard");
         }
         else{
             localStorage.removeItem("session_token");
-            authBtn.textContent = "ورود / ثبت‌نام";
-            authBtn.href = "/login";
+            setAuthButtons("ورود / ثبت‌نام", "/login");
         }
 
     }

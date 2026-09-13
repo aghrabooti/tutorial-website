@@ -23,6 +23,7 @@ body{ font-family:Vazir,sans-serif; }
 (function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}}catch(e){}})();
 </script>
 <link href="/css/dark-mode.css" rel="stylesheet">
+<link href="/css/responsive.css" rel="stylesheet">
 <script src="/js/theme.js" defer></script>
 </head>
 
@@ -30,18 +31,24 @@ body{ font-family:Vazir,sans-serif; }
 
 <div id="header"></div>
 
-<main class="flex-1 w-full max-w-6xl mx-auto p-4 md:p-8">
+<main class="flex-1 w-full max-w-6xl mx-auto p-4 md:p-8 overflow-x-hidden">
 
-<div class="flex items-center justify-between flex-wrap gap-4 mb-8">
-  <h1 class="text-2xl md:text-3xl font-black">پنل مدیریت</h1>
-  <a href="/admin-courses"
-     class="bg-white border rounded-full px-5 py-2 font-bold text-indigo-700 hover:shadow">
-     مدیریت دوره‌ها و جلسات ←
-  </a>
+<div class="flex items-center justify-between flex-wrap gap-3 mb-6 sm:mb-8">
+  <h1 class="text-xl sm:text-2xl md:text-3xl font-black">پنل مدیریت</h1>
+  <div class="flex items-center gap-2">
+    <a href="/admin-courses"
+       class="bg-white border rounded-full px-5 py-2 font-bold text-indigo-700 hover:shadow">
+       مدیریت دوره‌ها و جلسات ←
+    </a>
+    <button type="button" onclick="adminLogout()"
+       class="bg-red-500 hover:bg-red-600 text-white rounded-full px-5 py-2 font-bold">
+       خروج
+    </button>
+  </div>
 </div>
 
 <!-- تب‌ها -->
-<div class="flex gap-2 overflow-x-auto mb-8" id="tabs">
+<div class="flex gap-2 overflow-x-auto mb-6 sm:mb-8 -mx-4 px-4 md:mx-0 md:px-0 pb-1" id="tabs">
   <button data-tab="overview"  class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-indigo-600 text-white">داشبورد</button>
   <button data-tab="orders"    class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">سفارش‌ها</button>
   <button data-tab="shipments" class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">مرسوله‌های پستی</button>
@@ -52,24 +59,24 @@ body{ font-family:Vazir,sans-serif; }
 <!-- ── داشبورد ── -->
 <section id="sec-overview">
 
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
 
-    <div class="bg-white rounded-3xl shadow p-6">
+    <div class="bg-white rounded-3xl shadow p-4 sm:p-6">
       <p class="text-gray-500 text-sm">فروش کل (تومان)</p>
-      <p id="stat-revenue" class="text-2xl font-black mt-2 text-green-700">—</p>
+      <p id="stat-revenue" class="text-lg sm:text-2xl font-black mt-2 text-green-700 break-all">—</p>
     </div>
 
-    <div class="bg-white rounded-3xl shadow p-6">
+    <div class="bg-white rounded-3xl shadow p-4 sm:p-6">
       <p class="text-gray-500 text-sm">سفارش‌های موفق</p>
       <p id="stat-orders" class="text-2xl font-black mt-2">—</p>
     </div>
 
-    <div class="bg-white rounded-3xl shadow p-6">
+    <div class="bg-white rounded-3xl shadow p-4 sm:p-6">
       <p class="text-gray-500 text-sm">کاربران سایت</p>
       <p id="stat-users" class="text-2xl font-black mt-2">—</p>
     </div>
 
-    <div class="bg-white rounded-3xl shadow p-6">
+    <div class="bg-white rounded-3xl shadow p-4 sm:p-6">
       <p class="text-gray-500 text-sm">مرسوله‌های در انتظار ارسال</p>
       <p id="stat-shipments" class="text-2xl font-black mt-2 text-amber-600">—</p>
     </div>
@@ -157,7 +164,7 @@ body{ font-family:Vazir,sans-serif; }
   <div class="grid md:grid-cols-2 gap-6">
 
     <!-- آپلود PDF -->
-    <div class="bg-white rounded-3xl shadow p-6">
+    <div class="bg-white rounded-3xl shadow p-4 sm:p-6">
       <h2 class="text-xl font-black">آپلود PDF جزوه / کتاب</h2>
       <p class="text-gray-500 text-sm mt-2 leading-relaxed">
         فایل به‌صورت خودکار با نامِ شناسه‌ی محصول ذخیره می‌شود و نسخه‌ی قبلی را جایگزین می‌کند؛
@@ -182,7 +189,7 @@ body{ font-family:Vazir,sans-serif; }
     </div>
 
     <!-- آپلود عکس -->
-    <div class="bg-white rounded-3xl shadow p-6">
+    <div class="bg-white rounded-3xl shadow p-4 sm:p-6">
       <h2 class="text-xl font-black">آپلود عکس کاور دوره</h2>
       <p class="text-gray-500 text-sm mt-2 leading-relaxed">
         بعد از آپلود، لینک عمومی عکس را از اینجا کپی کنید و در فرم «مدیریت دوره‌ها»

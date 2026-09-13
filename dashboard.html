@@ -24,45 +24,27 @@
 (function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}}catch(e){}})();
 </script>
 <link href="/css/dark-mode.css" rel="stylesheet">
+<link href="/css/responsive.css" rel="stylesheet">
 <script src="/js/theme.js" defer></script>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between font-sans">
+<body id="dashboard" class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between font-sans">
 
-    <header class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                
-                <div class="flex items-center space-x-8 space-x-reverse">
-                    <div class="flex-shrink-0">
-                        <a href="/" class="text-xl font-black text-gray-950 tracking-tight">
-                            آکادمی <span class="text-indigo-600">عزیزی</span>
-                        </a>
-                    </div>
-                    <nav class="hidden md:flex space-x-6 space-x-reverse">
-                        <a href="/" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">صفحه اصلی</a>
-                        <a href="/courses" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">پکیج‌های آموزشی</a>
-                        <a href="#" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">درباره ما</a>
-                    </nav>
-                </div>
+    <div id="header"></div>
 
-                <div class="flex items-center gap-4">
-                    <button data-theme-toggle aria-label="تغییر حالت تاریک/روشن" class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition text-lg">
-                        <span data-theme-icon>🌙</span>
-                    </button>
-                    <span class="text-sm font-bold text-gray-700 hidden sm:inline">
-                        خوش آمدی، <span id="user-first-name" class="text-indigo-600">دانش‌آموز</span> عزیز 👋
-                    </span>
-                    <button id="logout-btn" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold px-4 py-2.5 rounded-xl transition duration-300 flex items-center gap-1.5">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        خروج از حساب
-                    </button>
-                </div>
-
-            </div>
+    <!-- نوار خوش‌آمد + خروج -->
+    <div class="bg-white border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3 flex-wrap">
+            <span class="text-sm font-bold text-gray-700">
+                خوش آمدی، <span id="user-first-name" class="text-indigo-600">دانش‌آموز</span> عزیز 👋
+            </span>
+            <button id="logout-btn" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold px-4 py-2.5 rounded-xl transition duration-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                خروج از حساب
+            </button>
         </div>
-    </header>
+    </div>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         <aside class="lg:col-span-4 bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm flex flex-col gap-6">
             <div class="flex flex-col items-center text-center border-b border-gray-100 pb-5">
@@ -153,6 +135,9 @@
     <div id="footer"></div>
 
 <script src="/js/api.js"></script>
+    <script src="/js/auth-state.js"></script>
+    <script src="/js/header.js"></script>
+    <script src="/js/cart-badge.js"></script>
     <script src="/js/course-cover.js"></script>
     <script src="/js/dashboard.js"></script>
     <script src="/js/change-password.js"></script>

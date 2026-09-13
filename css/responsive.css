@@ -1,0 +1,173 @@
+/* ═══════════════════════════════════════════════════════════════════
+   بهبودهای ریسپانسیو سراسری — بعد از Tailwind بارگذاری می‌شود
+   هدف: جلوگیری از اسکرول افقی، اندازه‌ی لمسیِ مناسب، جدول‌های قابل‌اسکرول،
+   و رفتار درست هدر/منوی موبایل روی همه‌ی صفحات (Tailwind v2 و v3).
+   ═══════════════════════════════════════════════════════════════════ */
+
+html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+}
+
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* iOS: جلوگیری از زوم خودکار روی input‌های کوچک‌تر از 16px */
+@media (max-width: 767px) {
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* تصاویر و iframe‌ها هیچ‌وقت از ظرف بیرون نزنند */
+img, video, iframe, svg, canvas {
+    max-width: 100%;
+}
+
+img, video {
+    height: auto;
+}
+
+iframe {
+    aspect-ratio: 16 / 9;
+}
+
+/* کلمات خیلی بلند (لینک، کد پیگیری، شماره) خط را نشکنند */
+p, h1, h2, h3, h4, td, li, a, span {
+    overflow-wrap: anywhere;
+}
+
+/* ── هدر ── */
+.site-header {
+    backdrop-filter: saturate(1.4) blur(8px);
+    -webkit-backdrop-filter: saturate(1.4) blur(8px);
+    background-color: rgba(255, 255, 255, 0.92);
+}
+
+html.dark .site-header {
+    background-color: rgba(30, 41, 59, 0.92);
+}
+
+/* دکمه‌های آیکونی هدر: حداقل 40px لمسی */
+.hdr-icon {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* منوی موبایل: انیمیشن باز شدن */
+.mobile-menu {
+    animation: menuIn .18s ease-out;
+}
+
+.mobile-menu[hidden] {
+    display: none !important;
+}
+
+@keyframes menuIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* وقتی منوی موبایل باز است، صفحه‌ی زیر اسکرول نخورد */
+@media (max-width: 767px) {
+    html.menu-open,
+    html.menu-open body {
+        overflow: hidden;
+    }
+}
+
+/* روی موبایل، آفست اسکرول برای لینک‌های داخلی (زیر هدر چسبان نروند) */
+[id] {
+    scroll-margin-top: 5rem;
+}
+
+/* ── جدول‌ها (پنل ادمین): اسکرول افقی نرم + عرض حداقلی ── */
+.table-scroll,
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+.overflow-x-auto > table {
+    min-width: 640px;
+}
+
+.overflow-x-auto > table th,
+.overflow-x-auto > table td {
+    white-space: nowrap;
+}
+
+/* ── دکمه‌ها: حداقل ارتفاع لمسی روی موبایل ── */
+@media (max-width: 640px) {
+    button:not(.hdr-icon):not([data-theme-toggle]),
+    .btn,
+    a[class*="rounded"][class*="px-"] {
+        min-height: 2.75rem;
+    }
+}
+
+/* ── هیرو صفحه اصلی: کارت‌های شناور روی گوشی‌های خیلی کوچک ── */
+@media (max-width: 380px) {
+    .hero-float-card {
+        transform: scale(.85) !important;
+    }
+}
+
+/* روی موبایل، انیمیشن‌های سنگین را کم‌تر کنیم (کارایی + باتری) */
+@media (prefers-reduced-motion: reduce) {
+    .blob, .float-slow, .float-slower, .live-dot::after, .reveal {
+        animation: none !important;
+        transition: none !important;
+    }
+    .reveal { opacity: 1 !important; transform: none !important; }
+}
+
+/* ── عناصر sticky در سایدبارها: روی موبایل sticky نباشند ── */
+@media (max-width: 1023px) {
+    .lg\:sticky,
+    .sticky.top-24 {
+        position: static !important;
+    }
+}
+
+/* ── مودال‌ها: روی موبایل تمام‌عرض و قابل اسکرول ── */
+@media (max-width: 640px) {
+    #edit-modal > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        border-radius: 1.25rem 1.25rem 0 0 !important;
+        max-height: 92vh !important;
+        align-self: flex-end;
+    }
+
+    #edit-modal {
+        align-items: flex-end !important;
+    }
+}
+
+/* ── فوتر: لوگوی اینماد روی موبایل کوچک‌تر ── */
+.enamad-logo img {
+    max-height: 72px;
+    width: auto;
+}
+
+/* ── تب‌های افقی (پنل ادمین، فیلترها): بدون اسکرول‌بار زشت ── */
+#tabs,
+#type-buttons-container {
+    scrollbar-width: none;
+}
+
+#tabs::-webkit-scrollbar,
+#type-buttons-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── بهبود فاصله‌ی کلی محتوا روی موبایل ── */
+@media (max-width: 640px) {
+    main.py-12 { padding-top: 2rem; padding-bottom: 2rem; }
+    .rounded-3xl { border-radius: 1.25rem; }
+}

@@ -15,7 +15,7 @@ async function loadCourses(){
 
 if(!token){
 
-window.location.href="/login";
+window.location.replace("/admin-login");
 return;
 
 }
@@ -472,15 +472,18 @@ document
 
 
 
-function logout(){
+async function logout(){
 
+try{
+    if(token) await apiCall("logout-user",{ token });
+}catch(e){}
 
 localStorage.removeItem("session_token");
 
 localStorage.removeItem("user");
 
 
-window.location.href="/login";
+window.location.replace("/admin-login");
 
 
 }

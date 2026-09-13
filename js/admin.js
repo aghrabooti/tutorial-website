@@ -7,19 +7,30 @@ function checkAdmin() {
     const token = localStorage.getItem("session_token");
 
     if (!token) {
-        window.location.href = "/login";
+        window.location.replace("/admin-login");
         return false;
     }
 
     const user = JSON.parse(localStorage.getItem("user") || "null");
 
     if (!user || user.role !== "admin") {
-        alert("دسترسی غیرمجاز");
-        window.location.href = "/dashboard";
+        // حساب غیرمدیر → به صفحه‌ی ورود مدیر (نه داشبورد دانش‌آموز)
+        localStorage.removeItem("session_token");
+        localStorage.removeItem("user");
+        window.location.replace("/admin-login");
         return false;
     }
 
     return true;
+}
+
+// خروج مدیر — نشست را در سرور می‌بندد و به صفحه‌ی ورود مدیر برمی‌گردد
+async function adminLogout() {
+    const t = localStorage.getItem("session_token");
+    try { if (t) await apiCall("logout-user", { token: t }); } catch (e) {}
+    localStorage.removeItem("session_token");
+    localStorage.removeItem("user");
+    window.location.replace("/admin-login");
 }
 
 if (!checkAdmin()) {

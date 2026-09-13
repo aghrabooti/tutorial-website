@@ -1,12 +1,13 @@
-<header class="bg-white border-b sticky top-0 z-50">
+<header id="site-header" class="site-header bg-white border-b sticky top-0 z-50">
 
-<div class="max-w-7xl mx-auto px-4">
+<div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
 
-<div class="flex justify-between items-center h-16">
+<div class="flex justify-between items-center h-14 sm:h-16 gap-2">
 
 
+<!-- لوگو -->
 <a href="/"
-class="text-xl font-black" style="flex-shrink:0;">
+class="text-lg sm:text-xl font-black whitespace-nowrap flex-shrink-0">
 
 آکادمی
 <span class="text-indigo-600">
@@ -17,13 +18,14 @@ class="text-xl font-black" style="flex-shrink:0;">
 
 
 
-<nav class="hidden md:flex gap-6">
+<!-- ناوبری دسکتاپ -->
+<nav class="hidden md:flex items-center gap-1 lg:gap-2">
 
 
 <a
 data-page="home"
 href="/"
-class="nav-link text-gray-600">
+class="nav-link text-gray-600 text-sm font-bold px-3 py-2 rounded-xl hover:bg-gray-50 hover:text-gray-900 transition">
 
 صفحه اصلی
 
@@ -34,7 +36,7 @@ class="nav-link text-gray-600">
 <a
 data-page="courses"
 href="/courses"
-class="nav-link text-gray-600">
+class="nav-link text-gray-600 text-sm font-bold px-3 py-2 rounded-xl hover:bg-gray-50 hover:text-gray-900 transition">
 
 دوره‌ها
 
@@ -45,7 +47,7 @@ class="nav-link text-gray-600">
 <a
 data-page="about-us"
 href="/about-us"
-class="nav-link text-gray-600">
+class="nav-link text-gray-600 text-sm font-bold px-3 py-2 rounded-xl hover:bg-gray-50 hover:text-gray-900 transition">
 
 درباره ما
 
@@ -57,18 +59,21 @@ class="nav-link text-gray-600">
 
 
 
-<div class="flex items-center gap-2" style="flex-shrink:0;">
+<!-- اکشن‌ها -->
+<div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
 
 
 <button
 data-theme-toggle
+type="button"
 aria-label="تغییر حالت تاریک/روشن"
-class="w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-all duration-200 text-lg">
+class="hdr-icon w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-all duration-200 text-base sm:text-lg">
 <span data-theme-icon>🌙</span>
 </button>
 
 
-<a href="/cart" class="relative w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-300 flex items-center justify-center transition-all duration-200">
+<a href="/cart" aria-label="سبد خرید"
+class="hdr-icon relative w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-300 flex items-center justify-center transition-all duration-200">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
     </svg>
@@ -81,11 +86,11 @@ class="w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 h
 </a>
 
 
+<!-- دکمه‌ی ورود / پنل — روی موبایل داخل منو نمایش داده می‌شود -->
 <a
 id="auth-btn"
 href="/login"
-class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl"
-style="white-space:nowrap;">
+class="hidden sm:inline-flex items-center bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-sm font-bold px-4 h-10 sm:h-11 rounded-xl whitespace-nowrap transition">
 
 ورود / ثبت‌نام
 
@@ -94,10 +99,16 @@ style="white-space:nowrap;">
 
 <button
 id="menu-btn"
-aria-label="منو"
-class="md:hidden w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-all duration-200">
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+type="button"
+aria-label="باز کردن منو"
+aria-expanded="false"
+aria-controls="mobile-menu"
+class="hdr-icon md:hidden w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-all duration-200">
+    <svg data-icon="open" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+    </svg>
+    <svg data-icon="close" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
 </button>
 
@@ -111,9 +122,9 @@ class="md:hidden w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-
 
 
 <!-- منوی موبایل -->
-<div id="mobile-menu" class="hidden md:hidden border-t">
+<div id="mobile-menu" class="mobile-menu md:hidden border-t border-gray-100" hidden>
 
-<div class="max-w-7xl mx-auto px-4">
+<div class="max-w-7xl mx-auto px-3 sm:px-4">
 
 <nav class="flex flex-col py-2">
 
@@ -121,7 +132,7 @@ class="md:hidden w-11 h-11 rounded-xl bg-gray-50 border border-gray-200/85 text-
 <a
 data-page="home"
 href="/"
-class="nav-link text-gray-600 py-3 border-b border-gray-100">
+class="nav-link text-gray-600 font-bold py-3.5 px-3 rounded-xl hover:bg-gray-50 transition">
 
 صفحه اصلی
 
@@ -132,7 +143,7 @@ class="nav-link text-gray-600 py-3 border-b border-gray-100">
 <a
 data-page="courses"
 href="/courses"
-class="nav-link text-gray-600 py-3 border-b border-gray-100">
+class="nav-link text-gray-600 font-bold py-3.5 px-3 rounded-xl hover:bg-gray-50 transition">
 
 دوره‌ها
 
@@ -143,9 +154,19 @@ class="nav-link text-gray-600 py-3 border-b border-gray-100">
 <a
 data-page="about-us"
 href="/about-us"
-class="nav-link text-gray-600 py-3">
+class="nav-link text-gray-600 font-bold py-3.5 px-3 rounded-xl hover:bg-gray-50 transition">
 
 درباره ما
+
+</a>
+
+
+<a
+id="auth-btn-mobile"
+href="/login"
+class="sm:hidden mt-2 mb-2 bg-indigo-600 text-white font-bold text-center py-3.5 rounded-xl hover:bg-indigo-700 transition">
+
+ورود / ثبت‌نام
 
 </a>
 
