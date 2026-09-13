@@ -249,11 +249,15 @@ function renderCourse(course){
 
 
 
-    if(course.image_url && img){
+    if(img){
 
 
         img.src =
-        course.image_url;
+        resolveCourseImage(course);
+
+
+        img.onerror =
+        ()=>courseCoverError(img);
 
 
         img.classList.remove(

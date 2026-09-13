@@ -85,7 +85,9 @@ function renderCart(items){
         <div class="bg-white border border-gray-200 rounded-2xl p-5 flex gap-5">
 
             <img
-            src="${course.image_url}"
+            src="${resolveCourseImage(course)}"
+            onerror="courseCoverError(this)"
+            alt="${course.title || ""}"
             class="w-40 h-24 rounded-xl object-cover">
 
             <div class="flex-1">

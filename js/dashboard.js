@@ -269,7 +269,9 @@ function renderPurchasedCourses(items){
 
 
             <img
-            src="${course.image_url || ''}"
+            src="${resolveCourseImage(course)}"
+            onerror="courseCoverError(this)"
+            alt="${course.title || ""}"
             class="w-full h-40 object-cover rounded-xl mb-4">
 
 

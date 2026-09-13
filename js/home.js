@@ -50,8 +50,7 @@ async function fetchCourses(){
 
 
         const imgUrl =
-        course.image_url ||
-        "https://placehold.co/400x225?text=No+Image";
+        resolveCourseImage(course);
 
 
 
@@ -84,6 +83,9 @@ async function fetchCourses(){
 
             <img
             src="${imgUrl}"
+            onerror="courseCoverError(this)"
+            loading="lazy"
+            alt="${course.title || ""}"
             class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
 
             <span class="absolute top-3 right-3 bg-white/85 backdrop-blur text-[10px] font-black text-gray-800 px-2.5 py-1 rounded-full">
