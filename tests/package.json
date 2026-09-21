@@ -1,0 +1,13 @@
+{
+  "name": "tutorial-website-tests",
+  "private": true,
+  "type": "module",
+  "description": "تست‌های محلی برای فانکشن‌های پرداخت و مرسوله‌های پستی (بدون نیاز به Supabase)",
+  "scripts": {
+    "test": "node run-all.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "jsdom": "^26.0.0"
+  }
+}

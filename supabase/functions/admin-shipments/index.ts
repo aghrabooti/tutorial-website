@@ -191,6 +191,7 @@ async function resyncMissingShipments(physicalCourseIds: Set<string>) {
   let created = 0;
   let missingAddress = 0;
   let failed = 0;
+  const errors: Record<string, string> = {};
 
   for (const o of relevant) {
     if (haveShipment.has(String(o.id))) continue;
@@ -198,13 +199,17 @@ async function resyncMissingShipments(physicalCourseIds: Set<string>) {
     const res = await createShipmentFromOrder(o);
     if (res.created) created++;
     else if (res.missing_address) missingAddress++;
-    else failed++;
+    else {
+      failed++;
+      if (res.error) errors[String(o.id)] = String(res.error);
+    }
   }
 
   return {
     created,
     missing_address: missingAddress,
     failed,
+    errors,
     needs_shipping: relevant.length,
   };
 }
@@ -259,7 +264,8 @@ Deno.serve(async (req) => {
     // ── فهرست مرسوله‌ها ──
     // قبل از خواندن، مرسوله‌های جامانده ساخته می‌شوند تا خریدهای قبلی هم دیده شوند
     const physicalCourseIds = await loadPhysicalCourseIds();
-    await resyncMissingShipments(physicalCourseIds);
+    const autoSync = await resyncMissingShipments(physicalCourseIds);
+    if (!sync) sync = autoSync;
 
     const { data: shipments, error } = await supabaseAdmin
       .from("shipments")
@@ -373,6 +379,9 @@ Deno.serve(async (req) => {
             [u.first_name, u.last_name].filter(Boolean).join(" ").trim() || null,
           user_phone: u.phone ?? null,
           no_shipment: true,
+          // اگر ساخت خودکار مرسوله با خطای دیتابیس خورده باشد، پیامش اینجا
+          // نمایش داده می‌شود تا مشکل بی‌صدا نماند
+          note: sync?.errors?.[String(o.id)] ?? null,
         };
       });
 

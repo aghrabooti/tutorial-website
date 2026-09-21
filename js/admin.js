@@ -301,6 +301,14 @@ function renderShipments() {
                 «ساخت مرسوله‌های جامانده» را بزنید یا با شماره‌ی بالا تماس بگیرید.
             </p>
 
+            ${
+                s.note
+                    ? `<p class="mt-2 text-xs text-red-600 bg-red-50 rounded-2xl p-3" dir="auto">
+                           خطای دیتابیس هنگام ساخت خودکار مرسوله: <b dir="ltr">${esc(s.note)}</b>
+                       </p>`
+                    : ""
+            }
+
             <div class="mt-3 flex justify-between items-center flex-wrap gap-3 text-xs text-gray-400">
                 <span>خرید: ${fmtDate(s.created_at)}</span>
                 <span>کد پیگیری پرداخت: <b dir="ltr" class="text-gray-700">${esc(s.ref_id ?? "—")}</b></span>
