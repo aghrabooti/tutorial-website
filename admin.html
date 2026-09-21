@@ -88,6 +88,12 @@ body{ font-family:Vazir,sans-serif; }
     و آپلود PDF جزوه/کتاب و عکس کاورها در تب «فایل و تصویر» است.
   </div>
 
+  <!-- وضعیت درگاه پرداخت -->
+  <div id="gateway-box" class="mt-6 bg-white rounded-3xl shadow p-6">
+    <h2 class="text-lg font-black">وضعیت درگاه پرداخت</h2>
+    <div id="gateway-content" class="mt-3 text-sm text-gray-500">در حال بارگذاری...</div>
+  </div>
+
 </section>
 
 <!-- ── سفارش‌ها ── -->
@@ -106,7 +112,8 @@ body{ font-family:Vazir,sans-serif; }
           <th class="p-4 text-right">مشتری</th>
           <th class="p-4 text-right">اقلام</th>
           <th class="p-4 text-right">مبلغ (تومان)</th>
-          <th class="p-4 text-right">وضعیت</th>
+          <th class="p-4 text-right">وضعیت پرداخت</th>
+          <th class="p-4 text-right">ارسال پستی</th>
           <th class="p-4 text-right">کد پیگیری</th>
         </tr>
       </thead>
@@ -121,15 +128,19 @@ body{ font-family:Vazir,sans-serif; }
 
   <div class="flex justify-between items-center flex-wrap gap-3 mb-4">
     <h2 class="text-xl font-black">مرسوله‌های پستی (کتاب / جزوه)</h2>
-    <div class="flex gap-2 items-center">
+    <div class="flex gap-2 items-center flex-wrap">
       <select id="shipments-filter" class="bg-white border rounded-full px-4 py-2 text-sm font-bold">
         <option value="pending">در انتظار ارسال</option>
+        <option value="missing">بدون مرسوله / ناقص</option>
         <option value="sent">ارسال‌شده</option>
         <option value="all">همه</option>
       </select>
+      <button id="shipments-sync" class="bg-indigo-600 text-white rounded-full px-4 py-2 text-sm font-bold hover:bg-indigo-700">ساخت مرسوله‌های جامانده</button>
       <button id="shipments-refresh" class="bg-white border rounded-full px-4 py-2 text-sm font-bold">↻ تازه‌سازی</button>
     </div>
   </div>
+
+  <div id="shipments-alert" class="hidden mb-4 rounded-3xl p-4 text-sm leading-relaxed"></div>
 
   <div id="shipments-list" class="space-y-4"></div>
 

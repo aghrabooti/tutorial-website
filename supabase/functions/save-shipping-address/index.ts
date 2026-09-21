@@ -107,24 +107,46 @@ Deno.serve(async (req) => {
     }
 
     // هر کاربر یک نشانی — ذخیره‌ی جدید جایگزین قبلی می‌شود
-    const { error: upErr } = await supabaseAdmin
-      .from("user_addresses")
-      .upsert(
-        {
-          user_id: String(user.id),
-          full_name,
-          phone,
-          province,
-          city,
-          address,
-          postal_code,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
+    // (به‌جای upsert/onConflict که به constraint یکتا نیاز دارد، اول می‌خوانیم
+    //  و بعد update/insert می‌زنیم تا روی هر ساختاری از جدول کار کند)
+    const payload = {
+      user_id: String(user.id),
+      full_name,
+      phone,
+      province,
+      city,
+      address,
+      postal_code,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (upErr) {
-      console.error(upErr);
+    const { data: existing, error: readErr } = await supabaseAdmin
+      .from("user_addresses")
+      .select("user_id")
+      .eq("user_id", String(user.id))
+      .maybeSingle();
+
+    if (readErr) console.error("[save-shipping-address] select:", readErr);
+
+    const writeRes = existing
+      ? await supabaseAdmin
+          .from("user_addresses")
+          .update(payload)
+          .eq("user_id", String(user.id))
+      : await supabaseAdmin.from("user_addresses").insert(payload);
+
+    if (writeRes.error) {
+      // اگر هم‌زمان رکورد ساخته شده باشد (unique violation) → دوباره update کن
+      if (writeRes.error.code === "23505") {
+        const retry = await supabaseAdmin
+          .from("user_addresses")
+          .update(payload)
+          .eq("user_id", String(user.id));
+
+        if (!retry.error) return jsonResponse({ success: true });
+      }
+
+      console.error("[save-shipping-address] write failed:", writeRes.error);
       return jsonResponse({ error: "خطا در ذخیره آدرس" }, 500);
     }
 
