@@ -107,8 +107,31 @@
     }
     </script>
 <!-- SEO:END -->
+<!-- LOADER:START (خودکار — با scripts/add-loader.py ساخته می‌شود) -->
+    <link rel="stylesheet" href="/css/loader.css">
+    <noscript><style>#page-loader,#page-loader-bar{display:none !important}</style></noscript>
+    <script src="/js/loader.js" defer></script>
+    <script src="/js/site-content.js" defer></script>
+<!-- LOADER:END -->
+
 </head>
 <body id="about-us" class="bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col">
+<!-- LOADER:START (خودکار — با scripts/add-loader.py ساخته می‌شود) -->
+<div id="page-loader-bar" aria-hidden="true"></div>
+<div id="page-loader" role="status" aria-live="polite" aria-label="در حال بارگذاری صفحه">
+    <div style="position:relative;width:108px;height:108px" class="flex items-center justify-center">
+        <span class="pl-ring" aria-hidden="true"></span>
+        <div class="pl-mark">
+            <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <path d="M8 46 24 18l8 14 8-14 16 28" stroke="#fff" stroke-width="6"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+    </div>
+    <p class="pl-text">در حال بارگذاری<span class="pl-dots"><span></span><span></span><span></span></span></p>
+</div>
+<!-- LOADER:END -->
+
 
     <div id="header"></div>
 
@@ -121,16 +144,16 @@
                     آکادمی تخصصی ریاضیات
                 </span>
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-950 leading-[1.25]">
-                    درباره‌ی آکادمی
-                    <span class="text-indigo-600">استاد مهدی عزیزی</span>
+                    <span data-content="about.title_1">درباره‌ی آکادمی</span>
+                    <span class="text-indigo-600" data-content="about.title_accent">استاد مهدی عزیزی</span>
                 </h1>
-                <p class="text-gray-500 text-sm sm:text-base font-medium leading-loose">
+                <p class="text-gray-500 text-sm sm:text-base font-medium leading-loose" data-content="about.lead" data-content-type="html">
                     آکادمی عزیزی با هدف آموزش مفهومی و عمیق ریاضیات دوره‌ی متوسطه شکل گرفته است.
                     تمرکز ما بر این است که دانش‌آموز به‌جای حفظ‌کردن، <b>فهمیدن</b> را تجربه کند —
                     با درسنامه‌های روان، حل تست‌های هدفمند، و پوشش کامل مقاطع نهم، دهم،
                     یازدهم و دوازدهم برای رشته‌های ریاضی و تجربی.
                 </p>
-                <p class="text-gray-500 text-sm sm:text-base font-medium leading-loose">
+                <p class="text-gray-500 text-sm sm:text-base font-medium leading-loose" data-content="about.lead2">
                     هر پکیج آموزشی همراه با ویدیوهای مرحله‌به‌مرحله، جزوات اختصاصی،
                     و امکان رفع اشکال ارائه می‌شود تا مسیر یادگیری برای هر دانش‌آموز
                     روشن و بدون‌سد باشد.
@@ -140,6 +163,7 @@
             <div class="flex justify-center">
                 <img
                     src="/assets/images/about-photo-900.jpg"
+                    data-content-img="about.photo"
                     alt="استاد مهدی عزیزی، مدرس ریاضیات و حسابان کنکور"
                     width="900" height="900" loading="lazy" decoding="async"
                     class="rounded-3xl shadow-2xl w-full max-w-md object-cover aspect-[4/5]">
@@ -148,64 +172,130 @@
 
     
 
-<!-- ── شبکه‌های اجتماعی رسمی + آمار واقعی ── -->
+<!-- ── شبکه‌های اجتماعی رسمی + آمار واقعی (با لوگوی هر پلتفرم) ── -->
 <section class="mb-20">
     <div class="bg-white border border-gray-100 rounded-3xl p-6 sm:p-10 shadow-sm">
-        <h2 class="text-2xl sm:text-3xl font-black text-gray-950">استاد مهدی عزیزی در شبکه‌های اجتماعی</h2>
-        <p class="mt-3 text-sm sm:text-base text-gray-600 leading-loose">
-            محتوای رایگان، نمونه تدریس‌ها و تحلیل آزمون‌ها را در کانال‌های رسمی زیر منتشر می‌کنیم.
-            این‌ها تنها صفحه‌ها و کانال‌های رسمی استاد مهدی عزیزی هستند:
-        </p>
 
-        <div class="mt-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="text-center">
+            <span class="inline-flex items-center gap-2 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black px-4 py-2">
+                صفحات رسمی
+            </span>
+            <h2 class="mt-4 text-2xl sm:text-3xl font-black text-gray-950" data-content="about.socials_title">
+                استاد مهدی عزیزی در شبکه‌های اجتماعی
+            </h2>
+            <p class="mt-3 text-sm sm:text-base text-gray-600 leading-loose max-w-2xl mx-auto" data-content="about.socials_intro">
+                محتوای رایگان، نمونه تدریس‌ها و تحلیل آزمون‌ها را در کانال‌های رسمی زیر منتشر می‌کنیم.
+                این‌ها تنها صفحه‌ها و کانال‌های رسمی استاد مهدی عزیزی هستند.
+            </p>
+        </div>
 
+        <div class="mt-9 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+            <!-- تلگرام -->
             <a href="https://t.me/mahdiazizi_math" target="_blank" rel="me noopener"
-               class="group bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-2xl p-5 transition">
-                <div class="text-sm font-black text-gray-800 group-hover:text-indigo-700">کانال تلگرام</div>
-                <div class="mt-1 text-xs font-bold text-gray-400" dir="ltr">t.me/mahdiazizi_math</div>
-                <div class="mt-3 text-xs font-bold text-indigo-600">۵۹٬۰۰۰+ عضو</div>
+               class="group relative overflow-hidden bg-white border border-gray-100 rounded-3xl p-6 text-center transition duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+                <span class="absolute inset-x-0 top-0 h-1" style="background:#229ED9"></span>
+                <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg transition duration-300 group-hover:scale-110"
+                      style="background:#229ED9;box-shadow:0 10px 24px -8px #229ED9">
+                    <svg viewBox="0 0 24 24" fill="#fff" class="h-9 w-9" aria-hidden="true">
+                        <path d="M21.94 4.3 18.8 19.1c-.24 1.05-.86 1.31-1.74.82l-4.8-3.54-2.32 2.23c-.26.26-.47.47-.96.47l.34-4.86 8.84-7.99c.38-.34-.08-.53-.6-.19L6.13 12.87l-4.7-1.47c-1.02-.32-1.04-1.02.21-1.51L20.7 2.79c.85-.31 1.6.2 1.24 1.51Z"/>
+                    </svg>
+                </span>
+                <h3 class="mt-4 text-base font-black text-gray-950">کانال تلگرام</h3>
+                <p class="mt-1 text-xs font-bold text-gray-400" dir="ltr">t.me/mahdiazizi_math</p>
+                <p class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-sky-50 text-sky-700 px-3.5 py-1.5 text-xs font-black">
+                    <span class="h-1.5 w-1.5 rounded-full bg-sky-500"></span>
+                    <span data-content="about.socials_telegram_stat">۵۹٬۰۰۰+ عضو</span>
+                </p>
             </a>
 
+            <!-- بله -->
             <a href="https://ble.ir/mahdiiazizii_math" target="_blank" rel="me noopener"
-               class="group bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-2xl p-5 transition">
-                <div class="text-sm font-black text-gray-800 group-hover:text-indigo-700">کانال بله</div>
-                <div class="mt-1 text-xs font-bold text-gray-400" dir="ltr">ble.ir/mahdiiazizii_math</div>
-                <div class="mt-3 text-xs font-bold text-indigo-600">۱۳٬۱۰۰+ عضو</div>
+               class="group relative overflow-hidden bg-white border border-gray-100 rounded-3xl p-6 text-center transition duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+                <span class="absolute inset-x-0 top-0 h-1" style="background:#00A693"></span>
+                <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg transition duration-300 group-hover:scale-110"
+                      style="background:#00A693;box-shadow:0 10px 24px -8px #00A693">
+                    <svg viewBox="0 0 24 24" fill="#fff" class="h-9 w-9" aria-hidden="true">
+                        <path d="M12 3.2c5.1 0 9.2 3.1 9.2 7 0 3.9-4.1 7-9.2 7-.62 0-1.22-.05-1.8-.14l-4.1 2.24a.4.4 0 0 1-.58-.43l.36-2.55C4.14 14.8 3 13.05 3 10.2c0-3.9 4.1-7 9-7Z"/>
+                        <circle cx="8.6" cy="10.2" r="1.05" fill="#00A693"/>
+                        <circle cx="12" cy="10.2" r="1.05" fill="#00A693"/>
+                        <circle cx="15.4" cy="10.2" r="1.05" fill="#00A693"/>
+                    </svg>
+                </span>
+                <h3 class="mt-4 text-base font-black text-gray-950">کانال بله</h3>
+                <p class="mt-1 text-xs font-bold text-gray-400" dir="ltr">ble.ir/mahdiiazizii_math</p>
+                <p class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 px-3.5 py-1.5 text-xs font-black">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                    <span data-content="about.socials_bale_stat">۱۳٬۱۰۰+ عضو</span>
+                </p>
             </a>
 
+            <!-- آپارات -->
             <a href="https://www.aparat.com/mahdiazizii" target="_blank" rel="me noopener"
-               class="group bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-2xl p-5 transition">
-                <div class="text-sm font-black text-gray-800 group-hover:text-indigo-700">آپارات (نمونه تدریس)</div>
-                <div class="mt-1 text-xs font-bold text-gray-400" dir="ltr">aparat.com/mahdiazizii</div>
-                <div class="mt-3 text-xs font-bold text-indigo-600">۷٬۴۰۰+ دنبال‌کننده · ۲۳۸٬۰۰۰ بازدید</div>
+               class="group relative overflow-hidden bg-white border border-gray-100 rounded-3xl p-6 text-center transition duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+                <span class="absolute inset-x-0 top-0 h-1" style="background:#ED145B"></span>
+                <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg transition duration-300 group-hover:scale-110"
+                      style="background:#ED145B;box-shadow:0 10px 24px -8px #ED145B">
+                    <svg viewBox="0 0 24 24" fill="#fff" class="h-9 w-9" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9.4"/>
+                        <path d="M10.1 8.2 16 12l-5.9 3.8V8.2Z" fill="#ED145B"/>
+                    </svg>
+                </span>
+                <h3 class="mt-4 text-base font-black text-gray-950">آپارات</h3>
+                <p class="mt-1 text-xs font-bold text-gray-400" dir="ltr">aparat.com/mahdiazizii</p>
+                <p class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-50 text-rose-700 px-3.5 py-1.5 text-xs font-black">
+                    <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                    <span data-content="about.socials_aparat_stat">۷٬۴۰۰+ دنبال‌کننده</span>
+                </p>
+                <p class="mt-2 text-[11px] font-bold text-gray-400" data-content="about.socials_aparat_views">
+                    ۲۳۸٬۰۰۰ بازدید ویدیوها
+                </p>
             </a>
 
+            <!-- اینستاگرام -->
             <a href="https://www.instagram.com/mahdiazizi_math/" target="_blank" rel="me noopener"
-               class="group bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-2xl p-5 transition">
-                <div class="text-sm font-black text-gray-800 group-hover:text-indigo-700">اینستاگرام</div>
-                <div class="mt-1 text-xs font-bold text-gray-400" dir="ltr">instagram.com/mahdiazizi_math</div>
-                <div class="mt-3 text-xs font-bold text-indigo-600">صفحه‌ی رسمی</div>
+               class="group relative overflow-hidden bg-white border border-gray-100 rounded-3xl p-6 text-center transition duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+                <span class="absolute inset-x-0 top-0 h-1" style="background:linear-gradient(90deg,#F58529,#DD2A7B,#8134AF)"></span>
+                <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg transition duration-300 group-hover:scale-110"
+                      style="background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF);box-shadow:0 10px 24px -8px #DD2A7B">
+                    <svg viewBox="0 0 24 24" fill="#fff" class="h-9 w-9" aria-hidden="true">
+                        <path d="M12 5.8a6.2 6.2 0 1 0 0 12.4 6.2 6.2 0 0 0 0-12.4Zm0 10.22a4.02 4.02 0 1 1 0-8.04 4.02 4.02 0 0 1 0 8.04Z"/>
+                        <circle cx="17.6" cy="6.4" r="1.45"/>
+                        <path d="M12 2.4c-2.6 0-2.93.01-3.95.06-.99.05-1.5.21-1.9.35-.5.2-.87.43-1.25.81-.38.38-.61.75-.81 1.25-.14.4-.3.91-.35 1.9C3.69 7.79 3.68 8.12 3.68 12s.01 4.21.06 5.23c.05.99.21 1.5.35 1.9.2.5.43.87.81 1.25.38.38.75.61 1.25.81.4.14.91.3 1.9.35 1.02.05 1.35.06 3.95.06s2.93-.01 3.95-.06c.99-.05 1.5-.21 1.9-.35.5-.2.87-.43 1.25-.81.38-.38.61-.75.81-1.25.14-.4.3-.91.35-1.9.05-1.02.06-1.35.06-5.23s-.01-4.21-.06-5.23c-.05-.99-.21-1.5-.35-1.9-.2-.5-.43-.87-.81-1.25a3.4 3.4 0 0 0-1.25-.81c-.4-.14-.91-.3-1.9-.35C14.93 2.41 14.6 2.4 12 2.4Zm0 1.8c2.55 0 2.86.01 3.87.06.93.04 1.44.2 1.78.33.45.17.77.38 1.11.72.34.34.55.66.72 1.11.13.34.29.85.33 1.78.05 1.01.06 1.32.06 3.8s-.01 2.79-.06 3.8c-.04.93-.2 1.44-.33 1.78-.17.45-.38.77-.72 1.11-.34.34-.66.55-1.11.72-.34.13-.85.29-1.78.33-1.01.05-1.32.06-3.87.06s-2.86-.01-3.87-.06c-.93-.04-1.44-.2-1.78-.33a2.98 2.98 0 0 1-1.11-.72 2.98 2.98 0 0 1-.72-1.11c-.13-.34-.29-.85-.33-1.78-.05-1.01-.06-1.32-.06-3.8s.01-2.79.06-3.8c.04-.93.2-1.44.33-1.78.17-.45.38-.77.72-1.11.34-.34.66-.55 1.11-.72.34-.13.85-.29 1.78-.33C9.14 4.21 9.45 4.2 12 4.2Z"/>
+                    </svg>
+                </span>
+                <h3 class="mt-4 text-base font-black text-gray-950">اینستاگرام</h3>
+                <p class="mt-1 text-xs font-bold text-gray-400" dir="ltr">instagram.com/mahdiazizi_math</p>
+                <p class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-fuchsia-50 text-fuchsia-700 px-3.5 py-1.5 text-xs font-black">
+                    <span class="h-1.5 w-1.5 rounded-full bg-fuchsia-500"></span>
+                    <span data-content="about.socials_instagram_stat">صفحه‌ی رسمی</span>
+                </p>
             </a>
 
         </div>
+
+        <p class="mt-8 text-center text-xs text-gray-400 leading-relaxed">
+            هر کانال یا صفحه‌ای غیر از این چهار مورد، به آکادمی عزیزی تعلق ندارد.
+        </p>
+
     </div>
 </section>
 
 <!-- ── رزومه‌ی استاد مهدی عزیزی ── -->
 <section class="mb-20">
     <div class="bg-white border border-gray-100 rounded-3xl p-6 sm:p-10 shadow-sm">
-        <h2 class="text-2xl sm:text-3xl font-black text-gray-950">
+        <h2 class="text-2xl sm:text-3xl font-black text-gray-950" data-content="about.resume_title">
             استاد مهدی عزیزی، مدرس ریاضیات و حسابان کنکور
         </h2>
 
-        <p class="mt-4 text-sm sm:text-base text-gray-600 leading-loose">
+        <p class="mt-4 text-sm sm:text-base text-gray-600 leading-loose" data-content="about.resume_p1" data-content-type="html">
             <strong>استاد مهدی عزیزی</strong> مدرس ریاضیات و حسابان آزمون سراسری، دانش‌آموخته‌ی
             کارشناسی ریاضی محض دانشگاه شهید بهشتی و مؤلف کتاب‌های کمک‌آموزشی است.
             ایشان سال‌هاست در مدارس و آموزشگاه‌های معتبر تدریس می‌کنند و تمرکزشان بر
             <b>آموزش مفهومی ریاضیات</b> همراه با حل تست‌های هدفمند برای کنکور و امتحانات نهایی است.
         </p>
 
-        <p class="mt-3 text-sm sm:text-base text-gray-600 leading-loose">
+        <p class="mt-3 text-sm sm:text-base text-gray-600 leading-loose" data-content="about.resume_p2">
             حاصل این مسیر، آکادمی عزیزی است: پکیج‌های آموزشی ویدئویی برای پایه‌های
             نهم، دهم، یازدهم و دوازدهم (رشته‌های ریاضی و تجربی)، جزوه‌های اختصاصی،
             کتاب و جزوه‌ی چاپی ارسالی به سراسر ایران، کلاس‌های آنلاین زنده و پشتیبانی آموزشی
@@ -215,19 +305,19 @@
         <!-- ⚠️ اعداد زیر پلیس‌هولدر است — با مقادیر واقعی جایگزین یا حذف شود -->
         <div class="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-indigo-50 rounded-2xl p-5 text-center">
-                <div class="text-2xl font-black text-indigo-600">NN</div>
+                <div class="text-2xl font-black text-indigo-600" data-content="about.stat_years">NN</div>
                 <div class="text-xs font-bold text-gray-500 mt-1">سال سابقه‌ی تدریس</div>
             </div>
             <div class="bg-indigo-50 rounded-2xl p-5 text-center">
-                <div class="text-2xl font-black text-indigo-600">NN</div>
+                <div class="text-2xl font-black text-indigo-600" data-content="about.stat_students">NN</div>
                 <div class="text-xs font-bold text-gray-500 mt-1">دانش‌آموز</div>
             </div>
             <div class="bg-indigo-50 rounded-2xl p-5 text-center">
-                <div class="text-2xl font-black text-indigo-600">NN</div>
+                <div class="text-2xl font-black text-indigo-600" data-content="about.stat_hours">NN</div>
                 <div class="text-xs font-bold text-gray-500 mt-1">ساعت آموزش ویدئویی</div>
             </div>
             <div class="bg-indigo-50 rounded-2xl p-5 text-center">
-                <div class="text-2xl font-black text-indigo-600">NN</div>
+                <div class="text-2xl font-black text-indigo-600" data-content="about.stat_packages">NN</div>
                 <div class="text-xs font-bold text-gray-500 mt-1">پکیج و جزوه</div>
             </div>
         </div>

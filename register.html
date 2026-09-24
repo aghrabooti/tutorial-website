@@ -60,10 +60,33 @@ font-family:Vazir,sans-serif;
     <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
     <meta name="theme-color" content="#4f46e5">
 <!-- SEO:END -->
+<!-- LOADER:START (خودکار — با scripts/add-loader.py ساخته می‌شود) -->
+    <link rel="stylesheet" href="/css/loader.css">
+    <noscript><style>#page-loader,#page-loader-bar{display:none !important}</style></noscript>
+    <script src="/js/loader.js" defer></script>
+    <script src="/js/site-content.js" defer></script>
+<!-- LOADER:END -->
+
 </head>
 
 
 <body id="register" class="bg-gray-50 min-h-screen flex flex-col">
+<!-- LOADER:START (خودکار — با scripts/add-loader.py ساخته می‌شود) -->
+<div id="page-loader-bar" aria-hidden="true"></div>
+<div id="page-loader" role="status" aria-live="polite" aria-label="در حال بارگذاری صفحه">
+    <div style="position:relative;width:108px;height:108px" class="flex items-center justify-center">
+        <span class="pl-ring" aria-hidden="true"></span>
+        <div class="pl-mark">
+            <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <path d="M8 46 24 18l8 14 8-14 16 28" stroke="#fff" stroke-width="6"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+    </div>
+    <p class="pl-text">در حال بارگذاری<span class="pl-dots"><span></span><span></span><span></span></span></p>
+</div>
+<!-- LOADER:END -->
+
 
 
 <div id="header"></div>
