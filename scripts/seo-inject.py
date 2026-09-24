@@ -42,6 +42,13 @@ PLACEHOLDERS = {
 # راه ارتباطی رسمی: شماره تلفن نداریم؛ پشتیبانی از طریق ادمین تلگرام است
 SUPPORT_URL = "https://t.me/math1360"
 
+# ── تأیید مالکیت گوگل (Google Search Console) ──
+# دو راه دارید؛ هر کدام راحت‌تر بود:
+#   ۱) TXT record در پنل Vercel → کاری در این فایل لازم نیست
+#   ۲) متا تگ → مقداری که گوگل می‌دهد را داخل کوتیشن زیر بگذارید و اسکریپت را اجرا کنید
+#      مثال: GOOGLE_SITE_VERIFICATION = "abcdEFGH1234567890"
+GOOGLE_SITE_VERIFICATION = ""
+
 SUPABASE_URL = "https://qbsfotperzzhuimnpmto.supabase.co"
 ANON_KEY = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFi"
@@ -228,6 +235,11 @@ def build_block(cfg):
         FAVICON,
     ]
 
+    if cfg.get("verify") and GOOGLE_SITE_VERIFICATION:
+        lines.append(
+            f'    <meta name="google-site-verification" content="{GOOGLE_SITE_VERIFICATION}">'
+        )
+
     if cfg.get("person"):
         lines += ["", person_jsonld()]
 
@@ -272,6 +284,7 @@ PAGES = {
         "title": "آکادمی استاد مهدی عزیزی | آموزش مفهومی ریاضیات نهم تا دوازدهم",
         "description": "آکادمی رسمی استاد مهدی عزیزی؛ پکیج‌های ویدئویی مفهومی و تستی ریاضی نهم تا دوازدهم، جزوه و کتاب چاپی با ارسال پستی، کلاس‌های آنلاین زنده و پشتیبانی تا روز امتحان.",
         "person": True,
+        "verify": True,
     },
     "courses.html": {
         "canonical": f"{SITE}/courses",

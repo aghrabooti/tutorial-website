@@ -67,6 +67,9 @@
 - اگر نمی‌خواهی خاموش کنی، حداقل یک فایل `404.html` بگذار که به دامنه‌ی اصلی ریدایرکت کند.
 
 ### ۲) Google Search Console (مهم‌ترین قدم بعد از کد)
+
+> راهنمای کامل با جزئیات پنل Vercel (شامل هشدار مهم درباره‌ی رکورد SPF ایمیل):
+> [`docs/google-search-console.md`](./google-search-console.md)
 1. برو به `search.google.com/search-console` → **Add property** → **URL prefix** →
    `https://www.mahdiazizi.com`
 2. تأیید مالکیت: ساده‌ترین راه، رکورد **DNS TXT** در پنل دامنه است (یا در Vercel گزینه‌ی HTML tag).

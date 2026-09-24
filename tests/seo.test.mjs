@@ -159,6 +159,21 @@ console.log("\n── راه ارتباطی (بدون شماره تلفن) ─�
   }
 }
 
+console.log("\n── آماده‌بودن برای تأیید گوگل ──");
+{
+  const index = read("index.html");
+  // تا وقتی توکن داده نشده، نباید تگ خالی در صفحه باشد
+  check("تگ تأیید گوگل خالی در سایت نمانده", !/content="">\s*<meta name="google-site-verification"/.test(index));
+  check(
+    "هیچ متای تأیید ناقصی درج نشده",
+    !index.includes('name="google-site-verification" content=""')
+  );
+
+  const injector = read("scripts/seo-inject.py");
+  check("اسکریپت از تگ تأیید گوگل پشتیبانی می‌کند", injector.includes("GOOGLE_SITE_VERIFICATION"));
+  check("راه TXT هم در راهنما هست", read("docs/seo-guide.md").includes("TXT"));
+}
+
 console.log("\n── robots.txt و sitemap.xml ──");
 {
   const robots = read("robots.txt");
