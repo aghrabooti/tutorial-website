@@ -1,0 +1,41 @@
+# robots.txt — آکادمی استاد مهدی عزیزی
+# سایت رسمی: https://www.mahdiazizi.com
+
+User-agent: *
+Allow: /
+
+# صفحات خصوصی / پنل‌ها و صفحه‌ی تست نباید ایندکس شوند
+Disallow: /admin
+Disallow: /admin-login
+Disallow: /admin-courses
+Disallow: /dashboard
+Disallow: /cart
+Disallow: /payment-result
+Disallow: /shipping-address
+Disallow: /complete-profile
+Disallow: /test-api
+Disallow: /.build/
+Disallow: /tests/
+
+# دستیارهای هوش مصنوعی و موتورهای پاسخ‌گو
+# اجازه‌ی استفاده داده می‌شود تا نام «استاد مهدی عزیزی» و آکادمی در
+# پاسخ‌های ChatGPT / Gemini / Perplexity و… به سایت رسمی نسبت داده شود.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://www.mahdiazizi.com/sitemap.xml
