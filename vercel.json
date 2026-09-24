@@ -4,8 +4,37 @@
   "rewrites": [
     {
       "source": "/",
-      "has": [{ "type": "host", "value": "admin.mahdiazizi.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.mahdiazizi.com"
+        }
+      ],
       "destination": "/admin-login"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.mahdiazizi.com"
+        }
+      ],
+      "destination": "/admin-login",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.admin.mahdiazizi.com"
+        }
+      ],
+      "destination": "/admin-login",
+      "permanent": false
     }
   ]
 }

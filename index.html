@@ -2,6 +2,21 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         زیردامنه‌ی ادمین: اگر سایت با admin.mahdiazizi.com باز شد،
+         مستقیم به صفحه‌ی ورود مدیر برو.
+         این اسکریپت عمداً این‌جا و «درون‌خطی» است تا پیش از هر چیز
+         دیگری اجرا شود (کاربر حتی یک لحظه صفحه‌ی اصلی را نبیند).
+         ───────────────────────────────────────────────────────────── -->
+    <script>
+        (function () {
+            var host = location.hostname.toLowerCase();
+            if (host.indexOf("admin.") === 0) {
+                location.replace("/admin-login");
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>آکادمی استاد مهدی عزیزی | آموزش مفهومی ریاضیات</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
