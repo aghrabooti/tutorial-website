@@ -174,6 +174,63 @@ console.log("\n── آماده‌بودن برای تأیید گوگل ──"
   check("راه TXT هم در راهنما هست", read("docs/seo-guide.md").includes("TXT"));
 }
 
+console.log("\n── زیردامنه‌ی ادمین (admin.mahdiazizi.com) ──");
+{
+  const index = read("index.html");
+  const vercel = JSON.parse(read("vercel.json"));
+
+  // ۱) قانون سرور (ورسل) برای زیردامنه‌ی ادمین
+  const allRules = [...(vercel.rewrites ?? []), ...(vercel.redirects ?? [])];
+  const adminRule = allRules.find((r) =>
+    (r.has ?? []).some((h) => h.type === "host" && h.value === "admin.mahdiazizi.com")
+  );
+
+  check("vercel.json قانون زیردامنه‌ی ادمین دارد", !!adminRule);
+  check("قانون به /admin-login می‌رود", adminRule?.destination === "/admin-login");
+
+  // ۲) نگهبان سمت مرورگر (چون قانون ورسل گاهی روی این دامنه اجرا نمی‌شود)
+  const guardMatch = index.match(/<script>\s*\(function \(\) \{[\s\S]*?host\.indexOf\("admin\."\)[\s\S]*?<\/script>/);
+  check("نگهبان درون‌خطی زیردامنه در صفحه اصلی هست", !!guardMatch);
+
+  if (guardMatch) {
+    const code = guardMatch[0].replace(/^<script>/, "").replace(/<\/script>$/, "");
+
+    // روی زیردامنه‌ی ادمین → باید به /admin-login برود
+    let target = null;
+    new Function("location", code)({
+      hostname: "admin.mahdiazizi.com",
+      replace: (u) => { target = u; },
+    });
+    check("روی admin.mahdiazizi.com به /admin-login می‌رود", target === "/admin-login", String(target));
+
+    // روی سایت اصلی → نباید هیچ ریدایرکتی بدهد
+    let target2 = null;
+    new Function("location", code)({
+      hostname: "www.mahdiazizi.com",
+      replace: (u) => { target2 = u; },
+    });
+    check("روی www.mahdiazizi.com هیچ ریدایرکتی نمی‌دهد", target2 === null);
+
+    // روی دامنه بدون www هم نباید ریدایرکت شود
+    let target3 = null;
+    new Function("location", code)({
+      hostname: "mahdiazizi.com",
+      replace: (u) => { target3 = u; },
+    });
+    check("روی mahdiazizi.com هیچ ریدایرکتی نمی‌دهد", target3 === null);
+  }
+
+  // ۳) نگهبان باید پیش از اسکریپت لودر باشد (تا کاربر صفحه اصلی را نبیند)
+  const guardPos = index.indexOf('host.indexOf("admin.")');
+  const loaderPos = index.indexOf("/js/loader.js");
+  check("نگهبان قبل از لودر اجرا می‌شود", guardPos !== -1 && loaderPos !== -1 && guardPos < loaderPos);
+
+  // ۴) صفحه‌ی ورود مدیر باید سالم باشد
+  const login = read("admin-login.html");
+  check("صفحه‌ی ورود مدیر وجود دارد", login.includes("ورود مدیر"));
+  check("صفحه‌ی ورود مدیر noindex است", login.includes("noindex"));
+}
+
 console.log("\n── robots.txt و sitemap.xml ──");
 {
   const robots = read("robots.txt");
