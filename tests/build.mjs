@@ -10,7 +10,7 @@ const outDir = path.join(here, ".build");
 
 mkdirSync(outDir, { recursive: true });
 
-const FUNCTIONS = ["admin-shipments", "payment-request", "payment-verify"];
+const FUNCTIONS = ["admin-shipments", "payment-request", "payment-verify", "site-content"];
 
 for (const name of FUNCTIONS) {
   const src = path.join(root, "supabase", "functions", name, "index.ts");

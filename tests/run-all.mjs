@@ -10,6 +10,7 @@ const steps = [
   ["node", ["payments.test.mjs"]],
   ["node", ["admin-panel.test.cjs"]],
   ["node", ["seo.test.mjs"]],
+  ["node", ["content.test.mjs"]],
 ];
 
 let failed = 0;

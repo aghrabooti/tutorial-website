@@ -9,6 +9,7 @@ export const DB = {
   site_users: [],
   user_sessions: [],
   cart_items: [],
+  site_content: [],
 };
 
 export const LOG = [];
@@ -47,6 +48,7 @@ class Builder {
   in(col, val) { this.filters.push(["in", col, val]); return this; }
   order(col, opts = {}) { this._order = { col, asc: opts.ascending !== false }; return this; }
   limit(n) { this._limit = n; return this; }
+  onConflict(col) { this._conflict = (col ?? "id").split(",")[0].trim(); return this; }
   maybeSingle() { this._single = "maybe"; return this._run(); }
   single() { this._single = "one"; return this._run(); }
 
@@ -74,6 +76,27 @@ class Builder {
       LOG.push(`insert ${this.table} ${JSON.stringify(list)}`);
       const data = this._single ? created[0] : created;
       return { data: this._selectCols === "*" || this.mode !== "insert" ? data : pick(data, this._selectCols), error: null };
+    }
+
+    if (this.mode === "upsert") {
+      const list = Array.isArray(this.payload) ? this.payload : [this.payload];
+      const key = this._conflict ?? "id";
+      const out = [];
+
+      for (const p of list) {
+        const idx = rows.findIndex((r) => String(r[key]) === String(p[key]));
+        if (idx >= 0) {
+          rows[idx] = { ...rows[idx], ...p };
+          out.push(rows[idx]);
+        } else {
+          const created = { created_at: new Date().toISOString(), ...p };
+          rows.push(created);
+          out.push(created);
+        }
+      }
+
+      LOG.push(`upsert ${this.table} (${out.length} rows)`);
+      return { data: out, error: null };
     }
 
     if (this.mode === "delete") {
@@ -168,6 +191,8 @@ export function createClient() {
         insert: (payload) => new Builder(table, "insert", payload),
         delete: () => new Builder(table, "delete"),
         update: (payload) => new Builder(table, "update", payload),
+        upsert: (payload, opts = {}) =>
+          new Builder(table, "upsert", payload).onConflict(opts.onConflict),
       };
     },
   };
