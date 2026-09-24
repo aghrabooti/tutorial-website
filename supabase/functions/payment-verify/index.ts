@@ -8,20 +8,33 @@
 //   ۱) سفارش → paid (به‌همراه ref_id و card_pan)
 //   ۲) دوره‌ها به کاربر اعطا می‌شود
 //   ۳) در حالت خرید سبد، آیتم‌ها از سبد پاک می‌شود
+//   ۴) اگر سفارش شامل کتاب/جزوه باشد، **مرسوله‌ی پستی** ساخته می‌شود
+//      تا در پنل مدیریت (تب مرسوله‌های پستی) برای ارسال دیده شود
 //   آیدمپوتنت: کد ۱۰۰ و ۱۰۱ زرین‌پال هر دو «موفق» تلقی می‌شوند و اجرای دوباره‌ی
 //   این تابع هیچ دوره‌ای را دوبار اعطا نمی‌کند.
+//
+// ── محیط درگاه ───────────────────────────────────────────────────────────────
+// پیش‌فرض روی درگاهِ واقعی است؛ ولی اگر authority از سندباکس آمده باشد
+// (با حرف S شروع می‌شود) خودکار روی سندباکس وریفای می‌کند تا تراکنش‌های
+// نیمه‌کاره‌ی قبلی هم بی‌نتیجه نمانند.
 // ─────────────────────────────────────────────────────────────────────────────
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const MERCHANT_ID = Deno.env.get("ZARINPAL_MERCHANT_ID") ?? "";
-const SANDBOX = (Deno.env.get("ZARINPAL_SANDBOX") ?? "true") === "true";
+const MERCHANT_ID = (Deno.env.get("ZARINPAL_MERCHANT_ID") ?? "").trim();
+const SANDBOX_FLAG = (Deno.env.get("ZARINPAL_SANDBOX") ?? "false")
+  .trim()
+  .toLowerCase() === "true";
 
 // ⚠️ باید دقیقاً مثل payment-request باشد:
 const CART_TABLE = "cart_items";
 
-const ZP_BASE = SANDBOX
-  ? "https://sandbox.zarinpal.com/pg"
-  : "https://payment.zarinpal.com/pg";
+const TEST_MERCHANT_IDS = new Set([
+  "00000000-0000-0000-0000-000000000000",
+  "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz",
+]);
+
+const ZP_PROD_BASE = "https://payment.zarinpal.com/pg";
+const ZP_SANDBOX_BASE = "https://sandbox.zarinpal.com/pg";
 
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -54,20 +67,140 @@ const ZP_ERRORS: Record<number, string> = {
   "-54": "شناسه‌ی تراکنش نامعتبر یا منقضی است",
 };
 
-// تشخیص نیاز به ارسال پستی — اگر حتی یکی از اقلام سفارش
-// محصول فیزیکی (کتاب/جزوه) باشد true برمی‌گرداند.
-// اگر ستون requires_shipping هنوز به courses اضافه نشده باشد، خطایی نمی‌دهد.
+// کدهایی که نشان می‌دهند احتمالاً محیط درگاه اشتباه انتخاب شده است
+const ENV_MISMATCH_CODES = new Set([-9, -10, -11, -15, -16, -53, -54]);
+
+// ── تشخیص محصول فیزیکی (کتاب / جزوه) ─────────────────────────────────────────
+// ملاک اول: requires_shipping در اسنپ‌شات سفارش/جدول courses
+// ملاک دوم: نوع محصول (book / lecture)
+function isPhysicalCourse(course: any) {
+  if (!course) return false;
+  if (course.requires_shipping === true) return true;
+
+  const type = String(course.type ?? "").trim().toLowerCase();
+  return type === "book" || type === "lecture";
+}
+
+// آیا این سفارش نیاز به ارسال پستی دارد؟
 async function orderNeedsShipping(order: any) {
+  // ۱) اسنپ‌شات خود سفارش (سفارش‌های جدید همیشه این را دارند)
+  const items = Array.isArray(order?.items) ? order.items : [];
+  if (items.some((i: any) => i?.requires_shipping === true)) return true;
+  if (
+    items.length > 0 &&
+    items.every((i: any) => i?.requires_shipping === false) &&
+    items.some((i: any) => i?.type)
+  ) {
+    // اسنپ‌شات کامل و بدون نیاز پستی است
+    return false;
+  }
+
+  // ۲) اگر اسنپ‌شات قدیمی بود، از جدول courses بخوان
   const courseIds = Array.isArray(order?.course_ids) ? order.course_ids : [];
   if (courseIds.length === 0) return false;
 
-  const { data: phys } = await supabaseAdmin
+  let { data: courses, error } = await supabaseAdmin
     .from("courses")
-    .select("id")
-    .in("id", courseIds)
-    .eq("requires_shipping", true);
+    .select("id, type, requires_shipping")
+    .in("id", courseIds);
 
-  return (phys ?? []).length > 0;
+  if (error) {
+    // اگر ستون requires_shipping نبود، فقط با type تصمیم بگیر
+    const retry = await supabaseAdmin
+      .from("courses")
+      .select("id, type")
+      .in("id", courseIds);
+    courses = retry.data;
+  }
+
+  return (courses ?? []).some((c: any) => isPhysicalCourse(c));
+}
+
+// ── ثبت مرسوله‌ی پستی برای یک سفارش (بدون وابستگی به unique بودن order_id) ──
+// اگر مرسوله وجود داشته باشد دست‌نخورده می‌ماند؛ در غیر این صورت از نشانی
+// ثبت‌شده‌ی کاربر ساخته می‌شود. خطاها لاگ می‌شوند ولی پرداخت را خراب نمی‌کنند.
+async function ensureShipment(order: any) {
+  try {
+    const { data: existing, error: selErr } = await supabaseAdmin
+      .from("shipments")
+      .select("id, status")
+      .eq("order_id", String(order.id))
+      .limit(1);
+
+    if (!selErr && existing && existing.length > 0) {
+      return { created: false, shipment_id: existing[0].id };
+    }
+    if (selErr) console.error("[payment-verify] shipments select:", selErr);
+
+    const { data: addr, error: addrErr } = await supabaseAdmin
+      .from("user_addresses")
+      .select("*")
+      .eq("user_id", String(order.user_id))
+      .maybeSingle();
+
+    if (addrErr) console.error("[payment-verify] address select:", addrErr);
+
+    if (!addr) {
+      console.error(
+        `[payment-verify] سفارش ${order.id} نیاز به ارسال پستی دارد ولی نشانی کاربر ${order.user_id} ثبت نشده است`
+      );
+      return { created: false, shipment_id: null, missing_address: true };
+    }
+
+    const now = new Date().toISOString();
+
+    const { data: inserted, error: insErr } = await supabaseAdmin
+      .from("shipments")
+      .insert({
+        order_id: String(order.id),
+        user_id: String(order.user_id),
+        full_name: addr.full_name,
+        phone: addr.phone,
+        province: addr.province,
+        city: addr.city,
+        address: addr.address,
+        postal_code: addr.postal_code,
+        status: "pending",
+        created_at: now,
+        updated_at: now,
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (insErr) {
+      console.error("[payment-verify] shipment insert failed:", insErr);
+      return { created: false, shipment_id: null, error: insErr.message };
+    }
+
+    console.log(
+      `[payment-verify] ✅ مرسوله‌ی پستی برای سفارش ${order.id} ساخته شد`
+    );
+
+    return { created: true, shipment_id: inserted?.id ?? null };
+  } catch (e) {
+    console.error("[payment-verify] ensureShipment crashed:", e);
+    return { created: false, shipment_id: null };
+  }
+}
+
+// ── وریفای با انتخابِ خودکارِ محیط درست ──────────────────────────────────────
+async function verifyWithBase(base: string, authority: string, amount: number) {
+  const res = await fetch(`${base}/v4/payment/verify.json`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      merchant_id: MERCHANT_ID,
+      amount,
+      authority,
+    }),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  const code = payload?.data?.code ?? payload?.errors?.code ?? null;
+  return { payload, code };
 }
 
 Deno.serve(async (req) => {
@@ -81,7 +214,13 @@ Deno.serve(async (req) => {
     if (!authority)
       return jsonResponse({ error: "شناسه‌ی تراکنش ارسال نشده" }, 400);
     if (!MERCHANT_ID)
-      return jsonResponse({ error: "درگاه پرداخت پیکربندی نشده است" }, 500);
+      return jsonResponse(
+        {
+          error:
+            "درگاه پرداخت پیکربندی نشده است؛ secret با نام ZARINPAL_MERCHANT_ID تنظیم نشده",
+        },
+        500
+      );
 
     // ۱) پیدا کردن سفارش
     const { data: order } = await supabaseAdmin
@@ -93,13 +232,17 @@ Deno.serve(async (req) => {
     if (!order) return jsonResponse({ error: "سفارش پیدا نشد" }, 404);
 
     // آیدمپوتنت: اگر قبلاً نهایی شده، همان را برگردان
+    // (و اگر مرسوله‌اش ساخته نشده بود، همین‌جا ساخته می‌شود)
     if (order.status === "paid") {
+      const needsShipping = await orderNeedsShipping(order);
+      if (needsShipping) await ensureShipment(order);
+
       return jsonResponse({
         success: true,
         ref_id: order.ref_id,
         already: true,
         order_id: order.id,
-        needs_shipping: await orderNeedsShipping(order),
+        needs_shipping: needsShipping,
       });
     }
     if (order.status !== "pending") {
@@ -110,21 +253,37 @@ Deno.serve(async (req) => {
     }
 
     // ۲) وریفای با مبلغِ خودمان (نه مبلغِ کلاینت)
-    const zpRes = await fetch(`${ZP_BASE}/v4/payment/verify.json`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        merchant_id: MERCHANT_ID,
-        amount: order.amount_rial,
-        authority,
-      }),
-    });
+    const isTestMerchant = TEST_MERCHANT_IDS.has(MERCHANT_ID.toLowerCase());
+    const sandbox = SANDBOX_FLAG || isTestMerchant;
 
-    const zp = await zpRes.json();
-    const code = zp?.data?.code ?? zp?.errors?.code;
+    // اگر authority از سندباکس می‌آید (با S شروع می‌شود) اول سندباکس را امتحان کن
+    const sandboxAuthority = /^s/i.test(String(authority));
+
+    let firstBase = sandbox ? ZP_SANDBOX_BASE : ZP_PROD_BASE;
+    let secondBase = sandbox ? ZP_PROD_BASE : ZP_SANDBOX_BASE;
+
+    if (sandboxAuthority && !sandbox) {
+      firstBase = ZP_SANDBOX_BASE;
+      secondBase = ZP_PROD_BASE;
+    }
+
+    let { payload: zp, code } = await verifyWithBase(
+      firstBase,
+      authority,
+      order.amount_rial
+    );
+
+    // اگر خطای «محیط اشتباه» گرفتیم، یک‌بار روی محیط دیگر هم امتحان کن
+    if (code !== 100 && code !== 101 && ENV_MISMATCH_CODES.has(Number(code))) {
+      console.warn(
+        `[payment-verify] code=${code} روی ${firstBase}؛ تلاش دوباره روی ${secondBase}`
+      );
+      const retry = await verifyWithBase(secondBase, authority, order.amount_rial);
+      if (retry.code === 100 || retry.code === 101) {
+        zp = retry.payload;
+        code = retry.code;
+      }
+    }
 
     if (code === 100 || code === 101) {
       const refId = zp?.data?.ref_id ?? null;
@@ -143,6 +302,8 @@ Deno.serve(async (req) => {
         .eq("status", "pending")
         .select("id");
 
+      const needsShipping = await orderNeedsShipping(order);
+
       if (!updated || updated.length === 0) {
         // یک درخواست موازی همین لحظه نهایی‌اش کرده؛ همان را برمی‌گردانیم
         const { data: fresh } = await supabaseAdmin
@@ -150,12 +311,15 @@ Deno.serve(async (req) => {
           .select("ref_id")
           .eq("id", order.id)
           .single();
+
+        if (needsShipping) await ensureShipment(order);
+
         return jsonResponse({
           success: true,
           ref_id: fresh?.ref_id ?? refId,
           already: true,
           order_id: order.id,
-          needs_shipping: await orderNeedsShipping(order),
+          needs_shipping: needsShipping,
         });
       }
 
@@ -176,32 +340,10 @@ Deno.serve(async (req) => {
           .in("course_id", courseIds);
       }
 
-      // ۵) اگر سفارش شامل محصول فیزیکی است، نشانی پستیِ ثبت‌شده‌ی کاربر
-      //    به‌عنوان مقصد همین مرسوله کنار سفارش اسنپ‌شات می‌شود
-      //    (آدرس همیشه قبل از پرداخت در پروفایل کاربر ثبت شده است)
-      if (await orderNeedsShipping(order)) {
-        const { data: addr } = await supabaseAdmin
-          .from("user_addresses")
-          .select("*")
-          .eq("user_id", String(order.user_id))
-          .maybeSingle();
-
-        if (addr) {
-          await supabaseAdmin.from("shipments").upsert(
-            {
-              order_id: order.id,
-              user_id: String(order.user_id),
-              full_name: addr.full_name,
-              phone: addr.phone,
-              province: addr.province,
-              city: addr.city,
-              address: addr.address,
-              postal_code: addr.postal_code,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "order_id" }
-          );
-        }
+      // ۵) کتاب/جزوه خریده شده → ساخت مرسوله‌ی پستی برای تب «مرسوله‌های پستی»
+      let shipment: any = { created: false, shipment_id: null };
+      if (needsShipping) {
+        shipment = await ensureShipment(order);
       }
 
       return jsonResponse({
@@ -209,7 +351,9 @@ Deno.serve(async (req) => {
         ref_id: refId,
         code,
         order_id: order.id,
-        needs_shipping: await orderNeedsShipping(order),
+        needs_shipping: needsShipping,
+        shipment_created: shipment.created === true,
+        shipment_missing_address: shipment.missing_address === true,
       });
     }
 
@@ -218,6 +362,8 @@ Deno.serve(async (req) => {
       .from("orders")
       .update({ status: "failed" })
       .eq("id", order.id);
+
+    console.error("[payment-verify] verify failed", code, zp);
 
     return jsonResponse(
       { success: false, error: ZP_ERRORS[code] ?? "پرداخت تأیید نشد", code },
