@@ -103,6 +103,51 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
 
 // ── داشبورد ──
 
+function renderGateway(gateway) {
+    const box = document.getElementById("gateway-content");
+    if (!box) return;
+
+    if (!gateway) {
+        box.innerHTML = `<span class="text-gray-400">اطلاعات درگاه در دسترس نیست</span>`;
+        return;
+    }
+
+    const real = !gateway.sandbox;
+
+    box.innerHTML = `
+        <div class="flex flex-wrap items-center gap-3">
+            <span class="rounded-full px-4 py-1.5 font-bold ${
+                real
+                    ? "bg-green-100 text-green-700"
+                    : "bg-amber-100 text-amber-700"
+            }">
+                ${
+                    real
+                        ? "زرین‌پال — درگاه واقعی ✅"
+                        : "زرین‌پال — سندباکس (آزمایشی) ⚠️"
+                }
+            </span>
+            <span class="text-gray-500">
+                مرچنت‌کد:
+                <b dir="ltr" class="text-gray-700">${esc(gateway.merchant_masked ?? "تنظیم نشده")}</b>
+            </span>
+        </div>
+
+        <div class="mt-3 text-gray-500">
+            آدرس بازگشت:
+            <span dir="ltr" class="text-xs">${esc(gateway.callback_url ?? "تنظیم نشده")}</span>
+        </div>
+
+        ${
+            (gateway.problems ?? []).length
+                ? `<ul class="mt-3 list-disc pr-5 text-red-600 space-y-1">
+                       ${gateway.problems.map((p) => `<li>${esc(p)}</li>`).join("")}
+                   </ul>`
+                : `<p class="mt-3 text-green-700">پیکربندی درگاه کامل است.</p>`
+        }
+    `;
+}
+
 loaders.overview = async () => {
     try {
         const res = await apiCall("admin-overview", { token });
@@ -118,6 +163,8 @@ loaders.overview = async () => {
         document.getElementById("stat-users").textContent = faNum(s.users);
         document.getElementById("stat-shipments").textContent =
             s.pending_shipments == null ? "—" : faNum(s.pending_shipments);
+
+        renderGateway(res.gateway);
     } catch (e) {
         console.error(e);
     }
@@ -126,20 +173,35 @@ loaders.overview = async () => {
 
 // ── سفارش‌ها ──
 
+// نشان «ارسال پستی» برای هر سفارش
+function shippingBadge(o) {
+    if (!o.needs_shipping) return `<span class="text-gray-300">—</span>`;
+
+    if (o.shipment_status === "sent") {
+        return `<span class="bg-gray-100 text-gray-700 rounded-full px-3 py-1 font-bold whitespace-nowrap">ارسال‌شده 📮</span>`;
+    }
+
+    if (o.shipment_status === "none") {
+        return `<span class="bg-red-100 text-red-700 rounded-full px-3 py-1 font-bold whitespace-nowrap">مرسوله ثبت نشده ⚠️</span>`;
+    }
+
+    return `<span class="bg-amber-100 text-amber-700 rounded-full px-3 py-1 font-bold whitespace-nowrap">در انتظار ارسال 📦</span>`;
+}
+
 async function loadOrders() {
     const body = document.getElementById("orders-body");
-    body.innerHTML = `<tr><td class="p-4 text-gray-400" colspan="6">در حال بارگذاری...</td></tr>`;
+    body.innerHTML = `<tr><td class="p-4 text-gray-400" colspan="7">در حال بارگذاری...</td></tr>`;
 
     try {
         const res = await apiCall("admin-orders", { token });
 
         if (!res.success) {
-            body.innerHTML = `<tr><td class="p-4 text-red-500" colspan="6">${esc(res.error)}</td></tr>`;
+            body.innerHTML = `<tr><td class="p-4 text-red-500" colspan="7">${esc(res.error)}</td></tr>`;
             return;
         }
 
         if (res.orders.length === 0) {
-            body.innerHTML = `<tr><td class="p-4 text-gray-400" colspan="6">سفارشی ثبت نشده است</td></tr>`;
+            body.innerHTML = `<tr><td class="p-4 text-gray-400" colspan="7">سفارشی ثبت نشده است</td></tr>`;
             return;
         }
 
@@ -155,13 +217,14 @@ async function loadOrders() {
                 <td class="p-4">${o.items.map(esc).join("، ") || "—"}</td>
                 <td class="p-4 font-bold whitespace-nowrap">${toman(o.amount_rial)}</td>
                 <td class="p-4 whitespace-nowrap">${STATUS_FA[o.status] ?? esc(o.status)}</td>
+                <td class="p-4 whitespace-nowrap">${shippingBadge(o)}</td>
                 <td class="p-4 text-xs" dir="ltr">${o.ref_id ?? "—"}</td>
             </tr>`
             )
             .join("");
     } catch (e) {
         console.error(e);
-        body.innerHTML = `<tr><td class="p-4 text-red-500" colspan="6">خطا در ارتباط با سرور</td></tr>`;
+        body.innerHTML = `<tr><td class="p-4 text-red-500" colspan="7">خطا در ارتباط با سرور</td></tr>`;
     }
 }
 
@@ -172,14 +235,35 @@ document.getElementById("orders-refresh").addEventListener("click", loadOrders);
 // ── مرسوله‌ها ──
 
 let shipmentsCache = [];
+let missingShipmentsCache = [];
 
 function renderShipments() {
     const filter = document.getElementById("shipments-filter").value;
     const list = document.getElementById("shipments-list");
 
-    const rows = shipmentsCache.filter(
-        (s) => filter === "all" || s.status === filter
-    );
+    // سفارش‌های پستی بدون مرسوله در فیلترهای «در انتظار ارسال»،
+    // «بدون مرسوله» و «همه» نمایش داده می‌شوند (نیاز به اقدام دارند)
+    const includeMissing = filter !== "sent";
+
+    const rows = [
+        ...(includeMissing ? missingShipmentsCache : []),
+        ...shipmentsCache.filter((s) => filter === "all" || s.status === filter),
+    ];
+
+    const alertBox = document.getElementById("shipments-alert");
+
+    if (missingShipmentsCache.length > 0) {
+        alertBox.className =
+            "mb-4 rounded-3xl p-4 text-sm leading-relaxed bg-red-50 border border-red-200 text-red-800";
+        alertBox.innerHTML = `
+            <b>${faNum(missingShipmentsCache.length)} سفارش پستی بدون مرسوله است.</b>
+            این سفارش‌ها پرداخت‌شان موفق بوده ولی نشانی پستی‌شان ثبت نشده؛
+            برای ساخت خودکار مرسوله‌ها دکمه‌ی «ساخت مرسوله‌های جامانده» را بزنید و
+            اگر باز هم ساخته نشد، با مشتری تماس بگیرید تا نشانی را در پروفایلش کامل کند.`;
+    } else if (alertBox) {
+        alertBox.className = "hidden mb-4";
+        alertBox.innerHTML = "";
+    }
 
     if (rows.length === 0) {
         list.innerHTML = `
@@ -191,6 +275,47 @@ function renderShipments() {
 
     list.innerHTML = rows
         .map((s) => {
+            // سفارش پستی که مرسوله‌اش ثبت نشده — کارت هشدار با اطلاعات تماس
+            if (s.no_shipment) {
+                return `
+        <div class="bg-white rounded-3xl shadow p-6 border-r-4 border-red-400">
+            <div class="flex justify-between flex-wrap gap-3">
+                <div>
+                    <span class="font-black">${esc(s.full_name)}</span>
+                    <span class="text-gray-500 text-sm mr-2" dir="ltr">${esc(s.phone)}</span>
+                </div>
+                <span class="bg-red-100 text-red-700 rounded-full px-3 py-1 font-bold text-sm">
+                    بدون مرسوله ⚠️
+                </span>
+            </div>
+
+            <div class="mt-3 text-sm">
+                <span class="text-gray-500">اقلام:</span>
+                ${s.items.map(esc).join("، ") || "—"}
+                ${s.amount_rial ? `<span class="text-gray-400">(${toman(s.amount_rial)} تومان)</span>` : ""}
+            </div>
+
+            <p class="mt-3 text-sm text-red-700 bg-red-50 rounded-2xl p-4 leading-relaxed">
+                پرداخت این سفارش موفق بوده و شامل کتاب/جزوه است، ولی مرسوله‌ای برایش ثبت نشده است؛
+                معمولاً به این معناست که نشانی پستی کاربر ذخیره نشده. برای ساخت آن دکمه‌ی
+                «ساخت مرسوله‌های جامانده» را بزنید یا با شماره‌ی بالا تماس بگیرید.
+            </p>
+
+            ${
+                s.note
+                    ? `<p class="mt-2 text-xs text-red-600 bg-red-50 rounded-2xl p-3" dir="auto">
+                           خطای دیتابیس هنگام ساخت خودکار مرسوله: <b dir="ltr">${esc(s.note)}</b>
+                       </p>`
+                    : ""
+            }
+
+            <div class="mt-3 flex justify-between items-center flex-wrap gap-3 text-xs text-gray-400">
+                <span>خرید: ${fmtDate(s.created_at)}</span>
+                <span>کد پیگیری پرداخت: <b dir="ltr" class="text-gray-700">${esc(s.ref_id ?? "—")}</b></span>
+            </div>
+        </div>`;
+            }
+
             const sent = s.status === "sent";
 
             return `
@@ -225,7 +350,10 @@ function renderShipments() {
             </div>
 
             <div class="mt-3 flex justify-between items-center flex-wrap gap-3 text-xs text-gray-400">
-                <span>ثبت: ${fmtDate(s.created_at)}</span>
+                <span>
+                    ثبت: ${fmtDate(s.created_at)}
+                    ${s.ref_id ? ` — کد پیگیری پرداخت: <b dir="ltr" class="text-gray-700">${esc(s.ref_id)}</b>` : ""}
+                </span>
 
                 ${
                     sent
@@ -261,7 +389,8 @@ async function loadShipments() {
             return;
         }
 
-        shipmentsCache = res.shipments;
+        shipmentsCache = res.shipments ?? [];
+        missingShipmentsCache = res.missing_shipments ?? [];
         renderShipments();
     } catch (e) {
         console.error(e);
@@ -295,6 +424,44 @@ window.markShipmentSent = async (id) => {
         alert("خطا در ارتباط با سرور");
     }
 };
+
+// ساخت دستی مرسوله‌های جامانده (خودترمیمی هم موقع بارگذاری انجام می‌شود)
+document.getElementById("shipments-sync").addEventListener("click", async () => {
+    const btn = document.getElementById("shipments-sync");
+    btn.disabled = true;
+    btn.innerText = "در حال بررسی...";
+
+    try {
+        const res = await apiCall("admin-shipments", { token, action: "resync" });
+
+        if (!res.success) {
+            alert(res.error || "خطا در همگام‌سازی مرسوله‌ها");
+            return;
+        }
+
+        const s = res.sync ?? {};
+
+        if (s.created > 0) {
+            alert(`${faNum(s.created)} مرسوله‌ی جامانده ساخته شد ✓`);
+        } else if (s.missing_address > 0) {
+            alert(
+                `${faNum(s.missing_address)} سفارش پستی نشانی ذخیره‌شده ندارد؛ ` +
+                    `از مشتری بخواهید در پروفایل خود نشانی ثبت کند.`
+            );
+        } else {
+            alert("همه‌ی سفارش‌های پستی مرسوله دارند ✓");
+        }
+
+        await loadShipments();
+        loaders.overview?.();
+    } catch (e) {
+        console.error(e);
+        alert("خطا در ارتباط با سرور");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "ساخت مرسوله‌های جامانده";
+    }
+});
 
 loaders.shipments = loadShipments;
 document.getElementById("shipments-refresh").addEventListener("click", loadShipments);
