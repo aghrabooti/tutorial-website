@@ -176,11 +176,92 @@ async function getCourse(id){
 
 
 
+// ── سئو: عنوان، توضیح، canonical و داده‌ی ساختاریافته‌ی همین دوره ──
+// (صفحه پویاست؛ پس این‌ها را همین‌جا ست می‌کنیم تا گوگل هر دوره را جدا بفهمد)
+const SITE_URL = "https://www.mahdiazizi.com";
+
+function setMeta(key, attr, value){
+    let el = document.head.querySelector(key);
+
+    if(!el){
+        const m = key.match(/"([^"]+)"/);
+        el = document.createElement(key.startsWith("link") ? "link" : "meta");
+
+        if(key.startsWith("link")) el.setAttribute("rel", m ? m[1] : "canonical");
+        else if(key.includes("property=")) el.setAttribute("property", m ? m[1] : "");
+        else el.setAttribute("name", m ? m[1] : "");
+
+        document.head.appendChild(el);
+    }
+
+    el.setAttribute(attr, value);
+}
+
+function applyCourseSeo(course){
+    const url = `${SITE_URL}/courses-detail?id=${course.id}`;
+    const desc = (course.description || `${course.title} — دوره‌ی آموزشی ریاضی استاد مهدی عزیزی`)
+        .toString().slice(0, 300);
+
+    document.title = `${course.title} | آکادمی استاد مهدی عزیزی`;
+
+    setMeta('link[rel="canonical"]', "href", url);
+    setMeta('meta[name="description"]', "content", desc);
+    setMeta('meta[property="og:title"]', "content", document.title);
+    setMeta('meta[property="og:description"]', "content", desc);
+    setMeta('meta[property="og:url"]', "content", url);
+    setMeta('meta[property="og:type"]', "content", "product");
+
+    if(course.image_url && String(course.image_url).trim()){
+        setMeta('meta[property="og:image"]', "content", String(course.image_url).trim());
+    }
+
+    // داده‌ی ساختاریافته‌ی دوره (Course) — گوگل از این‌ها استفاده می‌کند
+    const price = Number(
+        course.discount_price && Number(course.discount_price) > 0
+            ? course.discount_price
+            : course.price || 0
+    );
+
+    const data = {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        name: course.title,
+        description: desc,
+        inLanguage: "fa-IR",
+        url,
+        provider: { "@id": `${SITE_URL}/#academy` },
+        offers: {
+            "@type": "Offer",
+            price,
+            priceCurrency: "IRR",
+            availability: "https://schema.org/InStock",
+            url,
+        },
+    };
+
+    if(course.image_url && String(course.image_url).trim()) data.image = String(course.image_url).trim();
+    if(course.grade) data.educationalLevel = `پایه ${course.grade}`;
+    if(course.major) data.about = String(course.major);
+
+    let script = document.getElementById("course-jsonld");
+
+    if(!script){
+        script = document.createElement("script");
+        script.type = "application/ld+json";
+        script.id = "course-jsonld";
+        document.head.appendChild(script);
+    }
+
+    script.textContent = JSON.stringify(data);
+}
+
 function renderCourse(course){
 
 
+    applyCourseSeo(course);
+
     document.title =
-    `${course.title} | آکادمی عزیزی`;
+    `${course.title} | آکادمی استاد مهدی عزیزی`;
 
 
 
