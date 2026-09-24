@@ -1,0 +1,78 @@
+name: Deploy Supabase Edge Functions
+
+# دیپلوی همه‌ی فانکشن‌های Edge (شامل توابع پنل مدیریت و پرداخت) + مهاجرت SQL
+#
+# از GitHub → Actions → Deploy Supabase Edge Functions → Run workflow اجرا کنید.
+# برای «فعال کردن درگاه واقعی» فقط این سه ورودی را پر کنید:
+#   zarinpal_merchant_id  = مرچنت‌کد ۳۶ کاراکتری زرین‌پال
+#   zarinpal_sandbox      = false
+#   zarinpal_callback_url = https://<دامنه‌ی سایت>/payment-result
+# (خالی گذاشتن همه‌ی ورودی‌ها = فقط دیپلوی فانکشن‌ها، بدون دست‌زدن به تنظیمات درگاه)
+
+on:
+  workflow_dispatch:
+    inputs:
+      migrate_database:
+        description: "اجرای مهاجرت SQL (ساخت/اصلاح جدول‌های مرسوله، نشانی و سفارش) — true/false"
+        required: false
+        type: string
+      zarinpal_merchant_id:
+        description: "مرچنت‌کد زرین‌پال (خالی = تغییر نده) — ۳۶ کاراکتر"
+        required: false
+        type: string
+      zarinpal_sandbox:
+        description: "سندباکس؟ برای درگاه واقعی false بگذارید"
+        required: false
+        type: string
+      zarinpal_callback_url:
+        description: "آدرس بازگشت از درگاه، مثال: https://example.com/payment-result"
+        required: false
+        type: string
+
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  PROJECT_REF: qbsfotperzzhuimnpmto
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # همان برنچی که ورک‌فلو از آن اجرا شده (نه یک نام ثابت)
+          ref: ${{ github.ref_name }}
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy all edge functions
+        run: supabase functions deploy --project-ref "$PROJECT_REF"
+
+      - name: Apply SQL migrations (idempotent)
+        # پیش‌فرض: اجرا شود؛ مگر اینکه ورودی migrate_database برابر false باشد
+        if: ${{ inputs.migrate_database != 'false' }}
+        continue-on-error: true
+        run: python3 scripts/apply-migrations.py supabase/migrations/*.sql
+
+      - name: Configure Zarinpal gateway secrets
+        if: ${{ inputs.zarinpal_merchant_id != '' }}
+        run: |
+          echo "::add-mask::${{ inputs.zarinpal_merchant_id }}"
+
+          SANDBOX="${{ inputs.zarinpal_sandbox }}"
+          if [ -z "$SANDBOX" ]; then SANDBOX="false"; fi
+
+          ARGS="ZARINPAL_MERCHANT_ID=${{ inputs.zarinpal_merchant_id }} ZARINPAL_SANDBOX=$SANDBOX"
+
+          if [ -n "${{ inputs.zarinpal_callback_url }}" ]; then
+            ARGS="$ARGS ZARINPAL_CALLBACK_URL=${{ inputs.zarinpal_callback_url }}"
+          fi
+
+          # shellcheck disable=SC2086
+          supabase secrets set --project-ref "$PROJECT_REF" $ARGS
+
+          echo "تنظیمات درگاه ذخیره شد ✓ (SANDBOX=$SANDBOX)"
+
+      - name: Verify deployment
+        run: supabase functions list --project-ref "$PROJECT_REF"

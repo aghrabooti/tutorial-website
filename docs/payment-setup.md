@@ -1,137 +1,180 @@
-# راه‌اندازی پرداخت زرین‌پال (Payment Setup)
+# راه‌اندازی پرداخت زرین‌پال و ارسال پستی
 
-این سند مراحل لازم برای فعال‌سازی سیستم پرداخت را پوشش می‌دهد.
-چهار قطعه اضافه شده است:
+این سند سه بخش دارد:
+
+1. **فعال‌سازی درگاه واقعی پرداخت** (زرین‌پال production)
+2. **مرسوله‌های پستی** — چرا خرید کتاب/جزوه باید در پنل مدیریت دیده شود و چطور تضمین شده است
+3. **دیپلوی** فانکشن‌ها و اجرای مهاجرت دیتابیس
 
 | قطعه | مسیر |
 |---|---|
 | ساخت سفارش و اتصال به درگاه | `supabase/functions/payment-request` |
-| تأیید پرداخت و اعطای دوره‌ها | `supabase/functions/payment-verify` |
-| صفحه‌ی بازگشت از درگاه | `frontend/pages/payment-result.html` + `frontend/js/payment-result.js` |
-| اتصال دکمه‌ی «ادامه پرداخت» | `frontend/js/cart.js` |
+| تأیید پرداخت + ساخت مرسوله | `supabase/functions/payment-verify` |
+| صفحه‌ی بازگشت از درگاه | `payment-result.html` + `js/payment-result.js` |
+| لیست/مدیریت مرسوله‌های پستی | `supabase/functions/admin-shipments` + تب «مرسوله‌های پستی» در `admin.html` |
+| مهاجرت دیتابیس (ایمن و idempotent) | `supabase/migrations/20260921000001_shipping_and_orders.sql` |
+| دیپلوی خودکار | `deploy/deploy-functions.github-workflow.yml` → کپی در `.github/workflows/deploy-functions.yml` |
 
 ---
 
-## ۱) ساخت جدول سفارش‌ها
+## ۱) فعال‌سازی درگاه واقعی (production)
 
-در Supabase → SQL Editor این کوئری را اجرا کنید:
+کد به‌صورت پیش‌فرض روی **درگاه واقعی** است. فقط سه secret لازم است:
 
-```sql
-create table if not exists public.orders (
-    id          uuid primary key default gen_random_uuid(),
-    user_id     text not null,
-    authority   text unique,          -- null تا وقتی زرین‌پال جواب بدهد
-    amount_rial bigint not null,
-    description text,
-    status      text not null default 'init',  -- init | pending | paid | failed
-    source      text not null default 'cart',  -- cart | direct
-    items       jsonb not null default '[]',   -- [{course_id, title, unit_price_rial}]
-    course_ids  text[] not null default '{}',  -- برای کوئری مالکیت
-    ref_id      bigint,
-    card_pan    text,
-    created_at  timestamptz not null default now(),
-    verified_at timestamptz
-);
+| نام secret | مقدار |
+|---|---|
+| `ZARINPAL_MERCHANT_ID` | مرچنت‌کد ۳۶ کاراکتری از پنل `my.zarinpal.com` |
+| `ZARINPAL_SANDBOX` | `false` (برای درگاه واقعی) |
+| `ZARINPAL_CALLBACK_URL` | `https://<دامنه‌ی سایت>/payment-result` |
+| `PRICE_TO_RIAL_FACTOR` | اگر قیمت‌ها **تومان** است `10`، اگر ریال است `1` |
 
--- سرویس‌رول RLS را دور می‌زند؛ برای بقیه کاملاً بسته است
-alter table public.orders enable row level security;
-```
+### روش الف) از GitHub (پیشنهادی)
 
-اگر جدول را قبلاً ساخته‌اید، فقط ستون جدید را اضافه کنید:
+GitHub → **Actions** → **Deploy Supabase Edge Functions** → **Run workflow** و پر کردن:
 
-```sql
-alter table public.orders add column if not exists course_ids text[] not null default '{}';
-```
+- `zarinpal_merchant_id` = مرچنت‌کد واقعی
+- `zarinpal_sandbox` = `false`
+- `zarinpal_callback_url` = `https://<دامنه‌ی سایت>/payment-result`
+- `migrate_database` = `true`
 
-> **مدل داده:** سفارشِ `paid` خودِِ سند خرید است — جدول جداگانه‌ای برای
-> «خریدهای کاربر» وجود ندارد. توابع `check-course-access` و `get-my-courses`
-> هم از همین جدول می‌خوانند.
->
-> اگر قبل از این سیستم خریدهایی با جدول `purchases` ثبت شده‌اند و می‌خواهید
-> حفظ شوند، یک‌بار این مهاجرت را اجرا کنید:
+این ورک‌فلو هم فانکشن‌ها را دیپلوی می‌کند، هم مهاجرت دیتابیس را اجرا می‌کند و هم
+secret ها را می‌نویسد.
 
-```sql
-insert into public.orders
-  (user_id, amount_rial, description, status, source, items, course_ids, created_at, verified_at)
-select
-  user_id::text, 0, 'انتقال خریدهای قبلی', 'paid', 'legacy',
-  jsonb_build_array(jsonb_build_object('course_id', course_id)),
-  array[course_id::text], now(), now()
-from public.purchases;
-```
-
----
-
-## ۲) تنظیم Secret ها
+### روش ب) از Supabase
 
 ```bash
-# حالت تست (sandbox) — با هر UUID دلخواه کار می‌کند
 supabase secrets set \
-  ZARINPAL_MERCHANT_ID="00000000-0000-0000-0000-000000000000" \
-  ZARINPAL_SANDBOX="true" \
+  ZARINPAL_MERCHANT_ID="<مرچنت‌کد-۳۶-کاراکتری>" \
+  ZARINPAL_SANDBOX="false" \
   ZARINPAL_CALLBACK_URL="https://<دامنه‌ی-شما>/payment-result" \
   PRICE_TO_RIAL_FACTOR="10"
-
-# حالت واقعی — بعد از دریافت مرچنت‌کد
-supabase secrets set ZARINPAL_MERCHANT_ID="<مرچنت‌کد-۳۶-کاراکتری>" ZARINPAL_SANDBOX="false"
 ```
 
-قوانین مهم:
-- `ZARINPAL_MERCHANT_ID` را **هرگز** داخل کد یا ریپو نگذارید.
-- `PRICE_TO_RIAL_FACTOR`: اگر `courses.price` به **تومان** ذخیره شده `10`، اگر ریال است `1`.
-- `ZARINPAL_CALLBACK_URL` باید دقیقاً دامنه‌ی عمومی سایت + مسیر `/payment-result` باشد.
+> `ZARINPAL_MERCHANT_ID` را **هرگز** داخل کد یا ریپو نگذارید.
+
+### بررسی این‌که درگاه واقعی فعال است
+
+در پنل مدیریت → تب **داشبورد** → کارت **«وضعیت درگاه پرداخت»**:
+
+- سبز: `زرین‌پال — درگاه واقعی ✅` + مرچنت‌کد ماسک‌شده + آدرس بازگشت
+- زرد: `سندباکس (آزمایشی) ⚠️` → یعنی یا `ZARINPAL_SANDBOX=true` است یا مرچنت‌کد تنظیم نشده
+
+### قواعد مهم
+
+- مرچنت‌کد باید **۳۶ کاراکتر و UUID-مانند** باشد؛ در غیر این صورت پرداخت با خطای
+  واضح فارسی متوقف می‌شود (و به‌جای درگاه واقعی، بی‌سروصدا به سندباکس سقوط نمی‌کند).
+- مرچنت‌کد تستی `00000000-0000-0000-0000-000000000000` خودکار روی سندباکس اجرا می‌شود.
+- `ZARINPAL_CALLBACK_URL` برای درگاه واقعی **باید https و روی دامنه‌ی ثبت‌شده در
+  زرین‌پال** باشد.
+- اگر وسط راه sandbox/production عوض شد، `payment-verify` خودش محیط درست را از
+  روی `authority` تشخیص می‌دهد (authority های سندباکس با `S` شروع می‌شوند) و در
+  صورت لازم یک‌بار روی محیط دیگر هم تلاش می‌کند؛ پس تراکنش نیمه‌کاره بی‌نتیجه نمی‌ماند.
 
 ---
 
-## ۳) دیپلوی فانکشن‌ها
+## ۲) مرسوله‌های پستی: چرا خرید کتاب/جزوه باید در پنل دیده شود
+
+قاعده‌ی تشخیص «محصول فیزیکی» (در `payment-request`، `payment-verify`،
+`admin-shipments`، `admin-orders` و `admin-overview` یکسان است):
+
+```text
+ستون courses.requires_shipping = true   یا   courses.type ∈ { book, lecture }
+```
+
+### مسیر کامل یک خرید پستی
+
+1. کاربر کتاب/جزوه را به سبد اضافه می‌کند و «ادامه پرداخت» را می‌زند.
+2. `payment-request` اگر سبد محصول فیزیکی داشته باشد و نشانی ثبت/تأیید نشده باشد،
+   کاربر را به `/shipping-address` می‌فرستد (`needs_address: true`).
+3. پس از ثبت نشانی، دوباره `payment-request` صدا زده می‌شود؛ در اسنپ‌شات هر قلم
+   سفارش مقدار `requires_shipping` ذخیره می‌شود (تا بعداً قابل تشخیص باشد).
+4. پس از پرداخت موفق، `payment-verify` سفارش را `paid` می‌کند و **مرسوله‌ی پستی**
+   (ردیف جدول `shipments`) را با نشانی کاربر می‌سازد.
+5. در پنل مدیریت → تب «مرسوله‌های پستی» مرسوله با نشانی، اقلام، کد پیگیری پرداخت و
+   دکمه‌ی «ثبت ارسال ✓» دیده می‌شود.
+
+### خودترمیمی (مهم)
+
+هنگام باز شدن تب «مرسوله‌های پستی» (و همچنین با دکمه‌ی
+**«ساخت مرسوله‌های جامانده»**) تابع `admin-shipments`:
+
+- همه‌ی سفارش‌های `paid` را که محصول فیزیکی دارند بررسی می‌کند،
+- اگر مرسوله‌شان ساخته نشده باشد، از روی `user_addresses` **خودکار می‌سازد**
+  (پس خریدهای قبلی هم در پنل ظاهر می‌شوند)،
+- اگر نشانی کاربر ثبت نشده باشد، سفارش در فهرست با کارت قرمز
+  «بدون مرسوله ⚠️» و شماره‌ی تماس مشتری نمایش داده می‌شود تا از قلم نیفتد.
+
+پس از این تغییر، هیچ خریدی (نه خریدهای جدید و نه خریدهای قبلی) بی‌صدا از تب
+مرسوله‌ها جا نمی‌ماند.
+
+---
+
+## ۳) ساخت جدول‌ها و مهاجرت دیتابیس
+
+فایل `supabase/migrations/20260921000001_shipping_and_orders.sql` ایمن و
+idempotent است (چند بار اجرا شود بی‌خطر است و چیزی حذف نمی‌کند):
+
+- جدول `shipments` را می‌سازد و ستون‌های جامانده را اضافه می‌کند
+  (`order_id, user_id, full_name, phone, province, city, address, postal_code,
+  status, tracking_code, sent_at, created_at, updated_at`)
+- ایندکس یکتای `order_id` را **فقط اگر داده‌ی تکراری نباشد** می‌سازد
+- جدول `user_addresses` و یکتایی `user_id` را تضمین می‌کند
+- ستون‌های جدول `orders` (`course_ids`, `source`, `items`, `card_pan`, `verified_at`) را تضمین می‌کند
+- `courses.requires_shipping` را برای محصولات `book` و `lecture` روی `true` می‌گذارد
+- در پایان گزارشی در لاگ می‌دهد: تعداد سفارش‌های موفق، پستی، مرسوله‌ها و بدون مرسوله
+
+اجرا از GitHub (پیشنهادی): ورک‌فلوی دیپلوی با `migrate_database=true`.
+اجرای دستی: کل فایل را در Supabase → SQL Editor اجرا کنید.
+
+> توابع هیچ‌کدام به constraint یکتا **وابسته نیستند** (اول می‌خوانند، بعد
+> insert/update می‌زنند) تا روی هر ساختاری از جدول کار کنند.
+
+---
+
+## ۴) دیپلوی فانکشن‌ها
+
+نسخه‌ی اصلاح‌شده‌ی ورک‌فلو در `deploy/deploy-functions.github-workflow.yml` است؛
+یک‌بار آن را در `.github/workflows/deploy-functions.yml` کپی کنید (توضیح در
+`deploy/README.md`). این ورک‌فلو (نیاز به secret `SUPABASE_ACCESS_TOKEN` در
+تنظیمات ریپوزیتوری) **همه‌ی** فانکشن‌های پوشه‌ی `supabase/functions` را دیپلوی
+می‌کند، مهاجرت SQL را اجرا می‌کند و از همان برنچی که اجرا شده چک‌اوت می‌کند:
 
 ```bash
-supabase functions deploy payment-request
-supabase functions deploy payment-verify
-supabase functions deploy check-course-access
-supabase functions deploy get-my-courses
+supabase functions deploy --project-ref qbsfotperzzhuimnpmto
 ```
 
-⚠️ دو تابع آخر ممکن است قبلاً (خارج از ریپو) دیپلوی شده باشند — دیپلوی مجدد،
-نسخه‌ی فعلی را با نسخه‌ی مبتنی‌بر `orders` جایگزین می‌کند. این همان تغییری است
-که می‌خواهیم؛ کافی است هر ۴ تابع را یک‌بار دیپلوی کنید تا همه‌ی بخش‌ها روی
-مدل تک‌جدولی کار کنند.
+به‌صورت دستی هم می‌توانید همان دستور را با CLI اجرا کنید (بدون نیاز به Docker).
+`supabase/config.toml` برای همه‌ی فانکشن‌ها `verify_jwt = false` گذاشته است چون
+احراز هویت داخل خود فانکشن‌ها با توکن سشن انجام می‌شود.
 
 ---
 
-## ۴) تست در sandbox
+## ۵) تست
 
-1. در جدول `courses` یک دوره‌ی تست با قیمت پایین بسازید.
-2. از سایت آن را به سبد خرید اضافه کرده و «ادامه پرداخت» را بزنید.
-3. در صفحه‌ی sandbox زرین‌پال گزینه‌ی «پرداخت موفق» را انتخاب کنید.
-4. باید به `/payment-result` برگردید، شماره پیگیری (ref_id) ببینید، و:
-   - رکورد `orders` → `status = 'paid'`
-   - رکورد جدید در جدول خریدها
-   - سبد خرید خالی
-5. سناریوهای منفی: دکمه‌ی «انصراف» (→ صفحه‌ی لغو)، رفرش صفحه‌ی نتیجه (بدون اعطای دوباره).
+### سندباکس
 
-نکته: authority های sandbox با حرف `S` شروع می‌شوند.
+1. مرچنت‌کد را موقتاً روی UUID تستی بگذارید یا `ZARINPAL_SANDBOX=true`.
+2. یک کتاب/جزوه‌ی ارزان را خرید کنید و در صفحه‌ی سندباکس «پرداخت موفق» را بزنید.
+3. انتظار:
+   - `orders.status = paid` با `ref_id`
+   - **ردیف جدید در `shipments`** و نمایش در تب «مرسوله‌های پستی»
+   - خالی شدن سبد
+   - نشانی کاربر در کارت مرسوله
+4. سناریوهای منفی: دکمه‌ی «انصراف» درگاه، رفرش صفحه‌ی نتیجه (نباید مرسوله دوباره ساخته شود).
 
----
+### درگاه واقعی
 
-## ۵) چک‌لیست «رفتن روی production»
-
-- [ ] ثبت درخواست درگاه در `my.zarinpal.com` با دامنه‌ی سایت و تأیید حساب بانکی
-- [ ] ست کردن مرچنت‌کد واقعی و `ZARINPAL_SANDBOX=false`
-- [ ] تست یک خرید واقعی با مبلغ کم
-- [ ] بررسی گزارش‌ها در پنل زرین‌پال (ref_id هر سفارش در جدول `orders` هم می‌ماند)
+1. یک خرید واقعی با مبلغ کم.
+2. در پنل زرین‌پال `ref_id` را با `orders.ref_id` تطبیق دهید.
+3. در تب «مرسوله‌های پستی» مرسوله را ببینید و بعد از ارسال، کد رهگیری را ثبت کنید.
 
 ---
 
-## ⚠️ نکته: نام جدول‌ها
+## ۶) چک‌لیست «رفتن روی production»
 
-تنها نام ثابتی که فانکشن‌های فعلی فرض می‌کنند جدول سبد خرید است:
-
-```ts
-const CART_TABLE = "cart_items";   // با ستون‌های user_id و course_id
-```
-
-اگر نام واقعی فرق دارد، همین خط را در **هر سه** فانکشن `payment-request`،
-`payment-verify` و (در صورت نیاز) توابع کارت اصلاح کنید.
-جدول `orders` برای همه توسط همین پکیج ساخته می‌شود و فرضی درباره‌ی
-جدول خرید مجزایی وجود ندارد (مدل تک‌جدولی).
+- [ ] مرچنت‌کد واقعی ست شده (`ZARINPAL_MERCHANT_ID`)
+- [ ] `ZARINPAL_SANDBOX=false`
+- [ ] `ZARINPAL_CALLBACK_URL` روی دامنه‌ی ثبت‌شده در زرین‌پال و با https
+- [ ] در داشبورد پنل مدیریت، کارت درگاه سبز است («درگاه واقعی ✅»)
+- [ ] مهاجرت SQL اجرا شده (گزارش «بدون مرسوله: 0»)
+- [ ] یک خرید واقعی آزمایشی با مبلغ کم + بررسی مرسوله و کد رهگیری
