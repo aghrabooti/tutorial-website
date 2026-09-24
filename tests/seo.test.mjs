@@ -150,6 +150,15 @@ console.log("\n── صفحه‌ی درباره ما: آمار واقعی شب�
   check("پلیس‌هولدر عددهای رزومه حفظ شده (NN)", about.includes(">NN<"));
 }
 
+console.log("\n── راه ارتباطی (بدون شماره تلفن) ──");
+{
+  for (const file of ["index.html", "about-us.html", "courses.html"]) {
+    const html = read(file);
+    check(`${file}: شماره تلفن پلیس‌هولدر ندارد`, !/telephone|989120000000|98-21-00000000/.test(html));
+    check(`${file}: contactPoint با لینک پشتیبانی تلگرام`, html.includes('"url": "https://t.me/math1360"'));
+  }
+}
+
 console.log("\n── robots.txt و sitemap.xml ──");
 {
   const robots = read("robots.txt");

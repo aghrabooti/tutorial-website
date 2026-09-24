@@ -37,10 +37,10 @@ PLACEHOLDERS = {
     "INSTAGRAM": SOCIALS[1][1],
     "APARAT": SOCIALS[2][1],
     "BALE": SOCIALS[3][1],
-    # ⚠️ این دو باید با مقدار واقعی پر شوند
-    "PHONE": "+98-21-00000000",
-    "MOBILE": "+989120000000",
 }
+
+# راه ارتباطی رسمی: شماره تلفن نداریم؛ پشتیبانی از طریق ادمین تلگرام است
+SUPPORT_URL = "https://t.me/math1360"
 
 SUPABASE_URL = "https://qbsfotperzzhuimnpmto.supabase.co"
 ANON_KEY = (
@@ -103,7 +103,7 @@ def person_jsonld():
       "contactPoint": {
         "@type": "ContactPoint",
         "contactType": "پشتیبانی آموزشی",
-        "telephone": "%(mobile)s",
+        "url": "%(support)s",
         "availableLanguage": ["fa"]
       },
       "sameAs": [%(same_as)s]
@@ -125,6 +125,7 @@ def person_jsonld():
     }
     </script>""" % dict(
         site=SITE,
+        support=SUPPORT_URL,
         same_as=", ".join('"%s"' % url for _, url in SOCIALS),
         **{k.lower(): v for k, v in PLACEHOLDERS.items()}
     )
