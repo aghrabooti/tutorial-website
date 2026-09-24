@@ -89,8 +89,18 @@ console.log("\n── هویت و لینک‌های شبکه‌های اجتما
   check("Person وجود دارد", !!person);
   check("نام استاد درست است", person?.name === "مهدی عزیزی");
   check("alternateName برند دارد", (person?.alternateName ?? []).includes("استاد مهدی عزیزی"));
-  check("sameAs (شبکه‌های اجتماعی) هست", Array.isArray(person?.sameAs) && person.sameAs.length >= 3);
-  check("sameAs تلگرام پلیس‌هولدر است", (person?.sameAs ?? []).some((u) => u.includes("t.me")));
+  const SOCIALS = {
+    "تلگرام": "https://t.me/mahdiazizi_math",
+    "اینستاگرام": "https://www.instagram.com/mahdiazizi_math/",
+    "آپارات": "https://www.aparat.com/mahdiazizii",
+    "بله": "https://ble.ir/mahdiiazizii_math",
+  };
+
+  check("sameAs هر چهار شبکه‌ی اجتماعی را دارد", (person?.sameAs ?? []).length === 4, JSON.stringify(person?.sameAs));
+  for (const [name, url] of Object.entries(SOCIALS)) {
+    check(`sameAs شامل ${name} است`, (person?.sameAs ?? []).includes(url), url);
+  }
+  check("آکادمی هم همان لینک‌ها را دارد", (academy?.sameAs ?? []).length === 4);
   check("EducationalOrganization وجود دارد", !!academy);
   check("WebSite وجود دارد و به آکادمی وصل است", !!site && site.publisher?.["@id"]?.includes("#academy"));
 }
@@ -108,6 +118,36 @@ console.log("\n── Schema دوره‌ها در صفحه‌ی دوره‌ها 
   check("هر دوره قیمت دارد", courses.every((c) => typeof c.offers?.price === "number"));
   check("هر دوره لینک دارد", courses.every((c) => typeof c.url === "string" && c.url.includes("courses-detail?id=")));
   check("پایه‌ی تحصیلی ثبت شده", courses.some((c) => c.educationalLevel));
+}
+
+console.log("\n── فوتر: لینک‌های شبکه‌های اجتماعی با rel=me ──");
+{
+  const footer = read("components/footer.html");
+  const hrefs = [...footer.matchAll(/href="(https:\/\/(?:t\.me|www\.instagram|www\.aparat|ble\.ir)[^"]+)"/g)].map((m) => m[1]);
+
+  for (const [name, url] of Object.entries({
+    "تلگرام": "https://t.me/mahdiazizi_math",
+    "اینستاگرام": "https://www.instagram.com/mahdiazizi_math/",
+    "آپارات": "https://www.aparat.com/mahdiazizii",
+    "بله": "https://ble.ir/mahdiiazizii_math",
+  })) {
+    check(`فوتر: لینک ${name}`, hrefs.includes(url), url);
+  }
+
+  check("فوتر: هر چهار لینک rel=me دارند", (footer.match(/rel="me noopener"/g) ?? []).length >= 4);
+  check("فوتر: لینک‌ها در تب جدید باز می‌شوند", (footer.match(/target="_blank"/g) ?? []).length >= 4);
+  check("فوتر: aria-label دارد (دسترس‌پذیری)", (footer.match(/aria-label="/g) ?? []).length >= 4);
+  check("فوتر: کد اینماد دست‌نخورده است", footer.includes("trustseal.enamad.ir/logo.aspx?id=6934655"));
+}
+
+console.log("\n── صفحه‌ی درباره ما: آمار واقعی شبکه‌ها ──");
+{
+  const about = read("about-us.html");
+  check("بخش شبکه‌های اجتماعی هست", about.includes("استاد مهدی عزیزی در شبکه‌های اجتماعی"));
+  check("آمار تلگرام درج شده", about.includes("۵۹٬۰۰۰+ عضو"));
+  check("آمار بله درج شده", about.includes("۱۳٬۱۰۰+ عضو"));
+  check("آمار آپارات درج شده", about.includes("۲۳۸٬۰۰۰ بازدید"));
+  check("پلیس‌هولدر عددهای رزومه حفظ شده (NN)", about.includes(">NN<"));
 }
 
 console.log("\n── robots.txt و sitemap.xml ──");

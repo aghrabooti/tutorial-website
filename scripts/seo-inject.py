@@ -24,12 +24,20 @@ import urllib.request
 
 SITE = "https://www.mahdiazizi.com"
 
-# ⚠️ پلیس‌هولدرها — بعداً با مقادیر واقعی جایگزین کنید
+# ── شبکه‌های اجتماعی رسمی (تأییدشده در ۲۴ سپتامبر ۲۰۲۶) ──
+SOCIALS = [
+    ("تلگرام", "https://t.me/mahdiazizi_math"),            # ۵۹ هزار عضو
+    ("اینستاگرام", "https://www.instagram.com/mahdiazizi_math/"),
+    ("آپارات", "https://www.aparat.com/mahdiazizii"),      # ۷.۴ هزار دنبال‌کننده
+    ("بله", "https://ble.ir/mahdiiazizii_math"),           # ۱۳.۱ هزار عضو
+]
+
 PLACEHOLDERS = {
-    "TELEGRAM": "https://t.me/MahdiAzizi_math",   # کانال فعلی
-    "APARAT": "https://www.aparat.com/",
-    "INSTAGRAM": "https://www.instagram.com/",
-    "YOUTUBE": "https://www.youtube.com/",
+    "TELEGRAM": SOCIALS[0][1],
+    "INSTAGRAM": SOCIALS[1][1],
+    "APARAT": SOCIALS[2][1],
+    "BALE": SOCIALS[3][1],
+    # ⚠️ این دو باید با مقدار واقعی پر شوند
     "PHONE": "+98-21-00000000",
     "MOBILE": "+989120000000",
 }
@@ -73,7 +81,7 @@ def person_jsonld():
       "worksFor": {"@type": "EducationalOrganization", "name": "آکادمی استاد مهدی عزیزی", "url": "%(site)s/"},
       "alumniOf": {"@type": "CollegeOrUniversity", "name": "دانشگاه شهید بهشتی"},
       "knowsAbout": ["ریاضی کنکور تجربی", "حسابان", "ریاضی نهم", "ریاضی دهم", "ریاضی یازدهم", "ریاضی دوازدهم", "آزمون تیزهوشان"],
-      "sameAs": ["%(telegram)s", "%(aparat)s", "%(instagram)s", "%(youtube)s"]
+      "sameAs": [%(same_as)s]
     }
     </script>
 
@@ -98,7 +106,7 @@ def person_jsonld():
         "telephone": "%(mobile)s",
         "availableLanguage": ["fa"]
       },
-      "sameAs": ["%(telegram)s", "%(aparat)s", "%(instagram)s", "%(youtube)s"]
+      "sameAs": [%(same_as)s]
     }
     </script>
 
@@ -115,7 +123,11 @@ def person_jsonld():
       "publisher": {"@id": "%(site)s/#academy"},
       "about": {"@id": "%(site)s/#mahdi-azizi"}
     }
-    </script>""" % dict(site=SITE, **{k.lower(): v for k, v in PLACEHOLDERS.items()})
+    </script>""" % dict(
+        site=SITE,
+        same_as=", ".join('"%s"' % url for _, url in SOCIALS),
+        **{k.lower(): v for k, v in PLACEHOLDERS.items()}
+    )
 
 
 def course_jsonld(courses):
