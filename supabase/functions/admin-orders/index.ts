@@ -3,7 +3,10 @@
 // admin-orders — فهرست سفارش‌ها (فقط نقش admin)
 // ورودی: { token }
 // خروجی: { success, orders: [ { id, created_at, status, source, amount_rial,
-//          ref_id, user_name, user_phone, items: [عنوان‌ها] } ] }
+//          ref_id, user_name, user_phone, items: [عنوان‌ها],
+//          needs_shipping, shipment_status, tracking_code } ] }
+//   - needs_shipping: سفارش شامل کتاب/جزوه است و باید پستی فرستاده شود
+//   - shipment_status: pending | sent | none (مرسوله ساخته نشده) | null
 // ─────────────────────────────────────────────────────────────────────────────
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -56,6 +59,36 @@ async function getAdminUser(token: string) {
   return user;
 }
 
+function isPhysicalCourse(course: any) {
+  if (!course) return false;
+  if (course.requires_shipping === true) return true;
+
+  const type = String(course.type ?? "").trim().toLowerCase();
+  return type === "book" || type === "lecture";
+}
+
+async function loadPhysicalCourseIds(): Promise<Set<string>> {
+  const ids = new Set<string>();
+
+  const { data, error } = await supabaseAdmin
+    .from("courses")
+    .select("id, type, requires_shipping");
+
+  if (!error) {
+    (data ?? []).forEach((c: any) => {
+      if (isPhysicalCourse(c)) ids.add(String(c.id));
+    });
+    return ids;
+  }
+
+  const retry = await supabaseAdmin.from("courses").select("id, type");
+  (retry.data ?? []).forEach((c: any) => {
+    if (isPhysicalCourse(c)) ids.add(String(c.id));
+  });
+
+  return ids;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -71,13 +104,32 @@ Deno.serve(async (req) => {
 
     const { data: orders, error } = await supabaseAdmin
       .from("orders")
-      .select("id, user_id, amount_rial, status, source, items, ref_id, created_at")
+      .select(
+        "id, user_id, amount_rial, status, source, items, course_ids, ref_id, created_at"
+      )
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(200);
 
     if (error) {
       console.error(error);
       return jsonResponse({ error: "خطا در خواندن سفارش‌ها" }, 500);
+    }
+
+    // محصولات فیزیکی + وضعیت مرسوله‌ها
+    const physicalCourseIds = await loadPhysicalCourseIds();
+
+    const orderIds = (orders ?? []).map((o: any) => String(o.id));
+
+    let shipmentsByOrder: Record<string, any> = {};
+    if (orderIds.length > 0) {
+      const { data: shipments } = await supabaseAdmin
+        .from("shipments")
+        .select("order_id, status, tracking_code")
+        .in("order_id", orderIds);
+
+      shipmentsByOrder = Object.fromEntries(
+        (shipments ?? []).map((s: any) => [String(s.order_id), s])
+      );
     }
 
     // اطلاعات مشتری‌ها
@@ -97,6 +149,18 @@ Deno.serve(async (req) => {
 
     const rows = (orders ?? []).map((o: any) => {
       const u = usersById[String(o.user_id)] ?? {};
+      const items = Array.isArray(o.items) ? o.items : [];
+
+      const courseIds = Array.isArray(o.course_ids) && o.course_ids.length > 0
+        ? o.course_ids.map(String)
+        : items.map((i: any) => String(i?.course_id ?? "")).filter(Boolean);
+
+      const needsShipping =
+        items.some((i: any) => i?.requires_shipping === true) ||
+        courseIds.some((id: string) => physicalCourseIds.has(id));
+
+      const shipment = shipmentsByOrder[String(o.id)] ?? null;
+
       return {
         id: o.id,
         created_at: o.created_at,
@@ -107,9 +171,14 @@ Deno.serve(async (req) => {
         user_name:
           [u.first_name, u.last_name].filter(Boolean).join(" ").trim() || "—",
         user_phone: u.phone ?? "—",
-        items: Array.isArray(o.items)
-          ? o.items.map((i: any) => i.title).filter(Boolean)
-          : [],
+        items: items.map((i: any) => i.title).filter(Boolean),
+        needs_shipping: needsShipping,
+        shipment_status: needsShipping
+          ? shipment
+            ? shipment.status ?? "pending"
+            : "none"
+          : null,
+        tracking_code: shipment?.tracking_code ?? null,
       };
     });
 

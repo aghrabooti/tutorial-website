@@ -1,0 +1,74 @@
+# پیکربندی پروژه برای Supabase CLI (دیپلوی فانکشنها از GitHub Actions)
+project_id = "qbsfotperzzhuimnpmto"
+
+# دیپلوی قطعی: احراز هویت همهی فانکشنها داخل خودشان با توکن سشن انجام میشود
+# (کلاینت فقط anon key را میفرستد) پس verify_jwt لازم نیست.
+
+[functions.admin-get-sessions]
+verify_jwt = false
+
+[functions.admin-orders]
+verify_jwt = false
+
+[functions.admin-overview]
+verify_jwt = false
+
+[functions.admin-save-sessions]
+verify_jwt = false
+
+[functions.admin-shipments]
+verify_jwt = false
+
+[functions.admin-upload-url]
+verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false
+
+[functions.change-password]
+verify_jwt = false
+
+[functions.check-course-access]
+verify_jwt = false
+
+[functions.check-session]
+verify_jwt = false
+
+[functions.get-course-file]
+verify_jwt = false
+
+[functions.get-course-sessions]
+verify_jwt = false
+
+[functions.get-my-address]
+verify_jwt = false
+
+[functions.get-my-courses]
+verify_jwt = false
+
+[functions.login-user]
+verify_jwt = false
+
+[functions.logout-user]
+verify_jwt = false
+
+[functions.payment-request]
+verify_jwt = false
+
+[functions.payment-verify]
+verify_jwt = false
+
+[functions.register-user]
+verify_jwt = false
+
+[functions.save-shipping-address]
+verify_jwt = false
+
+[functions.send-otp]
+verify_jwt = false
+
+[functions.update-profile]
+verify_jwt = false
+
+[functions.verify-otp]
+verify_jwt = false
