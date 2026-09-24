@@ -6,6 +6,8 @@
 //                                                  (مسیر: course-files/<course_id>.pdf)
 //   { token, kind: "image", filename }           → لینک آپلود عکس دوره
 //                                                  + public_url آماده برای فرم دوره
+//   { token, kind: "site", filename }            → لینک آپلود عکس‌های سایت
+//                                                  (پنل محتوای سایت) + public_url
 // مرورگر بعد از دریافت پاسخ، خودِ فایل را با PUT مستقیم به استوریج می‌فرستد.
 // ─────────────────────────────────────────────────────────────────────────────
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -95,6 +97,34 @@ Deno.serve(async (req) => {
       }
 
       return jsonResponse({ success: true, upload_url: data.signedUrl, path });
+    }
+
+    // ── عکس‌های دلخواه سایت (پنل «محتوای سایت» — متن/عکس‌ها) ──
+    if (kind === "site") {
+      const safe = String(body.filename ?? "image")
+        .toLowerCase()
+        .replace(/[^a-z0-9.\-_]/g, "-")
+        .replace(/-+/g, "-");
+
+      const path = `site/${Date.now()}-${safe}`;
+
+      const { data, error } = await supabaseAdmin.storage
+        .from(IMAGES_BUCKET)
+        .createSignedUploadUrl(path);
+
+      if (error || !data?.signedUrl) {
+        console.error(error);
+        return jsonResponse({ error: "خطا در ساخت لینک آپلود" }, 500);
+      }
+
+      const public_url = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/${IMAGES_BUCKET}/${path}`;
+
+      return jsonResponse({
+        success: true,
+        upload_url: data.signedUrl,
+        path,
+        public_url,
+      });
     }
 
     // ── عکس کاور دوره ──
