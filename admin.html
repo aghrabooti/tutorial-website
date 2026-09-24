@@ -33,9 +33,32 @@ body{ font-family:Vazir,sans-serif; }
     <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
     <meta name="theme-color" content="#4f46e5">
 <!-- SEO:END -->
+<!-- LOADER:START (خودکار — با scripts/add-loader.py ساخته می‌شود) -->
+    <link rel="stylesheet" href="/css/loader.css">
+    <noscript><style>#page-loader,#page-loader-bar{display:none !important}</style></noscript>
+    <script src="/js/loader.js" defer></script>
+    <script src="/js/site-content.js" defer></script>
+<!-- LOADER:END -->
+
 </head>
 
 <body id="admin" class="bg-gray-100 min-h-screen flex flex-col">
+<!-- LOADER:START (خودکار — با scripts/add-loader.py ساخته می‌شود) -->
+<div id="page-loader-bar" aria-hidden="true"></div>
+<div id="page-loader" role="status" aria-live="polite" aria-label="در حال بارگذاری صفحه">
+    <div style="position:relative;width:108px;height:108px" class="flex items-center justify-center">
+        <span class="pl-ring" aria-hidden="true"></span>
+        <div class="pl-mark">
+            <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <path d="M8 46 24 18l8 14 8-14 16 28" stroke="#fff" stroke-width="6"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+    </div>
+    <p class="pl-text">در حال بارگذاری<span class="pl-dots"><span></span><span></span><span></span></span></p>
+</div>
+<!-- LOADER:END -->
+
 
 <div id="header"></div>
 
@@ -61,6 +84,7 @@ body{ font-family:Vazir,sans-serif; }
   <button data-tab="orders"    class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">سفارش‌ها</button>
   <button data-tab="shipments" class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">مرسوله‌های پستی</button>
   <button data-tab="users"     class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">کاربران</button>
+  <button data-tab="content"   class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">محتوای سایت</button>
   <button data-tab="files"     class="tab-btn whitespace-nowrap rounded-full px-5 py-2 font-bold bg-white border">فایل و تصویر</button>
 </div>
 
@@ -178,6 +202,42 @@ body{ font-family:Vazir,sans-serif; }
 </section>
 
 <!-- ── فایل و تصویر ── -->
+<section id="sec-content" class="hidden">
+
+  <div class="bg-white rounded-3xl shadow p-5 sm:p-6">
+
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-black">محتوای سایت</h2>
+        <p class="text-xs text-gray-400 mt-1 leading-relaxed">
+          متن‌ها و عکس‌های بخش‌های مختلف سایت را از این‌جا عوض کنید.
+          هر فیلدی را خالی بگذارید، همان مقدار پیش‌فرض سایت نمایش داده می‌شود.
+          بعد از ذخیره، سایت را با <b>Ctrl+F5</b> تازه کنید.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <input id="content-search" type="search" placeholder="جست‌وجو در متن‌ها…"
+               class="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-sm w-52">
+        <a href="/" target="_blank"
+           class="bg-white border rounded-full px-4 py-2.5 text-sm font-bold hover:border-indigo-200">↗ دیدن سایت</a>
+      </div>
+    </div>
+
+    <div id="content-status" class="hidden"></div>
+
+    <div id="content-groups" class="mt-6 space-y-6"></div>
+
+    <div class="sticky bottom-4 mt-6 flex justify-end">
+      <button id="content-save" type="button" disabled
+              class="rounded-full px-6 py-3 text-sm font-black bg-gray-200 text-gray-400 cursor-not-allowed">
+        تغییری برای ذخیره نیست
+      </button>
+    </div>
+
+  </div>
+</section>
+
 <section id="sec-files" class="hidden">
 
   <div class="grid md:grid-cols-2 gap-6">
@@ -251,7 +311,9 @@ body{ font-family:Vazir,sans-serif; }
 <script src="/js/cart-badge.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/js/supabase-client.js"></script>
+<script src="/js/content-manifest.js"></script>
 <script src="/js/admin.js"></script>
+<script src="/js/admin-content.js"></script>
 
     <div id="footer"></div>
     <script src="/js/footer.js"></script>
