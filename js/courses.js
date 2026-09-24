@@ -40,7 +40,12 @@ async function loadCourses(){
 
 
 
+    // اسکلتون بارگذاری (js/loader.js) تا صفحه هنگام انتظار شبکه، خالی نباشد
     container.innerHTML =
+    typeof Skeleton !== "undefined"
+    ?
+    Skeleton.cards(6)
+    :
     `
     <p class="text-center py-20 text-gray-500">
     در حال بارگذاری محصولات...

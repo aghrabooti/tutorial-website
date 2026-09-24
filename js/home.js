@@ -11,6 +11,17 @@ async function fetchCourses(){
     }
 
 
+    if(typeof Skeleton !== "undefined"){
+
+        container.innerHTML =
+        Skeleton.cards(
+            4,
+            "w-72 sm:w-80 snap-start"
+        );
+
+    }
+
+
     const { data: courses, error } =
     await db
     .from("courses")

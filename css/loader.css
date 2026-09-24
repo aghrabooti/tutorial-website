@@ -1,0 +1,277 @@
+/* ─────────────────────────────────────────────────────────────
+   loader.css — لودر سراسری صفحه + اسکلتون‌های بارگذاری
+   بخش‌های سایت: ۱) لودر تمام‌صفحه  ۲) اسکلتون کارت/خط/ردیف
+   بدون وابستگی به فونت آیکون یا CDN — همه‌چیز CSS و SVG خالص
+   ───────────────────────────────────────────────────────────── */
+
+/* ── ۱) لودر تمام‌صفحه ── */
+
+#page-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    background: #ffffff;
+    transition: opacity .38s ease, visibility .38s ease;
+}
+
+#page-loader.is-done {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* نشان آکادمی (لوگوی ساده با انیمیشن نفس‌کشیدن) */
+.pl-mark {
+    width: 68px;
+    height: 68px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 14px 34px -12px rgba(79, 70, 229, .75);
+    animation: pl-breathe 1.8s ease-in-out infinite;
+}
+
+.pl-mark svg {
+    width: 38px;
+    height: 38px;
+}
+
+/* حلقه‌ی چرخان دور نشان */
+.pl-ring {
+    position: absolute;
+    width: 108px;
+    height: 108px;
+    border-radius: 50%;
+    border: 3px solid rgba(79, 70, 229, .12);
+    border-top-color: #4f46e5;
+    animation: pl-spin .9s linear infinite;
+}
+
+.pl-text {
+    margin: 0;
+    font-family: Tahoma, "Segoe UI", sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    color: #6b7280;
+    letter-spacing: .2px;
+    animation: pl-fade 1.8s ease-in-out infinite;
+}
+
+/* سه نقطه‌ی متحرک پشت متن */
+.pl-dots span {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin-inline-start: 2px;
+    border-radius: 50%;
+    background: #a5b4fc;
+    animation: pl-bounce 1.2s ease-in-out infinite;
+}
+
+.pl-dots span:nth-child(2) { animation-delay: .15s; }
+.pl-dots span:nth-child(3) { animation-delay: .3s; }
+
+@keyframes pl-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pl-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.07); }
+}
+
+@keyframes pl-fade {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .45; }
+}
+
+@keyframes pl-bounce {
+    0%, 100% { transform: translateY(0); opacity: .5; }
+    50% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* نوار نازک بالای صفحه (مکمل لودر) */
+#page-loader-bar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3px;
+    z-index: 10000;
+    background: rgba(79, 70, 229, .12);
+    overflow: hidden;
+}
+
+#page-loader-bar::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    width: 40%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #818cf8, #4f46e5, #7c3aed);
+    animation: pl-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes pl-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(260%); }
+}
+
+/* ── ۲) اسکلتون‌ها ── */
+
+.sk {
+    position: relative;
+    overflow: hidden;
+    background: #eef2f7;
+    border-radius: 10px;
+}
+
+.sk::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, .85) 50%,
+        rgba(255, 255, 255, 0) 100%);
+    animation: sk-shine 1.4s ease-in-out infinite;
+}
+
+@keyframes sk-shine {
+    100% { transform: translateX(100%); }
+}
+
+.sk-line { height: 12px; }
+.sk-line.short { width: 45%; }
+.sk-line.mid { width: 70%; }
+.sk-line.tall { height: 18px; }
+.sk-block { width: 100%; }
+
+/* کارت اسکلتون (هم‌اندازه‌ی کارت واقعی دوره) */
+.sk-card {
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.sk-card .sk-cover {
+    aspect-ratio: 16 / 9;
+    border-radius: 0;
+}
+
+.sk-card .sk-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-grow: 1;
+    justify-content: space-between;
+}
+
+.sk-card .sk-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.sk-pill {
+    height: 34px;
+    width: 76px;
+    border-radius: 12px;
+}
+
+.sk-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    height: 20px;
+    width: 54px;
+    border-radius: 999px;
+    z-index: 1;
+}
+
+/* ردیف اسکلتون برای جدول‌های پنل */
+.sk-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 4px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.sk-row .sk-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    flex-shrink: 0;
+}
+
+.sk-row .sk-lines {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* اسپینر کوچک داخل دکمه‌ها */
+.btn-spin {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    margin-inline-end: 8px;
+    vertical-align: -2px;
+    border: 2px solid rgba(255, 255, 255, .45);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: pl-spin .7s linear infinite;
+}
+
+.btn-spin.dark {
+    border-color: rgba(79, 70, 229, .3);
+    border-top-color: #4f46e5;
+}
+
+[data-loading="1"] {
+    pointer-events: none;
+    opacity: .8;
+}
+
+/* ── احترام به تنظیم کاهش انیمیشن کاربر ── */
+
+@media (prefers-reduced-motion: reduce) {
+    .pl-mark,
+    .pl-ring,
+    .pl-text,
+    .pl-dots span,
+    #page-loader-bar::after,
+    .sk::after,
+    .btn-spin {
+        animation: none !important;
+    }
+
+    .pl-ring {
+        border-top-color: rgba(79, 70, 229, .35);
+    }
+}
+
+/* در چاپ، لودر و اسکلتون‌ها دیده نشوند */
+@media print {
+    #page-loader,
+    #page-loader-bar {
+        display: none !important;
+    }
+}
