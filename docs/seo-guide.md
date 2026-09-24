@@ -68,8 +68,12 @@
 
 ### ۲) Google Search Console (مهم‌ترین قدم بعد از کد)
 
-> راهنمای کامل با جزئیات پنل Vercel (شامل هشدار مهم درباره‌ی رکورد SPF ایمیل):
+> راهنمای کامل با جزئیات پنل Vercel (شامل هشدار مهم درباره‌ی رکورد SPF ایمیل)
+> **و کارهایی که بعد از تأیید داخل کنسول باید انجام دهید**:
 > [`docs/google-search-console.md`](./google-search-console.md)
+>
+> ⚠️ **اول PR #3 را مرج کنید**: تا وقتی مرج نشده، `robots.txt` و `sitemap.xml` روی
+> سایت زنده ۴۰۴ می‌دهند و ثبت نقشه‌ی سایت در کنسول شکست می‌خورد.
 1. برو به `search.google.com/search-console` → **Add property** → **URL prefix** →
    `https://www.mahdiazizi.com`
 2. تأیید مالکیت: ساده‌ترین راه، رکورد **DNS TXT** در پنل دامنه است (یا در Vercel گزینه‌ی HTML tag).
