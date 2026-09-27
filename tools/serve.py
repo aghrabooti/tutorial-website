@@ -7,7 +7,8 @@ serve.py — سرور کارگاه (داخل خودِ ریپو، پس همیشه
   /download    → صفحه‌ی دانلود: zip کل پروژه + zip فایل‌های تغییریافته
   /make-admin  → ابزار ساخت حساب مدیر (تولید دستور SQL)
   /otp-doctor  → ابزار تشخیص مشکل پیامک کد تأیید (sms.ir / کاوه‌نگار)
-  /deploy      → کد تازه‌ی send-otp برای کپی و گذاشتن روی Supabase
+  /deploy      → کد فانکشن‌ها برای کپی و گذاشتن روی Supabase
+  /deploy/NAME → کد همان فانکشن (کپی یک‌کلیکی + انگشت‌نگاشت نسخه)
   /project.zip /changes.zip /COMMANDS.txt /health
 
 اجرا:
@@ -36,7 +37,11 @@ COMMIT_GROUPS = [
     ("tools/", "chore: add admin and otp tools"),
     ("send-otp", "feat: send the otp sms through sms.ir"),
     ("register.js", "feat: show countdown when otp is rate limited"),
+    ("site-content.js",
+     "fix: fall back to default texts when the content function is missing"),
     ("tests/", "test: cover the otp flow"),
+    ("supabase/functions/",
+     "fix: add cors headers so the browser can call these functions"),
 ]
 
 
@@ -186,8 +191,9 @@ DOWNLOAD_PAGE = Template("""<!DOCTYPE html>
     </a>
 
     <a class="btn ghost" href="/deploy">
-      📤 گذاشتن کد تازه‌ی send-otp روی Supabase
-      <small>کپی یک‌کلیکی + انگشت‌نگاشت نسخه (برای sms.ir)</small>
+      📤 گذاشتن کد فانکشن‌ها روی Supabase
+      <small>register-user · site-content · check-session · logout-user · send-otp
+      — کپی یک‌کلیکی + انگشت‌نگاشت نسخه</small>
     </a>
 
     <a class="btn ghost" href="/otp-doctor">
@@ -214,16 +220,66 @@ DOWNLOAD_PAGE = Template("""<!DOCTYPE html>
 """)
 
 
-# ── صفحه‌ی گذاشتن کد تازه‌ی send-otp روی سرور Supabase ──
+# ── صفحه‌های گذاشتن کد فانکشن‌ها روی سرور Supabase ──
 
-SEND_OTP_FILE = "supabase/functions/send-otp/index.ts"
+DEPLOY_LIST = [
+    {
+        "name": "register-user",
+        "why": "بدون این نسخه، ثبت‌نام از مرورگر با خطای CORS مسدود می‌شود",
+        "kind": "update",
+    },
+    {
+        "name": "site-content",
+        "why": "اختیاری — اگر این فانکشن را نسازی، سایت با متن‌های پیش‌فرض کار می‌کند "
+               "و فقط متن‌های ویرایش‌شده از پنل ادمین اعمال نمی‌شوند",
+        "kind": "create",
+        "optional": True,
+    },
+    {
+        "name": "check-session",
+        "why": "بدون CORS، بررسی نشست کاربر از مرورگر رد می‌شود",
+        "kind": "update",
+    },
+    {
+        "name": "logout-user",
+        "why": "بدون CORS، دکمه‌ی خروج از حساب کار نمی‌کند",
+        "kind": "update",
+    },
+    {
+        "name": "send-otp",
+        "why": "نسخه‌ی sms.ir (اگر قبلاً گذاشته‌اید، لازم نیست دوباره)",
+        "kind": "update",
+    },
+]
 
-SEND_OTP_PAGE = Template("""<!DOCTYPE html>
+DEPLOY_BY_NAME = {d["name"]: d for d in DEPLOY_LIST}
+
+STEPS_UPDATE = """<ol>
+      <li>دکمه‌ی <b>«کپی کل کد»</b> پایین را بزنید.</li>
+      <li>برو به <code>supabase.com/dashboard</code> → پروژه → <b>Edge Functions</b> →
+          روی <code>$name</code> کلیک کنید.</li>
+      <li>در ادیتور کد: <b>Ctrl+A</b> → <b>Delete</b> (کد قبلی پاک شود) → <b>Ctrl+V</b>.</li>
+      <li>دکمه‌ی <b>Deploy</b> را بزنید و صبر کنید پیام «Deployed» بیاید.</li>
+    </ol>"""
+
+STEPS_CREATE = """<ol>
+      <li>دکمه‌ی <b>«کپی کل کد»</b> پایین را بزنید.</li>
+      <li>برو به <code>supabase.com/dashboard</code> → پروژه → <b>Edge Functions</b> →
+          دکمه‌ی <b>Create a new function</b> (یا <b>New function</b>) را بزنید.</li>
+      <li>اسم فانکشن را دقیقاً <code>$name</code> بگذارید.</li>
+      <li>در ادیتور: <b>Ctrl+A</b> → <b>Delete</b> → <b>Ctrl+V</b> (کد کامل).</li>
+      <li>اگر گزینه‌ی <b>Enforce JWT verification</b> (یا «Verify JWT») دیدید،
+          آن را <b>خاموش</b> کنید — این فانکشن عمومی است و مرورگر باید بتواند
+          صدایش بزند.</li>
+      <li><b>Deploy</b> را بزنید.</li>
+    </ol>"""
+
+FUNCTION_PAGE = Template("""<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>گذاشتن کد تازه‌ی send-otp روی سرور</title>
+<title>کد $name برای گذاشتن روی Supabase</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; padding: 24px; background: #f4f4f7; color: #1f2937;
@@ -231,9 +287,9 @@ SEND_OTP_PAGE = Template("""<!DOCTYPE html>
   .wrap { max-width: 900px; width: 100%; }
   .card { background: #fff; border-radius: 24px; padding: 30px;
           box-shadow: 0 12px 40px rgba(15,23,42,.08); margin-bottom: 18px; }
-  h1 { margin: 0 0 8px; font-size: 22px; }
+  h1 { margin: 0 0 8px; font-size: 21px; }
   h2 { margin: 0 0 12px; font-size: 16px; }
-  .sub { color: #6b7280; font-size: 13.5px; line-height: 2; margin: 0 0 20px; }
+  .sub { color: #6b7280; font-size: 13.5px; line-height: 2; margin: 0 0 18px; }
   ol { padding-right: 22px; font-size: 14px; line-height: 2.3; color: #374151; margin: 0; }
   code { background: #f3f4f6; padding: 2px 7px; border-radius: 6px; font-size: 12.5px;
          direction: ltr; display: inline-block; }
@@ -252,38 +308,22 @@ SEND_OTP_PAGE = Template("""<!DOCTYPE html>
         overflow: auto; max-height: 420px; font-size: 12px; line-height: 1.9;
         direction: ltr; text-align: left; font-family: Consolas, monospace;
         white-space: pre; margin: 14px 0 0; }
-  .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
-          border-radius: 16px; padding: 14px 18px; font-size: 13px; line-height: 2.1; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <div class="card">
-    <h1>کد تازه‌ی فانکشن <code>send-otp</code> را روی سرور بگذارید</h1>
-    <p class="sub">
-      این همان فایلی است که پیامک را با sms.ir می‌فرستد. تا وقتی این کد را روی
-      Supabase نگذارید، سرور همان نسخه‌ی قدیمی را اجرا می‌کند و sms.ir فعال نمی‌شود.
-      کارِ شما ۴ کلیک است:
-    </p>
-    <ol>
-      <li>دکمه‌ی <b>«کپی کل کد»</b> پایین را بزنید.</li>
-      <li>برو به <code>supabase.com/dashboard</code> → پروژه‌ی خودتان →
-          منوی چپ: <b>Edge Functions</b> → روی <code>send-otp</code> کلیک کنید.</li>
-      <li>در ادیتور کد: با <b>Ctrl+A</b> همه‌ی کد قبلی را انتخاب و <b>Delete</b> کنید،
-          بعد <b>Ctrl+V</b> کنید تا کد جدید جایگزین شود.</li>
-      <li>دکمه‌ی <b>Deploy</b> را بزنید و صبر کنید پیام «Deployed» بیاید
-          (چند ثانیه طول می‌کشد). تمام.</li>
-    </ol>
+    <h1>فانکشن <code>$name</code></h1>
+    <p class="sub">$why</p>
+    $steps
     <p class="sub" style="margin:16px 0 0">
-      بعد از Deploy، صفحه‌ی 🩺 <b>دکتر پیامک</b> را باز کنید و «ارسال کد تایید» را بزنید؛
-      باید بنویسد «پیامک ارسال شد» و از sms.ir رفته باشد. سکرت‌های
-      <code>SMS_IR_API_KEY</code> و <code>SMS_IR_TEMPLATE_ID</code> که ساختید دست نخورده می‌مانند.
+      این‌جا فقط همین یک فانکشن را عوض می‌کنید؛ بقیه‌ی فانکشن‌ها دست نمی‌خورند.
     </p>
   </div>
 
   <div class="card">
-    <h2>۱) کد را کپی کنید</h2>
+    <h2>کد آماده برای کپی</h2>
     <div class="finger">
       انگشت‌نگاشت این نسخه (برای تطبیق):
       <b>$sha</b> · تعداد خطوط: <b>$lines</b><br>
@@ -292,22 +332,11 @@ SEND_OTP_PAGE = Template("""<!DOCTYPE html>
     </div>
 
     <button id="copy">📋 کپی کل کد</button>
-    <a class="ghost" href="/send-otp.ts">دانلود فایل .ts</a>
+    <a class="ghost" href="/deploy/$name.ts">دانلود فایل .ts</a>
+    <a class="ghost" href="/deploy">← فهرست فانکشن‌ها</a>
     <a class="ghost" href="/otp-doctor">🩺 دکتر پیامک</a>
-    <a class="ghost" href="/download">⬇ دانلودها</a>
 
     <pre id="view">$code</pre>
-  </div>
-
-  <div class="card">
-    <div class="warn">
-      <b>نکته:</b> اگر در سایت پیام «سامانه‌ی پیامک تنظیم نشده» می‌بینید، یعنی
-      سکرت‌ها روی Supabase ذخیره نشده‌اند؛ در مسیر
-      <b>Project Settings → Edge Functions → Secrets</b> دو سکرت
-      <code>SMS_IR_API_KEY</code> و <code>SMS_IR_TEMPLATE_ID</code> را بسازید.
-      اگر پیام «قالب پیامکی در sms.ir پیدا نشد» دیدید، یعنی شناسه‌ی قالب اشتباه است
-      یا هنوز در پنل sms.ir تأیید نشده.
-    </div>
   </div>
 
 </div>
@@ -323,7 +352,6 @@ btn.addEventListener("click", async () => {
         await navigator.clipboard.writeText(text);
         ok();
     } catch (e) {
-        // اگر مرورگر کپی خودکار را نداد: متن را انتخاب می‌کنیم تا خودشان Ctrl+C بزنند
         const range = document.createRange();
         range.selectNodeContents(view);
         const sel = window.getSelection();
@@ -347,25 +375,130 @@ function ok() {
 """)
 
 
-def send_otp_page():
-    """HTML صفحه‌ی کپی کد تازه‌ی send-otp"""
+DEPLOY_HUB = Template("""<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>گذاشتن کد فانکشن‌ها روی Supabase</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #f4f4f7; color: #1f2937;
+         font-family: Tahoma, "Segoe UI", sans-serif; display: flex; justify-content: center; }
+  .wrap { max-width: 820px; width: 100%; }
+  .card { background: #fff; border-radius: 24px; padding: 32px;
+          box-shadow: 0 12px 40px rgba(15,23,42,.08); }
+  h1 { margin: 0 0 8px; font-size: 22px; }
+  .sub { color: #6b7280; font-size: 13.5px; line-height: 2; margin: 0 0 22px; }
+  a.btn { display: block; text-decoration: none; border-radius: 16px; padding: 17px 20px;
+          margin-bottom: 11px; font-weight: bold; border: 2px solid #e5e7eb;
+          background: #fff; color: #374151; }
+  a.btn:hover { border-color: #c7d2fe; }
+  a.btn small { display: block; font-weight: normal; opacity: .8; font-size: 12px; margin-top: 6px;
+                line-height: 1.9; }
+  a.btn b { direction: ltr; display: inline-block; }
+  .tag { font-size: 11px; padding: 3px 9px; border-radius: 999px; margin-right: 8px;
+         font-weight: bold; }
+  .tag.new { background: #fef3c7; color: #92400e; }
+  .tag.upd { background: #eef2ff; color: #3730a3; }
+  .tag.opt { background: #f0fdf4; color: #166534; }
+  code { background: #f3f4f6; padding: 2px 7px; border-radius: 6px; font-size: 12.5px;
+         direction: ltr; display: inline-block; }
+  .meta { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e5e7eb;
+          font-size: 13px; color: #6b7280; line-height: 2; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>گذاشتن کد فانکشن‌ها روی Supabase</h1>
+    <p class="sub">
+      هر فانکشن یک صفحه‌ی جدا دارد: کد کامل + دکمه‌ی کپی + انگشت‌نگاشت نسخه.
+      روی هر کدام بزنید، کد را کپی کنید و در Supabase جایگزین کنید.
+      <br>
+      <b>هیچ فانکشن تازه‌ای لازم نیست.</b> چهار مورد اول، همان فانکشن‌های موجود
+      هستند که فقط چند خط «هدر CORS» به آن‌ها اضافه شده — بدون هیچ تغییر در منطق کار،
+      تا ترجمه‌ی یک‌به‌یک آن‌ها به PHP ساده بمانَد.
+      «site-content» هم اختیاری است: اگر نسازی‌اش، سایت با متن‌های پیش‌فرض کار می‌کند.
+    </p>
+
+    $cards
+
+    <div class="meta">
+      پس از هر Deploy، همان صفحه را رفرش کنید و در سایت تست بگیرید.
+      <br>راهنمای پیامک: <a href="/otp-doctor">🩺 دکتر پیامک</a> ·
+      دانلودها: <a href="/download">⬇ صفحه‌ی دانلود</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+""")
+
+
+def _function_code(name):
+    """(کد، انگشت‌نگاشت، تعداد خط، زمان تغییر)"""
     import hashlib
     import time as _time
 
-    full = os.path.join(REPO, SEND_OTP_FILE)
+    rel = f"supabase/functions/{name}/index.ts"
+    full = os.path.join(REPO, rel)
 
     with open(full, "r", encoding="utf-8") as f:
         code = f.read()
 
-    digest = hashlib.sha256(code.encode("utf-8")).hexdigest()[:10]
-    updated = _time.strftime("%Y-%m-%d %H:%M", _time.localtime(os.path.getmtime(full)))
+    return (
+        rel,
+        code,
+        hashlib.sha256(code.encode("utf-8")).hexdigest()[:10],
+        len(code.splitlines()),
+        _time.strftime("%Y-%m-%d %H:%M", _time.localtime(os.path.getmtime(full))),
+    )
 
-    return SEND_OTP_PAGE.substitute(
-        sha=digest,
-        lines=len(code.splitlines()),
+
+def deploy_hub_page():
+    cards = []
+
+    for item in DEPLOY_LIST:
+        name = item["name"]
+        if not os.path.isfile(os.path.join(REPO, f"supabase/functions/{name}/index.ts")):
+            continue
+
+        if item.get("optional"):
+            tag = '<span class="tag opt">اختیاری</span>'
+        elif item["kind"] == "create":
+            tag = '<span class="tag new">ساخته نشده — بساز</span>'
+        else:
+            tag = '<span class="tag upd">فقط کد را جایگزین کن</span>'
+
+
+        cards.append(
+            f'<a class="btn" href="/deploy/{name}">{tag}<b>{name}</b>'
+            f'<small>{item["why"]}</small></a>'
+        )
+
+    return DEPLOY_HUB.substitute(cards="\n".join(cards))
+
+
+def deploy_function_page(name):
+    item = DEPLOY_BY_NAME.get(name)
+    if not item:
+        return None
+
+    rel, code, sha, lines, updated = _function_code(name)
+
+    steps = (STEPS_CREATE if item["kind"] == "create" else STEPS_UPDATE)
+    escaped = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    return FUNCTION_PAGE.substitute(
+        name=name,
+        why=item["why"],
+        steps=Template(steps).substitute(name=name),
+        sha=sha,
+        lines=lines,
         updated=updated,
-        path=SEND_OTP_FILE,
-        code=code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"),
+        path=rel,
+        code=escaped,
     )
 
 
@@ -485,12 +618,33 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path in ("/deploy", "/deploy-send-otp", "/send-otp"):
-            self._send(200, send_otp_page().encode("utf-8"),
+            self._send(200, deploy_hub_page().encode("utf-8"),
                        "text/html; charset=utf-8", head_only=head_only)
             return
 
+        if path.startswith("/deploy/"):
+            tail = urllib.parse.unquote(path[len("/deploy/"):])
+
+            if tail.endswith(".ts"):
+                name = tail[:-3]
+                rel = f"supabase/functions/{name}/index.ts"
+                self._file(rel, "text/plain; charset=utf-8", head_only,
+                           {"Content-Disposition": f'attachment; filename="{name}.ts"'})
+                return
+
+            html = deploy_function_page(tail.strip("/"))
+            if html is None:
+                self._send(404, b"404 Not Found\n", "text/plain; charset=utf-8",
+                           head_only=head_only)
+                return
+
+            self._send(200, html.encode("utf-8"), "text/html; charset=utf-8",
+                       head_only=head_only)
+            return
+
         if path in ("/send-otp.ts", "/send-otp-code.ts"):
-            self._file(SEND_OTP_FILE, "text/plain; charset=utf-8", head_only,
+            self._file("supabase/functions/send-otp/index.ts",
+                       "text/plain; charset=utf-8", head_only,
                        {"Content-Disposition": 'attachment; filename="send-otp.ts"'})
             return
 
@@ -537,7 +691,7 @@ if __name__ == "__main__":
     print(f"  سایت        → http://localhost:{PORT}/", flush=True)
     print(f"  دانلود      → http://localhost:{PORT}/download", flush=True)
     print(f"  ساخت ادمین  → http://localhost:{PORT}/make-admin", flush=True)
-    print(f"  کد send-otp → http://localhost:{PORT}/deploy", flush=True)
+    print(f"  کد فانکشن‌ها → http://localhost:{PORT}/deploy", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
