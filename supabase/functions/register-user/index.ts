@@ -106,7 +106,16 @@ const {
 }=await req.json();
 
 
-if(!phone || !password || !first_name || !last_name){
+// نام و نام خانوادگی اجباری نیست؛ کاربر بعد از ورود در صفحه‌ی
+// «تکمیل پروفایل» نام/پایه/رشته را پر می‌کند (login.js همان‌جا هدایت می‌کند).
+const safeFirstName =
+String(first_name ?? "").trim();
+
+const safeLastName =
+String(last_name ?? "").trim();
+
+
+if(!phone || !password){
 
 return new Response(
 JSON.stringify({
@@ -196,9 +205,9 @@ phone:normalizedPhone,
 
 password_hash:passwordHash,
 
-first_name,
+first_name:safeFirstName,
 
-last_name,
+last_name:safeLastName,
 
 role:"student"
 
