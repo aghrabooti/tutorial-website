@@ -195,6 +195,91 @@ for (const name of ["register-user", "check-session", "logout-user", "send-otp",
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   ۵) update-profile — ذخیره‌ی «تکمیل پروفایل»
+   (این فایل قبلاً خالی بود و سرور ۵۰۲ می‌داد)
+   ═══════════════════════════════════════════════════════════════ */
+
+console.log("\n── update-profile (تکمیل پروفایل) ──");
+
+{
+    const { createHash } = await import("node:crypto");
+    const { DB } = await import("./supabase-stub.js");
+
+    const TOKEN = "test-session-token";
+    const tokenHash = createHash("sha256").update(TOKEN).digest("hex");
+
+    const seed = () => {
+        DB.site_users = [{
+            id: "u1", phone: "989121351047", role: "student",
+            first_name: "", last_name: "", grade: "", major: "",
+        }];
+        DB.user_sessions = [{
+            id: "s1", user_id: "u1", token_hash: tokenHash, is_active: true,
+            expires_at: new Date(Date.now() + 86400000).toISOString(),
+        }];
+    };
+
+    const call = async (handler, body) => {
+        const res = await handler(new Request("http://x/", {
+            method: "POST",
+            headers: { Origin: ORIGIN, "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        }));
+        return { status: res.status, body: await res.json(), cors: firewallFree(res) };
+    };
+
+    // فایل نباید خالی بماند (باگ اصلی: استابِ خالی → ۵۰۲)
+    const src = read("supabase/functions/update-profile/index.ts");
+    check("فایل update-profile کد دارد (استابِ خالی نیست)", src.length > 1200, `${src.length} بایت`);
+    check("نشست را با هش توکن پیدا می‌کند", src.includes("token_hash"));
+    check("اطلاعات را در site_users ذخیره می‌کند", src.includes('from("site_users")'));
+
+    const handler = await loadHandler("update-profile", "profile");
+
+    seed();
+    const ok = await call(handler, {
+        token: TOKEN, first_name: "سارا", last_name: "محمدی",
+        grade: "11", major: "ریاضی",
+    });
+
+    check("ذخیره‌ی اطلاعات پروفایل موفق است", ok.status === 200 && ok.body.success === true,
+        JSON.stringify(ok.body).slice(0, 90));
+    check("پاسخ هدر CORS دارد", ok.cors);
+    check("نام ذخیره شد", DB.site_users[0].first_name === "سارا");
+    check("پایه ذخیره شد", DB.site_users[0].grade === "11");
+    check("رشته ذخیره شد", DB.site_users[0].major === "ریاضی");
+
+    // پایه‌ی نهم رشته ندارد (فرم major را null می‌فرستد)
+    seed();
+    const ninth = await call(handler, {
+        token: TOKEN, first_name: "علی", last_name: "رضایی", grade: "9", major: null,
+    });
+    check("پایه‌ی نهم بدون رشته هم ذخیره می‌شود",
+        ninth.body.success === true && DB.site_users[0].major === "",
+        JSON.stringify(DB.site_users[0]).slice(0, 90));
+
+    // توکن نامعتبر
+    seed();
+    const bad = await call(handler, {
+        token: "wrong", first_name: "سارا", last_name: "محمدی", grade: "11",
+    });
+    check("توکن نامعتبر → ۴۰۱ + CORS", bad.status === 401 && bad.cors, bad.body.error);
+    check("با توکن نامعتبر چیزی ذخیره نمی‌شود", DB.site_users[0].first_name === "");
+
+    // داده ناقص
+    seed();
+    const missing = await call(handler, { token: TOKEN, first_name: "سارا", last_name: "", grade: "" });
+    check("نام ناقص → ۴۰۰ «اطلاعات ناقص است»",
+        missing.status === 400 && /اطلاعات ناقص/.test(missing.body.error ?? ""), missing.body.error);
+
+    // پیش‌پرواز
+    const pre = await handler(new Request("http://x/", {
+        method: "OPTIONS", headers: { Origin: ORIGIN, "Access-Control-Request-Method": "POST" },
+    }));
+    check("preflight «update-profile» موفق است", pre.status === 200 && firewallFree(pre));
+}
+
+/* ═══════════════════════════════════════════════════════════════
    ۴) آیا کد جدید ثبت‌نام با فرم سایت هم‌خوان است؟
    ═══════════════════════════════════════════════════════════════ */
 
@@ -222,6 +307,24 @@ check("کاربر بدون نام بعد از ورود به «تکمیل پرو�
     /!user\.first_name/.test(loginJs) && loginJs.includes("/complete-profile"));
 
 console.log("\n✅ فرم و فانکشن حالا با هم هم‌خوان‌اند: شماره + رمز کافی است.");
+
+console.log("\n── ابزار دکتر پروفایل ──");
+
+const doctorProfile = read("tools/profile-doctor.html");
+const servePy = read("tools/serve.py");
+
+check("ابزار دکتر پروفایل وجود دارد", doctorProfile.length > 1500);
+check("فانکشن update-profile را زنده صدا می‌زند",
+    doctorProfile.includes('`${API}/update-profile`'));
+check("خطای ۵۰۲ را تشخیص می‌دهد", doctorProfile.includes("=== 502"));
+check("دستور SQL ساخت ستون‌های grade و major را دارد",
+    doctorProfile.includes("add column if not exists grade") &&
+    doctorProfile.includes("add column if not exists major"));
+check("مسیر ستون‌ها را از information_schema می‌خواند",
+    doctorProfile.includes("information_schema.columns"));
+check("سرور مسیر /profile-doctor را می‌شناسد", servePy.includes("/profile-doctor"));
+check("update-profile در فهرست صفحه‌ی Deploy هست",
+    servePy.includes('"name": "update-profile"'));
 
 console.log(`\n${failed === 0 ? "ALL CORS CHECKS PASSED ✅" : `${failed} تست شکست خورد ❌`}`);
 console.log(`(${passed} تست موفق)`);

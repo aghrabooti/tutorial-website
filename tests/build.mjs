@@ -19,6 +19,7 @@ const FUNCTIONS = [
   "login-user",
   "check-session",
   "logout-user",
+  "update-profile",
   "send-otp",
   "verify-otp",
 ];
