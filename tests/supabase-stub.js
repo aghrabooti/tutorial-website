@@ -10,6 +10,7 @@ export const DB = {
   user_sessions: [],
   cart_items: [],
   site_content: [],
+  otp_codes: [],
 };
 
 export const LOG = [];

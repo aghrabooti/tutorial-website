@@ -11,6 +11,8 @@ const steps = [
   ["node", ["admin-panel.test.cjs"]],
   ["node", ["seo.test.mjs"]],
   ["node", ["content.test.mjs"]],
+  ["node", ["admin-tool.test.mjs"]],
+  ["node", ["otp.test.mjs"]],
 ];
 
 let failed = 0;
