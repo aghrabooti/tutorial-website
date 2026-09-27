@@ -29,7 +29,7 @@ async function loadDashboardData(){
 
 
 
-        if(!result.valid){
+        if(!(result.valid === true || result.success === true)){
 
 
             localStorage.clear();
