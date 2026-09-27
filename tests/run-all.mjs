@@ -14,6 +14,7 @@ const steps = [
   ["node", ["admin-tool.test.mjs"]],
   ["node", ["otp.test.mjs"]],
   ["node", ["cors.test.mjs"]],
+  ["node", ["profile-flow.test.mjs"]],
 ];
 
 let failed = 0;
