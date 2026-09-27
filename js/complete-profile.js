@@ -205,6 +205,45 @@ async(e)=>{
     if(updateResult.success){
 
 
+        // حافظه‌ی مرورگر را هم به‌روز می‌کنیم؛ وگرنه صفحات دیگر
+        // (داشبورد، نشانی پستی، سبد خرید) اطلاعات کهنه‌ی زمان ثبت‌نام را
+        // می‌بینند و کاربر دوباره به همین صفحه برمی‌گردد.
+        let storedUser = {};
+
+        try{
+            storedUser = JSON.parse(
+                localStorage.getItem("user") || "{}"
+            ) || {};
+        }
+        catch(e){
+            storedUser = {};
+        }
+
+
+        localStorage.setItem(
+
+            "user",
+
+            JSON.stringify(
+
+                Object.assign(
+                    {},
+                    storedUser,
+                    updateResult.user || {},
+                    {
+                        first_name: payload.first_name,
+                        last_name: payload.last_name,
+                        grade: payload.grade,
+                        major: payload.major || ""
+                    }
+                )
+
+            )
+
+        );
+
+
+
         alert(
             "اطلاعات با موفقیت ذخیره شد"
         );
