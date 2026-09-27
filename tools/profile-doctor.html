@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دکتر پروفایل — بررسی ذخیره‌ی اطلاعات کاربر</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: #f4f4f7; color: #1f2937;
+    font-family: Tahoma, "Segoe UI", sans-serif; display: flex; justify-content: center;
+  }
+  .wrap { max-width: 880px; width: 100%; }
+  .card {
+    background: #fff; border-radius: 24px; padding: 30px;
+    box-shadow: 0 12px 40px rgba(15,23,42,.08); margin-bottom: 18px;
+  }
+  h1 { margin: 0 0 8px; font-size: 22px; }
+  h2 { margin: 0 0 12px; font-size: 16px; }
+  .sub { color: #6b7280; font-size: 13.5px; line-height: 2; margin: 0 0 20px; }
+  ol { padding-right: 22px; font-size: 13.5px; line-height: 2.2; color: #374151; margin: 8px 0 0; }
+  code { background: #f3f4f6; padding: 2px 7px; border-radius: 6px; font-size: 12.5px;
+         direction: ltr; display: inline-block; }
+  button {
+    margin-top: 16px; padding: 14px 22px; border: 0; border-radius: 14px;
+    background: #4f46e5; color: #fff; font-size: 14px; font-weight: bold;
+    cursor: pointer; font-family: inherit;
+  }
+  button:hover { background: #4338ca; }
+  button:disabled { background: #d1d5db; cursor: not-allowed; }
+  button.ghost { background: #eef2ff; color: #3730a3; border: 2px solid #c7d2fe;
+                 font-size: 13px; padding: 11px 16px; }
+  pre {
+    background: #0f172a; color: #e2e8f0; padding: 18px; border-radius: 16px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.9; direction: ltr;
+    text-align: left; font-family: Consolas, monospace; margin: 12px 0 0;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .verdict { padding: 18px 20px; border-radius: 18px; font-size: 14px; line-height: 2;
+             font-weight: bold; margin-bottom: 14px; }
+  .v-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+  .v-warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .v-bad { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+  .v-info { background: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3; }
+  .verdict span { display: block; font-weight: normal; font-size: 13px; margin-top: 8px; line-height: 2.1; }
+  .muted { color: #9ca3af; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <h1>دکتر پروفایل</h1>
+    <p class="sub">
+      این صفحه دو چیز را بررسی می‌کند: (۱) فانکشن <code>update-profile</code> روی سرور
+      سالم است یا نه، (۲) ستون‌های لازم در جدول کاربران وجود دارند یا نه.
+      مشکل «خطا موقع ذخیره‌ی کاربر» تقریباً همیشه یکی از این دو است.
+    </p>
+
+    <button id="check">۱) بررسی فانکشن update-profile</button>
+    <div id="verdict" style="margin-top:16px"></div>
+    <pre id="raw" style="display:none"></pre>
+  </div>
+
+  <div class="card">
+    <h2>۲) بررسی ستون‌های جدول کاربران</h2>
+    <p class="sub" style="margin-bottom:10px">
+      این دستور را در <b>Supabase → SQL Editor</b> اجرا کنید. باید چهار ستون
+      <code>first_name</code>، <code>last_name</code>، <code>grade</code>،
+      <code>major</code> را نشان بدهد.
+    </p>
+    <pre>select column_name, data_type
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'site_users'
+order by ordinal_position;</pre>
+    <button id="copyCheck" class="ghost">کپی دستور بررسی</button>
+
+    <p class="sub" style="margin:18px 0 10px">
+      اگر <code>grade</code> یا <code>major</code> نبود، این دستور آن‌ها را اضافه می‌کند
+      (بقیه‌ی اطلاعات دست نمی‌خورد):
+    </p>
+    <pre>alter table public.site_users
+  add column if not exists grade text,
+  add column if not exists major text;</pre>
+    <button id="copyFix" class="ghost">کپی دستور اصلاح</button>
+  </div>
+
+  <div class="card">
+    <h2>۳) اگر باز هم خطا داد</h2>
+    <ol>
+      <li>کد تازه‌ی فانکشن را از صفحه‌ی
+          <a href="/deploy/update-profile">/deploy/update-profile</a> کپی کنید.</li>
+      <li>در Supabase → Edge Functions → <code>update-profile</code>، کد قبلی را پاک و
+          کد تازه را پیست کنید → <b>Deploy</b>.</li>
+      <li>دوباره دکمه‌ی «بررسی فانکشن» بالای همین صفحه را بزنید.</li>
+      <li>در مرورگر، صفحه‌ی <code>/complete-profile</code> را با Ctrl+Shift+R
+          (رفرش سخت) دوباره باز کنید و فرم را ذخیره کنید.</li>
+    </ol>
+  </div>
+
+</div>
+
+<script>
+const API = "https://qbsfotperzzhuimnpmto.supabase.co/functions/v1";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA";
+
+const $ = (id) => document.getElementById(id);
+
+function verdict(cls, title, details) {
+    $("verdict").innerHTML =
+        `<div class="verdict ${cls}">${title}${details ? `<span>${details}</span>` : ""}</div>`;
+}
+
+$("check").addEventListener("click", async () => {
+    $("check").disabled = true;
+    verdict("v-info", "در حال بررسی…", "");
+
+    let res;
+    try {
+        res = await fetch(`${API}/update-profile`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${ANON}`,
+            },
+            // توکن عمداً بی‌اعتبار است؛ فقط می‌خواهیم ببینیم فانکشن جواب می‌دهد
+            body: JSON.stringify({ token: "diagnostic-test", first_name: "ت", last_name: "ت", grade: "11" }),
+        });
+    } catch (e) {
+        verdict("v-bad", "❌ فانکشن جواب نداد (CORS یا شبکه)",
+            "یعنی پاسخ سرور هدر <code>Access-Control-Allow-Origin</code> ندارد. " +
+            "کد تازه را از <a href=\"/deploy/update-profile\">/deploy/update-profile</a> " +
+            "روی Supabase بگذارید و دوباره Deploy کنید." +
+            `<br><span class="muted">${e.message}</span>`);
+        $("check").disabled = false;
+        return;
+    }
+
+    let body = null;
+    try { body = await res.json(); } catch (e) { /* بدنه‌ی غیر JSON */ }
+
+    $("raw").style.display = "";
+    $("raw").textContent = `HTTP ${res.status}\n` + JSON.stringify(body, null, 2);
+
+    if (res.status === 401) {
+        verdict("v-ok", "✅ فانکشن سالم است",
+            "جواب درست داد: «نشست معتبر نیست» برای توکن آزمایشی طبیعی است؛ " +
+            "یعنی کد روی سرور نصب شده و CORS هم درست است. اگر در سایت باز هم خطا دیدید، " +
+            "احتمالاً مشکل ستون‌های دیتابیس است (بخش ۲ بالا).");
+    } else if (res.status === 502 || res.status === 504) {
+        verdict("v-bad", "❌ فانکشن روی سرور خراب است (۵۰۲)",
+            "کد فعلیِ روی Supabase ناقص/خالی است. کد تازه را از " +
+            "<a href=\"/deploy/update-profile\">/deploy/update-profile</a> کپی کنید و " +
+            "کل محتوای فانکشن را جایگزین و Deploy کنید.");
+    } else if (res.status === 400) {
+        verdict("v-warn", "⚠️ فانکشن جواب می‌دهد ولی کد دیگری روی سرور است",
+            "پاسخ «اطلاعات ناقص است» آمد، در حالی که این ابزار داده‌ی کامل فرستاد. " +
+            "کد تازه را از <a href=\"/deploy/update-profile\">/deploy/update-profile</a> " +
+            "دوباره Deploy کنید.");
+    } else if (body && body.error && /mine|column|schema/i.test(String(body.error))) {
+        verdict("v-warn", "⚠️ ستون‌های دیتابیس مشکل دارند",
+            "پیام سرور: " + body.error + " — دستور بخش ۲ بالا را اجرا کنید.");
+    } else {
+        verdict("v-info", `پاسخ سرور: HTTP ${res.status}`, "جزئیات را در کادر پایین ببینید.");
+    }
+
+    $("check").disabled = false;
+});
+
+async function copyText(text, btn, label) {
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch (e) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+    }
+    const original = btn.textContent;
+    btn.textContent = "✅ " + (label || "کپی شد");
+    setTimeout(() => { btn.textContent = original; }, 3000);
+}
+
+$("copyCheck").addEventListener("click", (e) =>
+    copyText($("copyCheck").previousElementSibling.textContent, e.target, "کپی شد"));
+
+$("copyFix").addEventListener("click", (e) =>
+    copyText($("copyFix").previousElementSibling.textContent, e.target, "کپی شد"));
+</script>
+</body>
+</html>

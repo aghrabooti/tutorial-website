@@ -9,6 +9,7 @@ serve.py — سرور کارگاه (داخل خودِ ریپو، پس همیشه
   /otp-doctor  → ابزار تشخیص مشکل پیامک کد تأیید (sms.ir / کاوه‌نگار)
   /deploy      → کد فانکشن‌ها برای کپی و گذاشتن روی Supabase
   /deploy/NAME → کد همان فانکشن (کپی یک‌کلیکی + انگشت‌نگاشت نسخه)
+  /profile-doctor → تشخیص خطای ذخیره‌ی پروفایل کاربر
   /project.zip /changes.zip /COMMANDS.txt /health
 
 اجرا:
@@ -34,14 +35,16 @@ SKIP_FILES = {".DS_Store"}
 
 # گروه‌بندی کامیت‌ها: الگوی مسیر → پیام کامیت
 COMMIT_GROUPS = [
-    ("tools/", "chore: add admin and otp tools"),
+    ("tools/", "chore: add the profile doctor tool"),
+    ("update-profile",
+     "fix: implement update-profile (was an empty stub that returned 502)"),
+    ("register-user",
+     "fix: allow signup with phone and password only, plus cors"),
     ("send-otp", "feat: send the otp sms through sms.ir"),
     ("register.js", "feat: show countdown when otp is rate limited"),
     ("site-content.js",
      "fix: fall back to default texts when the content function is missing"),
-    ("tests/", "test: cover the otp flow"),
-    ("register-user",
-     "fix: allow signup with phone and password only, plus cors"),
+    ("tests/", "test: cover the profile update flow"),
     ("supabase/functions/",
      "fix: add cors headers so the browser can call these functions"),
 ]
@@ -203,6 +206,11 @@ DOWNLOAD_PAGE = Template("""<!DOCTYPE html>
       <small>راه‌اندازی sms.ir، قالب کد تأیید، قفل ۶۰ ثانیه، خطای پنل پیامکی</small>
     </a>
 
+    <a class="btn ghost" href="/profile-doctor">
+      🩹 دکتر پروفایل (خطای ذخیره‌ی کاربر)
+      <small>بررسی فانکشن update-profile + دستور SQL ستون‌های grade و major</small>
+    </a>
+
     <a class="btn ghost" href="/make-admin">
       🔐 ابزار ساخت حساب مدیر
       <small>شماره موبایل + رمز دلخواه → دستور SQL آماده</small>
@@ -237,6 +245,12 @@ DEPLOY_LIST = [
                "و فقط متن‌های ویرایش‌شده از پنل ادمین اعمال نمی‌شوند",
         "kind": "create",
         "optional": True,
+    },
+    {
+        "name": "update-profile",
+        "why": "ذخیره‌ی «تکمیل پروفایل» — این فایل در ریپو خالی بود و سرور ۵۰۲ می‌داد "
+               "(خطای «No Access-Control-Allow-Origin» + 502 در کنسول)",
+        "kind": "update",
     },
     {
         "name": "check-session",
@@ -653,6 +667,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if path in ("/otp-doctor", "/otp-doctor.html", "/tools/otp-doctor"):
             self._file("tools/otp-doctor.html", "text/html; charset=utf-8", head_only)
+            return
+
+        if path in ("/profile-doctor", "/profile-doctor.html", "/tools/profile-doctor"):
+            self._file("tools/profile-doctor.html", "text/html; charset=utf-8", head_only)
             return
 
         if path in ("/make-admin", "/make-admin.html", "/tools/make-admin"):
