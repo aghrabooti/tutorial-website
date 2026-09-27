@@ -1,5 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// ── CORS: بدون این هدرها، مرورگر درخواست را از دامنه‌ی سایت رد می‌کند ──
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+
 
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -37,6 +46,14 @@ async function hashText(text:string){
 
 Deno.serve(async(req)=>{
 
+// درخواست preflight مرورگر — باید ۲۰۰ با هدرهای CORS جواب بگیرد
+if(req.method === "OPTIONS"){
+
+return new Response("ok",{headers:corsHeaders});
+
+}
+
+
 
 try{
 
@@ -54,7 +71,8 @@ JSON.stringify({
 error:"توکن ارسال نشده"
 }),
 {
-status:400
+status:400,
+headers:{...corsHeaders,"Content-Type":"application/json"}
 }
 );
 
@@ -90,7 +108,8 @@ JSON.stringify({
 error:"نشست معتبر نیست"
 }),
 {
-status:401
+status:401,
+headers:{...corsHeaders,"Content-Type":"application/json"}
 }
 );
 
@@ -124,7 +143,8 @@ JSON.stringify({
 error:"نشست منقضی شده"
 }),
 {
-status:401
+status:401,
+headers:{...corsHeaders,"Content-Type":"application/json"}
 }
 );
 
@@ -156,7 +176,8 @@ JSON.stringify({
 error:"کاربر پیدا نشد"
 }),
 {
-status:404
+status:404,
+headers:{...corsHeaders,"Content-Type":"application/json"}
 }
 );
 
@@ -174,7 +195,8 @@ user
 
 }),
 {
-status:200
+status:200,
+headers:{...corsHeaders,"Content-Type":"application/json"}
 }
 );
 
@@ -190,7 +212,8 @@ JSON.stringify({
 error:error.message
 }),
 {
-status:500
+status:500,
+headers:{...corsHeaders,"Content-Type":"application/json"}
 }
 );
 
