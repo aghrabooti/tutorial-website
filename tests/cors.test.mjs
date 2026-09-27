@@ -131,7 +131,10 @@ for (const name of ["register-user", "check-session", "logout-user", "send-otp",
 }
 
 {
-    const handler = await loadHandler("register-user", "post-missing");
+    const { DB } = await import("./supabase-stub.js");
+    DB.site_users = [];
+
+    const handler = await loadHandler("register-user", "post-ok");
 
     const res = await handler(new Request("http://x/", {
         method: "POST",
@@ -141,9 +144,29 @@ for (const name of ["register-user", "check-session", "logout-user", "send-otp",
 
     const body = await res.json();
 
+    check("همان درخواست فرم سایت (شماره + رمز) ثبت‌نام می‌شود",
+        res.status === 200 && body.success === true,
+        JSON.stringify(body).slice(0, 90));
+    check("پاسخ register-user هدر CORS دارد", firewallFree(res),
+        `ACAO=${res.headers.get("access-control-allow-origin")}`);
+    check("بدون نام، کاربر با نام خالی ساخته می‌شود",
+        DB.site_users[0]?.first_name === "" && DB.site_users[0]?.role === "student");
+}
+
+{
+    const handler = await loadHandler("register-user", "post-missing");
+
+    const res = await handler(new Request("http://x/", {
+        method: "POST",
+        headers: { Origin: ORIGIN, "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: "09121351047" }),
+    }));
+
+    const body = await res.json();
+
     check("پاسخ خطای register-user هم هدر CORS دارد (پیام خطا به کاربر می‌رسد)",
         firewallFree(res), `ACAO=${res.headers.get("access-control-allow-origin")}`);
-    check("register-user بدون نام، خطای «اطلاعات ناقص است» می‌دهد",
+    check("register-user بدون رمز، خطای «اطلاعات ناقص است» می‌دهد",
         res.status === 400 && /اطلاعات ناقص/.test(body.error ?? ""), body.error);
 }
 
@@ -184,13 +207,21 @@ const registerFn = read("supabase/functions/register-user/index.ts");
 check("فرم ثبت‌نام نام نمی‌فرستد (طراحی: نام در تکمیل پروفایل)",
     !registerJs.includes("first_name") && !registerHtml.includes("first_name"));
 
-check("ولی فانکشن register-user نام و نام خانوادگی را اجباری می‌خواهد",
-    /!first_name/.test(registerFn) && /!last_name/.test(registerFn));
+check("فانکشن register-user نام را اجباری نمی‌خواهد (هم‌خوان با فرم)",
+    !/!first_name/.test(registerFn) && /safeFirstName/.test(registerFn));
 
-console.log(
-    "\n⚠️  توجه: این دو با هم هم‌خوان نیستند — یا فرم باید نام بگیرد،" +
-    "\n   یا فانکشن باید بدون نام کاربر بسازد (تصمیم با کاربر است)."
-);
+check("شماره و رمز همچنان اجباری‌اند",
+    /if\(!phone \|\| !password\)/.test(registerFn));
+
+check("اگر نام بفرستند، ذخیره می‌شود",
+    /first_name:safeFirstName/.test(registerFn) &&
+    /last_name:safeLastName/.test(registerFn));
+
+const loginJs = read("js/login.js");
+check("کاربر بدون نام بعد از ورود به «تکمیل پروفایل» می‌رود",
+    /!user\.first_name/.test(loginJs) && loginJs.includes("/complete-profile"));
+
+console.log("\n✅ فرم و فانکشن حالا با هم هم‌خوان‌اند: شماره + رمز کافی است.");
 
 console.log(`\n${failed === 0 ? "ALL CORS CHECKS PASSED ✅" : `${failed} تست شکست خورد ❌`}`);
 console.log(`(${passed} تست موفق)`);

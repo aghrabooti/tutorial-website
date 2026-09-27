@@ -240,12 +240,21 @@ if (existsSync(path.join(here, ".build", "register-user.mjs"))) {
     const shortPass = await callRegister({ phone: "09120000009", password: "123" });
     check("رمز کوتاه رد می‌شود", shortPass.json.success !== true);
 
-    // ⚠️ وضعیت فعلی: نام اجباری است. فرم ثبت‌نام نامی نمی‌فرستد، پس با این
-    // نسخه از فانکشن هیچ کاربر جدیدی نمی‌تواند ثبت‌نام کند.
-    // اگر تصمیم گرفتید اختیاری شود، همین بررسی «برعکس» می‌شود.
+    // تصمیم کاربر: نام اجباری نیست — همان چیزی که فرم سایت می‌فرستد
+    // (شماره + رمز) باید ثبت‌نام شود و نام بعداً در «تکمیل پروفایل» گرفته شود.
     const noName = await callRegister({ phone: "09120000002", password: "test1234" });
-    check("وضعیت فعلی: بدون نام رد می‌شود (نیازمند تصمیم شما)",
-        noName.json.success !== true, JSON.stringify(noName.json).slice(0, 60));
+    check("ثبت‌نام با همان چیزی که فرم می‌فرستد (شماره + رمز) کار می‌کند",
+        noName.json.success === true, JSON.stringify(noName.json).slice(0, 90));
+
+    const noNameUser = DB.site_users.find((u) => u.phone === "989120000002");
+    check("بدون نام، فیلد نام خالی ذخیره می‌شود",
+        noNameUser?.first_name === "" && noNameUser?.last_name === "",
+        JSON.stringify(noNameUser ?? {}).slice(0, 80));
+    check("نقش کاربرِ بدون نام هم student است", noNameUser?.role === "student");
+
+    const noPhone = await callRegister({ password: "test1234" });
+    check("بدون شماره، خطای «اطلاعات ناقص است» می‌دهد",
+        noPhone.json.success !== true, JSON.stringify(noPhone.json).slice(0, 60));
 
     // ورود کاربری که ثبت‌نام کرده
     check("login-user باندل شده است", existsSync(path.join(here, ".build", "login-user.mjs")));
