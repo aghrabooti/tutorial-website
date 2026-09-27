@@ -40,6 +40,8 @@ COMMIT_GROUPS = [
     ("site-content.js",
      "fix: fall back to default texts when the content function is missing"),
     ("tests/", "test: cover the otp flow"),
+    ("register-user",
+     "fix: allow signup with phone and password only, plus cors"),
     ("supabase/functions/",
      "fix: add cors headers so the browser can call these functions"),
 ]
@@ -225,7 +227,8 @@ DOWNLOAD_PAGE = Template("""<!DOCTYPE html>
 DEPLOY_LIST = [
     {
         "name": "register-user",
-        "why": "بدون این نسخه، ثبت‌نام از مرورگر با خطای CORS مسدود می‌شود",
+        "why": "ثبت‌نام از مرورگر را باز می‌کند: هم هدر CORS دارد و هم دیگر "
+               "نام و نام خانوادگی را اجباری نمی‌خواهد (نام بعداً در تکمیل پروفایل)",
         "kind": "update",
     },
     {
