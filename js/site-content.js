@@ -14,6 +14,38 @@
     var CACHE_KEY = "site_content_cache_v1";
     var API_FUNCTION = "site-content";
 
+    /* اگر فانکشن site-content روی سرور نباشد (مثلاً هنوز ساخته نشده)،
+       هر بار صدا زدنش یک خطای قرمز CORS در کنسول می‌سازد. پس یک‌بار
+       امتحان می‌کنیم و بعدش مدتی بی‌سر‌و‌صدا رد می‌شویم.
+       برای تلاش دوباره‌ی فوری: window.SiteContent.refresh() */
+    var SKIP_KEY = "site_content_skip_v1";
+    var SKIP_MS = 6 * 60 * 60 * 1000; // شش ساعت
+
+    function isSkipped() {
+        try {
+            var t = Number(localStorage.getItem(SKIP_KEY) || 0);
+            return t > 0 && Date.now() - t < SKIP_MS;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function markSkipped() {
+        try {
+            localStorage.setItem(SKIP_KEY, String(Date.now()));
+        } catch (e) {
+            /* بی‌خیال */
+        }
+    }
+
+    function clearSkip() {
+        try {
+            localStorage.removeItem(SKIP_KEY);
+        } catch (e) {
+            /* بی‌خیال */
+        }
+    }
+
     /* ── اعمال یک نگاشت (کلید → مقدار) روی DOM ── */
 
     function applyOne(el, value, kind) {
@@ -155,19 +187,35 @@
 
     var current = {};
 
-    async function init() {
+    async function init(force) {
         var cached = readCache();
         if (cached) {
             current = cached;
             applyContent(cached);
         }
 
+        // فانکشن روی سرور نیست؟ بی‌سروصدا رد شو (متن‌های پیش‌فرض سایت می‌مانند)
+        if (!force && isSkipped()) {
+            watchInjectedParts(current);
+            return;
+        }
+
         var fresh = await fetchContent();
 
         if (fresh) {
+            clearSkip();
             current = fresh;
             writeCache(fresh);
             applyContent(fresh);
+        } else if (!cached) {
+            // سرور جواب نداد و نسخه‌ی کش‌شده هم نداریم → مدتی بی‌سروصدا می‌مانیم
+            markSkipped();
+
+            if (window.console && console.info) {
+                console.info(
+                    "site-content روی سرور در دسترس نیست؛ متن‌های پیش‌فرض سایت نمایش داده می‌شود."
+                );
+            }
         }
 
         watchInjectedParts(current);
@@ -179,7 +227,7 @@
 
     window.SiteContent = {
         apply: applyContent,
-        refresh: init,
+        refresh: function () { return init(true); },
         get current() { return current; },
         CACHE_KEY: CACHE_KEY,
     };
