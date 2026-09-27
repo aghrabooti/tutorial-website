@@ -17,6 +17,8 @@ const FUNCTIONS = [
   "site-content",
   "register-user",
   "login-user",
+  "check-session",
+  "logout-user",
   "send-otp",
   "verify-otp",
 ];

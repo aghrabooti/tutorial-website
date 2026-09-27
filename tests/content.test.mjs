@@ -310,6 +310,20 @@ const fn = read("supabase/functions/site-content/index.ts");
 check("فانکشن، نقش admin را بررسی می‌کند", fn.includes('user.role !== "admin"'));
 check("فانکشن کلیدها را اعتبارسنجی می‌کند", fn.includes("isValidKey"));
 
+/* ═══════════════════════════════════════════════════════════════
+   اگر فانکشن site-content روی سرور نباشد (مثلاً کاربر نخواهد
+   فانکشن تازه‌ای بسازد) سایت باید بی‌سرو‌صدا با متن‌های پیش‌فرض کار کند
+   ═══════════════════════════════════════════════════════════════ */
+
+const siteJs = read("js/site-content.js");
+
+check("گارد «سرور نیست» دارد", siteJs.includes("site_content_skip_v1"));
+check("بعد از خطا مدتی بی‌سروصدا رد می‌شود", siteJs.includes("isSkipped"));
+check("تلاش دوباره‌ی دستی ممکن است", siteJs.includes("refresh: function"));
+check("پیام غیرقرمز (console.info) می‌دهد", siteJs.includes("console.info"));
+check("متن‌های پیش‌فرض HTML دست‌نخورده می‌مانند (بدون مقدار پیش‌فرض چیزی پاک نمی‌شود)",
+  siteJs.includes("value === undefined"));
+
 /* ═══════════════════════════════════════════════════════════════ */
 
 console.log(`\n${failed === 0 ? "ALL CONTENT CHECKS PASSED ✅" : `${failed} تست شکست خورد ❌`}`);

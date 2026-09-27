@@ -13,6 +13,7 @@ const steps = [
   ["node", ["content.test.mjs"]],
   ["node", ["admin-tool.test.mjs"]],
   ["node", ["otp.test.mjs"]],
+  ["node", ["cors.test.mjs"]],
 ];
 
 let failed = 0;

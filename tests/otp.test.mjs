@@ -457,6 +457,16 @@ check("همان فایل send-otp را برای کپی می‌خواند",
     serve.includes('supabase/functions/send-otp/index.ts'));
 check("انگشت‌نگاشت نسخه (sha256) را نشان می‌دهد", serve.includes("hashlib.sha256"));
 check("فایل خام .ts هم قابل دانلود است", serve.includes("/send-otp.ts"));
+check("برای هر فانکشن یک صفحه‌ی کپی جدا هست", serve.includes('path.startswith("/deploy/")'));
+check("فهرست فانکشن‌های نیازمند Deploy کامل است",
+    ["register-user", "site-content", "check-session", "logout-user", "send-otp"]
+        .every((n) => serve.includes(`"name": "${n}"`)));
+check("راهنمای ساخت فانکشن تازه (Create a new function) هست",
+    serve.includes("Create a new function"));
+check("site-content به‌عنوان «اختیاری» علامت خورده", serve.includes('"optional": True'));
+check("تأکید شده که فانکشن تازه‌ای ساخته نمی‌شود", serve.includes("هیچ فانکشن تازه‌ای لازم نیست"));
+check("راهنمای خاموش‌کردن Enforce JWT برای فانکشن عمومی هست",
+    serve.includes("Enforce JWT verification"));
 
 /* ═══════════════════════════════════════════════════════════════ */
 
