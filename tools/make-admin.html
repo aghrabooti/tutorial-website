@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ساخت حساب مدیر — آکادمی عزیزی</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: #f4f4f7; color: #1f2937;
+    font-family: Tahoma, "Segoe UI", sans-serif; display: flex; justify-content: center;
+  }
+  .wrap { max-width: 780px; width: 100%; }
+  .card {
+    background: #fff; border-radius: 24px; padding: 32px;
+    box-shadow: 0 12px 40px rgba(15,23,42,.08); margin-bottom: 20px;
+  }
+  h1 { margin: 0 0 8px; font-size: 22px; }
+  .sub { color: #6b7280; font-size: 13.5px; line-height: 2; margin: 0 0 24px; }
+  label { display: block; font-size: 13px; font-weight: bold; margin: 18px 0 7px; }
+  input {
+    width: 100%; padding: 13px 16px; border: 1px solid #e5e7eb; border-radius: 14px;
+    font-size: 14px; font-family: inherit; background: #f9fafb;
+  }
+  input:focus { outline: 2px solid #c7d2fe; background: #fff; }
+  input.ltr { direction: ltr; text-align: left; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 200px; }
+  .hint { font-size: 11.5px; color: #9ca3af; margin-top: 6px; }
+  button {
+    margin-top: 24px; width: 100%; padding: 15px; border: 0; border-radius: 16px;
+    background: #4f46e5; color: #fff; font-size: 15px; font-weight: bold; cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: #4338ca; }
+  button:disabled { background: #d1d5db; cursor: not-allowed; }
+  .ghost {
+    background: #eef2ff; color: #3730a3; border: 2px solid #c7d2fe;
+    font-size: 13px; padding: 12px; margin-top: 10px;
+  }
+  .ghost:hover { background: #e0e7ff; }
+  pre {
+    background: #0f172a; color: #e2e8f0; padding: 20px; border-radius: 16px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.9; direction: ltr;
+    text-align: left; font-family: Consolas, "Courier New", monospace; margin: 0;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .msg { margin-top: 16px; padding: 14px 16px; border-radius: 14px; font-size: 13px; line-height: 1.9; }
+  .err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .info { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+  ol { padding-right: 22px; font-size: 13.5px; line-height: 2.2; color: #374151; }
+  ol b { color: #111827; }
+  code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; font-size: 12.5px; direction: ltr; display: inline-block; }
+  .step { background: #f9fafb; border: 1px solid #f1f5f9; border-radius: 18px; padding: 20px; margin-top: 16px; }
+  .step h3 { margin: 0 0 10px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <h1>ساخت حساب مدیر</h1>
+    <p class="sub">
+      این صفحه یک دستور SQL برای شما می‌سازد که همان شماره موبایل را با نقش «مدیر» در سایت ثبت می‌کند.
+      <br>
+      🔒 <b>رمز عبور شما فقط در مرورگر خودتان پردازش می‌شود</b> و به هیچ سروری فرستاده نمی‌شود؛
+      خروجی فقط «اثر انگشت رمز» است.
+    </p>
+
+    <label for="phone">شماره موبایل ادمین</label>
+    <input id="phone" class="ltr" value="09121351047" placeholder="09121351047" inputmode="numeric">
+    <div class="hint">هر فرمتی بنویسید (۰۹۱۲… یا +۹۸۹۱۲… یا ۹۸۹۱۲…) — خودش استاندارد می‌کند.</div>
+
+    <label for="password">رمز عبور دلخواه (حداقل ۸ کاراکتر)</label>
+    <input id="password" class="ltr" type="text" placeholder="مثلاً: Math@1404Admin" autocomplete="new-password">
+    <div class="hint">این رمز را جایی امن نگه دارید؛ برای ورود به <code>admin.mahdiazizi.com</code> لازمش دارید.</div>
+
+    <div class="row">
+      <div>
+        <label for="first">نام</label>
+        <input id="first" value="مهدی">
+      </div>
+      <div>
+        <label for="last">نام خانوادگی</label>
+        <input id="last" value="عزیزی">
+      </div>
+    </div>
+
+    <button id="go">ساخت دستور SQL</button>
+    <button id="onlyRole" class="ghost">حساب از قبل ساخته شده — فقط نقش را ادمین کن</button>
+
+    <div id="msg"></div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <h1 style="font-size:18px">دستور آماده است ✅</h1>
+    <p class="sub" style="margin-bottom:16px">
+      کادر زیر را کپی کنید و در Supabase اجرا کنید. مراحل دقیق پایین‌تر آمده است.
+    </p>
+
+    <pre id="sql"></pre>
+
+    <button id="copy">کپی دستور</button>
+
+    <div class="step">
+      <h3>حالا کجا بچسبانم؟</h3>
+      <ol>
+        <li>برو به <code>supabase.com/dashboard</code> و پروژه‌ی سایت را باز کن.</li>
+        <li>از منوی چپ: <b>SQL Editor</b> → دکمه‌ی <b>New query</b>.</li>
+        <li>دستور بالا را پیست کن (Ctrl+V).</li>
+        <li>دکمه‌ی <b>Run</b> (پایین‌راست یا Ctrl+Enter) را بزن.</li>
+        <li>در آخرین جدول نتیجه، باید یک ردیف با <code>role = admin</code> ببینی.</li>
+        <li>برو به <code>admin.mahdiazizi.com</code> و با همین شماره و رمز وارد شو.</li>
+      </ol>
+    </div>
+
+    <div class="msg info" style="margin-top:20px">
+      اگر بعداً خواستی رمز را عوض کنی، از داخل پنل و بخش «تغییر رمز عبور» در داشبورد
+      قابل انجام است — یا همین صفحه را دوباره باز کن.
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   AdminHash — تولید اثر انگشت رمز، دقیقاً با همان الگوریتم Backend
+     • PBKDF2 / SHA-256
+     • ۱۰۰٬۰۰۰ تکرار
+     • نمک ۱۶ بایت تصادفی
+     • خروجی: saltHex:hashHex
+   این بخش عمداً مستقل نوشته شده تا در تست‌ها هم قابل استفاده باشد.
+   ───────────────────────────────────────────────────────────── */
+window.AdminHash = {
+    toHex(bytes) {
+        return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+    },
+
+    async hashPassword(password) {
+        const encoder = new TextEncoder();
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+
+        const key = await crypto.subtle.importKey(
+            "raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]
+        );
+
+        const bits = await crypto.subtle.deriveBits(
+            { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+            key, 256
+        );
+
+        return this.toHex(salt) + ":" + this.toHex(new Uint8Array(bits));
+    },
+
+    /* ۰۹۱۲…  →  ۹۸۹۱۲…   (همان کاری که ثبت‌نام سایت می‌کند) */
+    normalizePhone(phone) {
+        let p = String(phone || "").trim().replace(/\s+/g, "").replace(/[۰-۹]/g,
+            (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+
+        if (p.startsWith("09")) p = "98" + p.substring(1);
+        if (p.startsWith("+98")) p = p.substring(1);
+        if (p.startsWith("0098")) p = p.substring(2);
+
+        return p;
+    },
+
+    buildSql({ phone, hash, firstName, lastName, roleOnly }) {
+        const p = String(phone).replace(/'/g, "");
+        const f = String(firstName || "").replace(/'/g, "''");
+        const l = String(lastName || "").replace(/'/g, "''");
+
+        if (roleOnly) {
+            return [
+                "-- فقط نقش این شماره را ادمین می‌کند (حساب از قبل هست)",
+                "update public.site_users",
+                "set role = 'admin',",
+                "    is_active = true",
+                "where phone in ('" + p + "', '0" + p.slice(2) + "', '+98" + p.slice(2) + "');",
+                "",
+                "-- بررسی نتیجه",
+                "select id, phone, role, first_name, last_name",
+                "from public.site_users",
+                "where phone in ('" + p + "', '0" + p.slice(2) + "', '+98" + p.slice(2) + "');",
+            ].join("\n");
+        }
+
+        return [
+            "-- ۱) اگر این شماره از قبل حساب دارد: نقش ادمین + رمز جدید",
+            "update public.site_users",
+            "set role = 'admin',",
+            "    is_active = true,",
+            "    password_hash = '" + hash + "'",
+            "where phone in ('" + p + "', '0" + p.slice(2) + "', '+98" + p.slice(2) + "');",
+            "",
+            "-- ۲) اگر حساب ندارد: بساز",
+            "insert into public.site_users (phone, password_hash, first_name, last_name, role, is_active)",
+            "select '" + p + "', '" + hash + "', '" + f + "', '" + l + "', 'admin', true",
+            "where not exists (select 1 from public.site_users where phone = '" + p + "');",
+            "",
+            "-- ۳) بررسی نتیجه (باید role = admin باشد)",
+            "select id, phone, role, first_name, last_name",
+            "from public.site_users",
+            "where phone in ('" + p + "', '0" + p.slice(2) + "', '+98" + p.slice(2) + "');",
+        ].join("\n");
+    },
+};
+
+/* ── اتصال به صفحه (فقط در مرورگر) ── */
+document.addEventListener("DOMContentLoaded", function () {
+    const $ = (id) => document.getElementById(id);
+    const msg = $("msg");
+    const resultCard = $("resultCard");
+    const sqlBox = $("sql");
+
+    function say(text, kind) {
+        msg.className = "msg " + kind;
+        msg.textContent = text;
+    }
+
+    function readForm() {
+        const phone = window.AdminHash.normalizePhone($("phone").value);
+        const password = $("password").value;
+
+        if (!/^98\d{10}$/.test(phone)) {
+            say("شماره موبایل درست نیست. نمونه‌ی درست: 09121351047", "err");
+            return null;
+        }
+
+        return {
+            phone,
+            password,
+            firstName: $("first").value,
+            lastName: $("last").value,
+        };
+    }
+
+    $("go").addEventListener("click", async () => {
+        const data = readForm();
+        if (!data) return;
+
+        if (data.password.length < 8) {
+            say("رمز عبور باید حداقل ۸ کاراکتر باشد.", "err");
+            return;
+        }
+
+        $("go").disabled = true;
+        say("در حال ساخت اثر انگشت رمز…", "info");
+
+        try {
+            const hash = await window.AdminHash.hashPassword(data.password);
+
+            sqlBox.textContent = window.AdminHash.buildSql({
+                phone: data.phone,
+                hash,
+                firstName: data.firstName,
+                lastName: data.lastName,
+            });
+
+            resultCard.style.display = "";
+            resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+            say("آماده شد. دستور را کپی کن و در Supabase اجرا کن.", "ok");
+        } catch (e) {
+            say("خطا: " + e.message, "err");
+        }
+
+        $("go").disabled = false;
+    });
+
+    $("onlyRole").addEventListener("click", () => {
+        const data = readForm();
+        if (!data) return;
+
+        sqlBox.textContent = window.AdminHash.buildSql({
+            phone: data.phone,
+            roleOnly: true,
+        });
+
+        resultCard.style.display = "";
+        resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+        say("دستور فقط-نقش ساخته شد (رمز و پروفایل دست‌نخورده می‌ماند).", "ok");
+    });
+
+    $("copy").addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(sqlBox.textContent);
+            $("copy").textContent = "کپی شد ✅";
+            setTimeout(() => { $("copy").textContent = "کپی دستور"; }, 2000);
+        } catch (e) {
+            say("مرورگر اجازه‌ی کپی نداد؛ دستی انتخاب و کپی کن.", "err");
+        }
+    });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دکتر پیامک — تشخیص مشکل ارسال کد</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: #f4f4f7; color: #1f2937;
+    font-family: Tahoma, "Segoe UI", sans-serif; display: flex; justify-content: center;
+  }
+  .wrap { max-width: 860px; width: 100%; }
+  .card {
+    background: #fff; border-radius: 24px; padding: 30px;
+    box-shadow: 0 12px 40px rgba(15,23,42,.08); margin-bottom: 18px;
+  }
+  h1 { margin: 0 0 8px; font-size: 22px; }
+  h2 { margin: 0 0 12px; font-size: 16px; }
+  .sub { color: #6b7280; font-size: 13.5px; line-height: 2; margin: 0 0 22px; }
+  label { display: block; font-size: 13px; font-weight: bold; margin: 16px 0 7px; }
+  input {
+    width: 100%; padding: 13px 16px; border: 1px solid #e5e7eb; border-radius: 14px;
+    font-size: 14px; font-family: inherit; background: #f9fafb;
+  }
+  input.ltr { direction: ltr; text-align: left; }
+  input:focus { outline: 2px solid #c7d2fe; background: #fff; }
+  button {
+    margin-top: 18px; padding: 14px 22px; border: 0; border-radius: 14px;
+    background: #4f46e5; color: #fff; font-size: 14px; font-weight: bold;
+    cursor: pointer; font-family: inherit;
+  }
+  button:hover { background: #4338ca; }
+  button:disabled { background: #d1d5db; cursor: not-allowed; }
+  button.ghost {
+    background: #eef2ff; color: #3730a3; border: 2px solid #c7d2fe;
+    font-size: 13px; padding: 11px 16px; margin-top: 10px; margin-left: 6px;
+  }
+  button.ghost:hover { background: #e0e7ff; }
+  pre {
+    background: #0f172a; color: #e2e8f0; padding: 18px; border-radius: 16px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.9; direction: ltr;
+    text-align: left; font-family: Consolas, monospace; margin: 12px 0 0;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .verdict {
+    padding: 18px 20px; border-radius: 18px; font-size: 14px; line-height: 2;
+    font-weight: bold; margin-bottom: 14px;
+  }
+  .v-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+  .v-warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .v-bad { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+  .v-info { background: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3; }
+  .verdict span { display: block; font-weight: normal; font-size: 13px; margin-top: 8px; line-height: 2.1; }
+  ol { padding-right: 22px; font-size: 13.5px; line-height: 2.2; color: #374151; margin: 10px 0 0; }
+  code { background: #f3f4f6; padding: 2px 7px; border-radius: 6px; font-size: 12.5px;
+         direction: ltr; display: inline-block; }
+  .big-code {
+    font-size: 30px; font-weight: bold; letter-spacing: 8px; direction: ltr;
+    text-align: center; background: #0f172a; color: #a5b4fc; padding: 18px;
+    border-radius: 16px; margin: 12px 0; font-family: Consolas, monospace;
+  }
+  .muted { color: #9ca3af; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <h1>دکتر پیامک</h1>
+    <p class="sub">
+      این صفحه دقیقاً همان درخواستی را می‌فرستد که فرم ثبت‌نام سایت می‌فرستد، و
+      پاسخ خام سرور را نشان می‌دهد. با این کار معلوم می‌شود مشکل کجاست:
+      «سامانه‌ی پیامک تنظیم نشده»، «فاصله‌ی ۶۰ ثانیه‌ای»، یا «خطای پنل پیامکی».
+      <br>
+      هیچ چیزی روی سایت شما تغییر نمی‌کند و کد ارسالی فقط برای همان شماره است.
+    </p>
+
+    <label for="phone">شماره موبایل برای تست</label>
+    <input id="phone" class="ltr" value="09121351047" inputmode="numeric">
+    <div class="muted" style="margin-top:6px">همان شماره‌ای که می‌خواهید کاربر جدید با آن ثبت‌نام کند.</div>
+
+    <button id="send">۱) ارسال کد تایید (تست)</button>
+    <button id="clearSql" class="ghost">۲) ساخت SQL برای پاک‌کردن قفل ۶۰ ثانیه</button>
+
+    <div id="verdict"></div>
+    <pre id="raw" style="display:none"></pre>
+  </div>
+
+  <div class="card" id="verifyCard" style="display:none">
+    <h2>بررسی کد</h2>
+    <p class="sub" style="margin-bottom:10px">
+      کدی که دیدید (یا با پیامک رسید) را این‌جا بزنید تا مطمئن شویم همان کد پذیرفته می‌شود.
+    </p>
+    <div id="codeBox"></div>
+    <label for="code">کد تایید ۶ رقمی</label>
+    <input id="code" class="ltr" placeholder="123456" maxlength="6" inputmode="numeric">
+    <button id="verify">بررسی کد</button>
+    <div id="verifyResult"></div>
+  </div>
+
+  <div class="card" id="sqlCard" style="display:none">
+    <h2>پاک‌کردن قفل ۶۰ ثانیه</h2>
+    <p class="sub" style="margin-bottom:10px">
+      اگر پیام «تا N ثانیه‌ی دیگر صبر کنید» می‌گیرید، این دستور را در
+      Supabase → SQL Editor اجرا کنید تا فوراً بتوانید دوباره کد بگیرید.
+    </p>
+    <pre id="sql"></pre>
+    <button id="copySql" class="ghost">کپی دستور</button>
+  </div>
+
+  <div class="card">
+    <h2>راه‌اندازی sms.ir (پیشنهادی)</h2>
+    <p class="sub" style="margin-bottom:10px">
+      سایت از دو سامانه پشتیبانی می‌کند: <b>sms.ir</b> و کاوه‌نگار. اگر سکرت
+      <code>SMS_IR_API_KEY</code> (یا <code>SMSIR_API_KEY</code>) تنظیم باشد،
+      مسیر پیامک از sms.ir می‌رود.
+    </p>
+
+    <h3 style="margin:14px 0 6px">۱) در پنل sms.ir</h3>
+    <ol>
+      <li>وارد <code>app.sms.ir</code> شوید → منوی <b>برنامه‌نویسان</b> →
+          <b>لیست کلیدهای API</b> → <b>ایجاد کلید جدید</b> →
+          نوع <b>Production</b> (برای تست، نوع <b>Sandbox</b> هم هست).</li>
+      <li>کلید ساخته‌شده را کپی کنید (فقط یک‌بار کامل نشان داده می‌شود).</li>
+      <li>از منو بروید به <b>ارسال سریع</b> (ارسال با قالب / Verify) →
+          <b>ایجاد قالب جدید</b>. متن قالب را مثلاً این بگذارید:
+          <br><code>کد تایید شما در آکادمی استاد مهدی عزیزی: #CODE#</code>
+          <br>در متن قالب حتماً عبارت «کد تایید» باشد و متغیر <code>#CODE#</code>
+          داخلش قرار بگیرد. بعد از تأیید قالب، <b>شناسه‌ی قالب</b> (یک عدد) را
+          یادداشت کنید.</li>
+      <li>اگر پنل می‌گوید «خط ارسال‌کننده نیاز به فعال‌سازی دارد»، خط خدماتی‌تان را
+          در پنل فعال کنید یا با پشتیبانی sms.ir تماس بگیرید.</li>
+    </ol>
+
+    <h3 style="margin:14px 0 6px">۲) در Supabase</h3>
+    <ol>
+      <li>وارد <code>supabase.com/dashboard</code> شوید و پروژه را باز کنید.</li>
+      <li>منوی چپ: <b>Project Settings</b> → بخش <b>Edge Functions</b> → <b>Secrets</b>
+          (یا در نسخه‌های جدید: <b>Edge Functions</b> → تب <b>Secrets</b>).</li>
+      <li>روی <b>Add new secret</b> بزنید و این دو سکرت را بسازید
+          (هر دو نام‌گذاری قبول است؛ همان که دارید را نگه دارید):
+        <ul style="margin:8px 0">
+          <li><code>SMS_IR_API_KEY</code> یا <code>SMSIR_API_KEY</code> = کلیدی که
+              از پنل sms.ir کپی کردید</li>
+          <li><code>SMS_IR_TEMPLATE_ID</code> یا <code>SMSIR_TEMPLATE_ID</code> =
+              شناسه‌ی عددی قالب کد تأیید</li>
+        </ul>
+      </li>
+      <li><b>Save</b>. بعد از ذخیره‌ی سکرت، فانکشن <code>send-otp</code> را یک‌بار
+          <b>دوباره Deploy</b> کنید (Supabase → Edge Functions → send-otp →
+          Deploy) تا کد جدید و سکرت‌ها با هم فعال شوند.</li>
+      <li>دوباره دکمه‌ی «ارسال کد تایید» همین صفحه را بزنید — باید بنویسد
+          «پیامک ارسال شد».</li>
+    </ol>
+
+    <p class="muted" style="margin-top:14px">
+      سکرت‌های اختیاری: <code>SMS_IR_OTP_PARAMETER</code> اگر نام متغیر قالب شما
+      <code>CODE</code> نیست · <code>SMS_IR_LINE_NUMBER</code> برای ارسال با خط
+      اختصاصی (روش Bulk، بدون قالب) · <code>OTP_DEBUG=true</code> برای دیدن کد در
+      پاسخ هنگام تست (بعد از تست حتماً حذفش کنید) ·
+      <code>KAVENEGAR_API_KEY</code> فقط اگر خواستید به کاوه‌نگار برگردید.
+    </p>
+  </div>
+
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   Dr (این ابزار فقط با فانکشن زنده‌ی سایت حرف می‌زند)
+   ───────────────────────────────────────────────────────────── */
+const API = "https://qbsfotperzzhuimnpmto.supabase.co/functions/v1";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA";
+
+const $ = (id) => document.getElementById(id);
+
+function normalizePhone(p) {
+    let x = String(p || "").trim().replace(/\s+/g, "")
+        .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+    if (x.startsWith("09")) x = "98" + x.substring(1);
+    if (x.startsWith("+98")) x = x.substring(1);
+    if (x.startsWith("0098")) x = x.substring(2);
+    return x;
+}
+
+async function callFunction(name, payload) {
+    const res = await fetch(`${API}/${name}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${ANON}`,
+        },
+        body: JSON.stringify(payload),
+    });
+
+    let body;
+    try { body = await res.json(); } catch (e) { body = { raw: await res.text().catch(() => "") }; }
+    return { status: res.status, body };
+}
+
+function verdict(cls, title, details) {
+    $("verdict").innerHTML =
+        `<div class="verdict ${cls}">${title}${details ? `<span>${details}</span>` : ""}</div>`;
+}
+
+function showRaw(body) {
+    $("raw").style.display = "";
+    $("raw").textContent = JSON.stringify(body, null, 2);
+}
+
+function escapeHtml(s) {
+    return String(s ?? "")
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* ── ارسال کد ── */
+$("send").addEventListener("click", async () => {
+    const phone = normalizePhone($("phone").value);
+
+    if (!/^989\d{9}$/.test(phone)) {
+        verdict("v-bad", "شماره درست نیست", "نمونه‌ی درست: 09121351047");
+        return;
+    }
+
+    $("send").disabled = true;
+    verdict("v-info", "در حال ارسال درخواست…", "");
+    $("raw").style.display = "none";
+    $("verifyCard").style.display = "none";
+
+    let out;
+    try {
+        out = await callFunction("send-otp", { phone });
+    } catch (e) {
+        verdict("v-bad", "ارتباط با سرور برقرار نشد",
+            `خطای شبکه: ${e.message}<br>اینترنت یا مسدودسازی را بررسی کنید.`);
+        $("send").disabled = false;
+        return;
+    }
+
+    const b = out.body || {};
+    showRaw(b);
+
+    /* ۱) موفق + پیامک واقعی */
+    if (b.success && b.sent_via_sms) {
+        const via = b.provider === "smsir"
+            ? `sms.ir${b.sms_mode === "bulk" ? " (خط اختصاصی)" : " (قالب / Verify)"}`
+            : b.provider === "kavenegar" ? "کاوه‌نگار" : "سامانه‌ی پیامک";
+
+        verdict("v-ok", "✅ پیامک ارسال شد",
+            `ارسال از طریق <b>${via}</b> انجام شد و کد تا ۲ دقیقه اعتبار دارد.` +
+            (b.message_id ? `<br>شناسه‌ی پیام در پنل: <code>${b.message_id}</code>` : ""));
+
+        if (b.debug && b.debug_code) {
+            $("codeBox").innerHTML =
+                `<div class="muted">حالت <code>OTP_DEBUG</code> روشن است، پس کد را هم نشان می‌دهیم.
+                 این حالت فقط برای تست است:</div>
+                 <div class="big-code">${b.debug_code}</div>`;
+            $("code").value = b.debug_code;
+        }
+
+        $("verifyCard").style.display = "";
+    }
+
+    /* ۲) موفق ولی حالت توسعه → کلید پیامک تنظیم نشده */
+    else if (b.success && (b.dev_mode || b.sms_configured === false)) {
+        verdict("v-warn", "⚠️ سامانه‌ی پیامک تنظیم نشده — پیامکی ارسال نمی‌شود",
+            "سرور کد را ساخته، ولی چون نه <b>SMS_IR_API_KEY</b> و نه " +
+            "<b>KAVENEGAR_API_KEY</b> در Secrets تنظیم نشده، پیامکی فرستاده نشده و " +
+            "کد فقط در پاسخ API برگشته است.");
+
+        $("codeBox").innerHTML =
+            `<div class="muted">کد ساخته‌شده (برای ادامه‌ی تست همین را در فرم سایت بزنید):</div>
+             <div class="big-code">${b.debug_code || "—"}</div>`;
+
+        $("code").value = b.debug_code || "";
+        $("verifyCard").style.display = "";
+    }
+
+    /* ۳) قفل ۶۰ ثانیه‌ای */
+    else if (out.status === 429) {
+        const wait = b.retry_after ? `${b.retry_after} ثانیه` : "حدود ۶۰ ثانیه";
+        verdict("v-warn", "⏳ فاصله‌ی مجاز بین دو درخواست",
+            `برای هر شماره، هر ۶۰ ثانیه یک کد مجاز است. ${wait} دیگر دوباره تلاش کنید،
+             یا دستور SQL پایین را اجرا کنید تا فوراً آزاد شود.`);
+        $("sqlCard").style.display = "";
+    }
+
+    /* ۴) خطای پنل پیامکی */
+    else if (b.sms_failed || out.status === 502) {
+        const isSmsIr = b.provider === "smsir";
+        const name = isSmsIr ? "sms.ir" : b.provider === "kavenegar" ? "کاوه‌نگار" : "پنل پیامکی";
+
+        const lines = [
+            `${name} درخواست را رد کرده است:`,
+            b.error ? `<br><b>${escapeHtml(b.error)}</b>` : "",
+            b.sms_status !== null && b.sms_status !== undefined
+                ? `<br>کد وضعیت sms.ir: <code>${b.sms_status}</code>` +
+                  (b.sms_message ? ` — «${escapeHtml(b.sms_message)}»` : "")
+                : "",
+            b.sms_config_missing
+                ? "<br>یعنی سکرت‌های sms.ir روی Supabase کامل نیستند" +
+                  (b.missing_secret ? ` (سکرت <b>${escapeHtml(b.missing_secret)}</b> تنظیم نشده)` : "") + "."
+                : "",
+            "<br>شماره قفل نشد؛ بعد از رفع مشکل می‌توانید فوراً دوباره تلاش کنید.",
+        ];
+
+        verdict("v-bad", "❌ ارسال پیامک ناموفق بود", lines.join(" "));
+    }
+
+    /* ۵) بقیه‌ی خطاها */
+    else {
+        verdict("v-bad", "خطای غیرمنتظره", JSON.stringify(b));
+    }
+
+    $("send").disabled = false;
+});
+
+/* ── ساخت دستور SQL برای پاک‌کردن قفل ── */
+function buildSql() {
+    const phone = normalizePhone($("phone").value);
+    const local = "0" + phone.slice(2);
+
+    return [
+        "-- پاک‌کردن کدهای قبلی این شماره → قفل ۶۰ ثانیه فوراً برداشته می‌شود",
+        "delete from public.otp_codes",
+        `where phone in ('${phone}', '${local}', '+${phone}');`,
+        "",
+        "-- بررسی: باید صفر ردیف بمانَد",
+        "select phone, purpose, created_at",
+        "from public.otp_codes",
+        `where phone in ('${phone}', '${local}', '+${phone}');`,
+    ].join("\n");
+}
+
+$("clearSql").addEventListener("click", () => {
+    $("sql").textContent = buildSql();
+    $("sqlCard").style.display = "";
+    $("sqlCard").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+$("copySql").addEventListener("click", async () => {
+    try {
+        await navigator.clipboard.writeText($("sql").textContent);
+        $("copySql").textContent = "کپی شد ✅";
+        setTimeout(() => { $("copySql").textContent = "کپی دستور"; }, 2000);
+    } catch (e) {
+        verdict("v-bad", "مرورگر اجازه‌ی کپی نداد", "دستی انتخاب و کپی کنید.");
+    }
+});
+
+/* ── بررسی کد ── */
+$("verify").addEventListener("click", async () => {
+    const phone = normalizePhone($("phone").value);
+    const code = $("code").value.trim();
+
+    if (!/^\d{4,8}$/.test(code)) {
+        $("verifyResult").innerHTML = `<div class="verdict v-bad">کد را کامل وارد کنید</div>`;
+        return;
+    }
+
+    $("verify").disabled = true;
+    $("verifyResult").innerHTML = "";
+
+    let out;
+    try {
+        out = await callFunction("otp-verify", { phone, code, purpose: "register" });
+    } catch (e) {
+        $("verifyResult").innerHTML =
+            `<div class="verdict v-bad">ارتباط برقرار نشد<span>${e.message}</span></div>`;
+        $("verify").disabled = false;
+        return;
+    }
+
+    const b = out.body || {};
+
+    if (b.success) {
+        $("verifyResult").innerHTML =
+            `<div class="verdict v-ok">✅ کد پذیرفته شد
+              <span>حالا در سایت می‌توانید ثبت‌نام را کامل کنید: شماره، همین کد، و رمز دلخواه.</span>
+             </div>`;
+    } else {
+        $("verifyResult").innerHTML =
+            `<div class="verdict v-bad">❌ کد پذیرفته نشد
+              <span>${b.error || "کد اشتباه است یا منقضی شده (اعتبار ۲ دقیقه)"}</span>
+             </div>`;
+    }
+
+    $("verify").disabled = false;
+});
+</script>
+</body>
+</html>
