@@ -38,6 +38,43 @@ function showMessage(text, success=false){
 
 
 
+// شمارش معکوس روی دکمه‌ی ارسال کد (وقتی سرور می‌گوید «صبر کن»)
+
+let cooldownTimer = null;
+
+function startCooldown(seconds, reason) {
+
+    clearInterval(cooldownTimer);
+
+    let left = Math.max(1, Number(seconds) || 60);
+    const original = sendOtpBtn.textContent;
+
+    sendOtpBtn.disabled = true;
+
+    const tick = () => {
+
+        sendOtpBtn.textContent = `ارسال دوباره تا ${left} ثانیه`;
+
+        if (left <= 0) {
+
+            clearInterval(cooldownTimer);
+            cooldownTimer = null;
+            sendOtpBtn.disabled = false;
+            sendOtpBtn.textContent = original;
+
+            showMessage(reason || "حالا می‌توانید دوباره کد بگیرید", true);
+
+            return;
+        }
+
+        left--;
+    };
+
+    tick();
+    cooldownTimer = setInterval(tick, 1000);
+}
+
+
 // ارسال OTP
 
 sendOtpBtn.addEventListener(
@@ -62,7 +99,10 @@ async()=>{
 
 
 
+    clearInterval(cooldownTimer);
+    cooldownTimer = null;
     sendOtpBtn.disabled = true;
+    sendOtpBtn.textContent = "ارسال کد تایید";
 
 
 
@@ -92,10 +132,22 @@ async()=>{
         if(result.success){
 
 
-            showMessage(
-                "کد تایید ساخته شد",
-                true
-            );
+            if(result.dev_mode || result.sms_configured === false){
+
+                // پیامکی ارسال نشده — کد فقط در پاسخ API برگشته است
+                showMessage(
+                    "کد ساخته شد ولی پیامکی ارسال نشد (سامانه‌ی پیامک تنظیم نشده). " +
+                    "کد در کنسول مرورگر (F12 → Console) نمایش داده شده است."
+                );
+
+            } else {
+
+                showMessage(
+                    "کد تایید پیامک شد",
+                    true
+                );
+
+            }
 
 
 
@@ -126,6 +178,17 @@ async()=>{
         else{
 
 
+            if(result.cooldown || result.retry_after){
+
+                // سرور فاصله‌ی مجاز را اعلام کرده → شمارش معکوس نشان می‌دهیم
+                startCooldown(
+                    result.retry_after || 60,
+                    "حالا می‌توانید دوباره کد بگیرید"
+                );
+
+            }
+
+
             showMessage(
                 result.error ||
                 "خطا در ارسال OTP"
@@ -152,8 +215,11 @@ async()=>{
 
 
 
-    sendOtpBtn.disabled=false;
+    if(!cooldownTimer){
 
+        sendOtpBtn.disabled=false;
+
+    }
 
 });
 
