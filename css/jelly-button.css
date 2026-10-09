@@ -1,0 +1,79 @@
+/* Jelly Explore treatment for the primary homepage CTA only. */
+.jelly-explore-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .25rem;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 1rem;
+    background: linear-gradient(145deg, #6366f1 0%, #4f46e5 58%, #4338ca 100%);
+    box-shadow:
+        0 12px 26px -14px rgba(79, 70, 229, .72),
+        inset 0 1px 0 rgba(255, 255, 255, .25),
+        inset 0 -3px 0 rgba(49, 46, 129, .2);
+    transform-origin: center;
+    transition: background .2s ease, box-shadow .2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.jelly-explore-button::before {
+    position: absolute;
+    inset: 2px 14% auto;
+    z-index: 0;
+    height: 34%;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, 0));
+    content: "";
+    pointer-events: none;
+}
+
+.jelly-explore-button > * {
+    position: relative;
+    z-index: 1;
+}
+
+.jelly-explore-button:hover {
+    background: linear-gradient(145deg, #6366f1 0%, #4f46e5 58%, #4338ca 100%);
+    animation: jelly-explore-wobble .68s cubic-bezier(.34, 1.56, .64, 1) both;
+    box-shadow:
+        0 16px 30px -13px rgba(79, 70, 229, .78),
+        inset 0 1px 0 rgba(255, 255, 255, .28),
+        inset 0 -3px 0 rgba(49, 46, 129, .2);
+}
+
+.jelly-explore-button:active {
+    animation: none;
+    transform: scale(.96);
+}
+
+.jelly-explore-button:focus-visible {
+    outline: 3px solid rgba(99, 102, 241, .5);
+    outline-offset: 4px;
+}
+
+@keyframes jelly-explore-wobble {
+    0%, 100% { transform: scale3d(1, 1, 1); }
+    28%      { transform: scale3d(1.055, .94, 1); }
+    48%      { transform: scale3d(.965, 1.045, 1); }
+    68%      { transform: scale3d(1.025, .985, 1); }
+    84%      { transform: scale3d(.995, 1.008, 1); }
+}
+
+@media (hover: none) {
+    .jelly-explore-button:active {
+        animation: jelly-explore-wobble .58s cubic-bezier(.34, 1.56, .64, 1) both;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jelly-explore-button,
+    .jelly-explore-button:hover,
+    .jelly-explore-button:active {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+    }
+}

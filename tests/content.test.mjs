@@ -140,6 +140,85 @@ check("هیچ کلید ناشناسی در HTML نیست", unknownKeys.length ==
 
 check("تعداد کلیدهای قابل ویرایش", MANIFEST_KEYS.length >= 45, `${MANIFEST_KEYS.length} کلید`);
 
+console.log("\n── پرسش‌های متداول صفحه اصلی ──");
+
+const faqHtml = read("index.html");
+const faqCss = read("css/faq.css");
+const faqJs = read("js/home-faq.js");
+const jellyCss = read("css/jelly-button.css");
+const heroCss = read("css/home-hero.css");
+const ctaCss = read("css/home-cta.css");
+const jellyButtons = faqHtml.match(/class="[^"]*jelly-explore-button[^"]*"/g) ?? [];
+
+check("پس‌زمینه‌ی شعاعی بنفش روی CTA پایانی صفحه است",
+  faqHtml.includes("home-cta-card") && ctaCss.includes("radial-gradient(circle at bottom") && ctaCss.includes("#4937a4"));
+check("بلور فقط روی لایه‌ی تزئینی CTA اعمال می‌شود",
+  ctaCss.includes(".home-cta-card::before") && ctaCss.includes("filter: blur(10px)"));
+check("حالت روز CTA پس‌زمینه‌ی روشن و نوشته‌ی تیره دارد",
+  ctaCss.includes("background-color: #faf9ff") && ctaCss.includes(".home-cta-title { color: #1e1b4b; }"));
+check("حالت شب CTA هاله‌ی تیره و نوشته‌ی روشن را نگه می‌دارد",
+  ctaCss.includes("html.dark .home-cta-card") && ctaCss.includes("#000000 40%, #4937a4 47%") && ctaCss.includes("html.dark .home-cta-title { color: #fff; }"));
+check("استایل پس‌زمینه‌ی CTA در صفحه بارگذاری می‌شود",
+  faqHtml.includes("/css/home-cta.css"));
+check("استایل پس‌زمینه‌ی هیرو در صفحه اصلی بارگذاری می‌شود",
+  faqHtml.includes("/css/home-hero.css") && heroCss.includes(".hero-aurora"));
+check("پس‌زمینه‌ی هیرو با موج‌های نور چندرنگ و محو ساخته شده",
+  faqHtml.includes('class="hero-aurora"') &&
+  faqHtml.includes('aria-hidden="true"') && faqHtml.includes("feGaussianBlur"));
+check("پس‌زمینه‌ی هیرو با تم روشن و تاریک سازگار است",
+  heroCss.includes(".hero-band {") && heroCss.includes("html.dark .hero-band"));
+check("دکمه‌ی ژله‌ای فقط روی CTA اصلی صفحه اصلی است", jellyButtons.length === 1);
+check("استایل دکمه‌ی Jelly در صفحه بارگذاری می‌شود",
+  faqHtml.includes("/css/jelly-button.css") && jellyCss.includes("@keyframes jelly-explore-wobble"));
+check("انیمیشن دکمه به حرکت کمتر احترام می‌گذارد", jellyCss.includes("prefers-reduced-motion"));
+const faqItems = [...faqHtml.matchAll(/<details class="home-faq__item"([^>]*)>([\s\S]*?)<\/details>/g)];
+const ctaIndex = faqHtml.indexOf("<!-- ─────────── CTA ─────────── -->");
+const faqIndex = faqHtml.indexOf("<!-- ─────────── FAQ — Velara-inspired layout ─────────── -->");
+const faqSectionClose = faqHtml.indexOf("</section>", faqIndex);
+const mainCloseIndex = faqHtml.indexOf("</main>", faqIndex);
+const footerIndex = faqHtml.indexOf('<div id="footer"></div>');
+
+check("بخش FAQ در صفحه اصلی شناسه‌ی لنگر دارد", /<section id="faq"/.test(faqHtml));
+check("پنج پرسش با آکاردئون بومی details ساخته شده", faqItems.length === 5, `${faqItems.length} پرسش`);
+check("فقط پرسش اول در شروع باز است",
+  faqItems.length === 5 && faqItems[0][1].includes("open") && faqItems.slice(1).every((item) => !item[1].includes("open")));
+check("هر پرسش به پاسخ خودش وصل است",
+  faqItems.length === 5 && faqItems.every((item) => {
+    const controls = item[2].match(/aria-controls="([^"]+)"/);
+    return controls && item[2].includes(`id="${controls[1]}"`);
+  }));
+check("همه‌ی کشوها در گروه انحصاری هستند",
+  faqItems.length === 5 && faqItems.every((item) => item[1].includes('name="home-faq"')));
+check("FAQ بعد از CTA و درست قبل از فوتر است",
+  ctaIndex >= 0 && faqIndex > ctaIndex && faqSectionClose > faqIndex &&
+  mainCloseIndex > faqSectionClose && footerIndex > mainCloseIndex &&
+  faqHtml.slice(mainCloseIndex + "</main>".length, footerIndex).trim() === "");
+check("پس‌زمینه FAQ با تم روشن/تاریک سایت هماهنگ است",
+  faqCss.includes("background: #f9fafb") && faqCss.includes("html.dark .home-faq"));
+check("چیدمان FAQ در موبایل تک‌ستونه می‌شود",
+  faqCss.includes("@media (max-width: 760px)") && faqCss.includes("grid-template-columns: minmax(0, 1fr)"));
+check("کارت تماس با پشتیبانی در FAQ وجود دارد", faqHtml.includes("home-faq__contact"));
+check("CSS آکاردئون حرکت کمتر را رعایت می‌کند", faqCss.includes("prefers-reduced-motion"));
+check("فوتر به FAQ صفحه اصلی لینک دارد", read("components/footer.html").includes('href="/#faq"'));
+
+{
+  const faqDom = new JSDOM(`
+    <details class="home-faq__item" open></details>
+    <details class="home-faq__item"></details>
+    <details class="home-faq__item"></details>
+  `, { runScripts: "outside-only" });
+  faqDom.window.eval(faqJs);
+  const items = faqDom.window.document.querySelectorAll(".home-faq__item");
+
+  items[1].open = true;
+  items[1].dispatchEvent(new faqDom.window.Event("toggle"));
+  check("بازکردن کشوی دوم، کشوی اول را می‌بندد", !items[0].open && items[1].open);
+
+  items[2].open = true;
+  items[2].dispatchEvent(new faqDom.window.Event("toggle"));
+  check("در هر لحظه فقط یک کشو باز می‌ماند", !items[0].open && !items[1].open && items[2].open);
+}
+
 /* تصاویر: هر کلید از نوع image باید data-content-img داشته باشد */
 const imageItems = MANIFEST.groups.flatMap((g) => g.items).filter((i) => i.type === "image");
 check("فیلدهای تصویری تعریف شده‌اند", imageItems.length >= 2, `${imageItems.length} تصویر`);

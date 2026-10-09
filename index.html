@@ -34,44 +34,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* ── پس‌زمینه‌ی هیرو: گرادیان مش درخشان ── */
-        .hero-band {
-            background:
-                radial-gradient(1200px 500px at 85% -10%, rgba(99,102,241,.22), transparent 60%),
-                radial-gradient(900px 420px at 10% 110%, rgba(245,158,11,.16), transparent 55%),
-                radial-gradient(700px 380px at 55% 45%, rgba(139,92,246,.14), transparent 60%);
-        }
-        html.dark .hero-band {
-            background:
-                radial-gradient(1200px 500px at 85% -10%, rgba(99,102,241,.30), transparent 60%),
-                radial-gradient(900px 420px at 10% 110%, rgba(245,158,11,.18), transparent 55%),
-                radial-gradient(700px 380px at 55% 45%, rgba(139,92,246,.22), transparent 60%);
-        }
-
-        /* نقطه‌چین ظریف */
-        .dots {
-            background-image: radial-gradient(rgba(99,102,241,.20) 1.3px, transparent 1.4px);
-            background-size: 22px 22px;
-        }
-        html.dark .dots {
-            background-image: radial-gradient(rgba(129,140,248,.28) 1.3px, transparent 1.4px);
-        }
-
-        /* حباب‌های رنگی شناور */
-        .blob {
-            position: absolute;
-            border-radius: 9999px;
-            filter: blur(64px);
-            opacity: .38;
-            animation: blobDrift 12s ease-in-out infinite alternate;
-        }
-        html.dark .blob { opacity: .5; }
-        @keyframes blobDrift {
-            0%   { transform: translate(0,0) scale(1); }
-            50%  { transform: translate(24px,-28px) scale(1.12); }
-            100% { transform: translate(-18px,20px) scale(.96); }
-        }
-        .blob-delay { animation-delay: -6s; }
 
         /* شناور بودن کارت‌های هیرو */
         .float-slow { animation: floatY 5.5s ease-in-out infinite; }
@@ -134,6 +96,10 @@
 </script>
 <link href="/css/dark-mode.css" rel="stylesheet">
 <link href="/css/responsive.css" rel="stylesheet">
+<link href="/css/home-hero.css" rel="stylesheet">
+<link href="/css/home-cta.css" rel="stylesheet">
+<link href="/css/faq.css" rel="stylesheet">
+<link href="/css/jelly-button.css" rel="stylesheet">
 <script src="/js/theme.js" defer></script>
 <!-- SEO:START (خودکار — با scripts/seo-inject.py ساخته می‌شود) -->
     <link rel="canonical" href="https://www.mahdiazizi.com/">
@@ -250,12 +216,45 @@
     <div id="header"></div>
 
     <!-- ─────────── هیرو ─────────── -->
-    <section class="hero-band dots relative overflow-hidden">
+    <section class="hero-band relative overflow-hidden">
 
-        <div class="blob w-72 h-72 sm:w-96 sm:h-96 -top-20 -right-20" style="background:#8b5cf6;"></div>
-        <div class="blob blob-delay w-64 h-64 sm:w-80 sm:h-80 -bottom-24 -left-16" style="background:#f59e0b;"></div>
+        <svg class="hero-aurora" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"
+             xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+            <defs>
+                <linearGradient id="home-aurora-pink-indigo" x1="1540" y1="90" x2="90" y2="790" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#f472b6" stop-opacity=".58"/>
+                    <stop offset=".28" stop-color="#c4b5fd" stop-opacity=".52"/>
+                    <stop offset=".58" stop-color="#6366f1" stop-opacity=".68"/>
+                    <stop offset=".82" stop-color="#67e8f9" stop-opacity=".48"/>
+                    <stop offset="1" stop-color="#a78bfa" stop-opacity=".55"/>
+                </linearGradient>
+                <linearGradient id="home-aurora-cyan-violet" x1="70" y1="850" x2="1530" y2="120" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#22d3ee" stop-opacity=".48"/>
+                    <stop offset=".34" stop-color="#818cf8" stop-opacity=".54"/>
+                    <stop offset=".68" stop-color="#a855f7" stop-opacity=".62"/>
+                    <stop offset="1" stop-color="#f9a8d4" stop-opacity=".4"/>
+                </linearGradient>
+                <linearGradient id="home-aurora-lilac-rose" x1="1510" y1="820" x2="100" y2="160" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#c4b5fd" stop-opacity=".5"/>
+                    <stop offset=".45" stop-color="#8b5cf6" stop-opacity=".62"/>
+                    <stop offset=".76" stop-color="#f472b6" stop-opacity=".48"/>
+                    <stop offset="1" stop-color="#bfdbfe" stop-opacity=".4"/>
+                </linearGradient>
+                <filter id="home-aurora-soft-blur" x="-20%" y="-30%" width="140%" height="160%" color-interpolation-filters="sRGB">
+                    <feGaussianBlur stdDeviation="42"/>
+                </filter>
+            </defs>
+            <g fill="none" stroke-linecap="round">
+                <path d="M 1720 -130 C 1530 70 1480 282 1240 330 C 1015 376 915 164 700 196 C 470 230 435 510 212 565 C 37 608 -85 526 -180 438"
+                      stroke="url(#home-aurora-pink-indigo)" stroke-width="190" opacity=".72" filter="url(#home-aurora-soft-blur)"/>
+                <path d="M -180 800 C 35 725 125 567 330 505 C 553 437 704 690 938 680 C 1185 669 1290 452 1540 441 C 1640 437 1710 466 1790 510"
+                      stroke="url(#home-aurora-cyan-violet)" stroke-width="166" opacity=".68" filter="url(#home-aurora-soft-blur)"/>
+                <path d="M -150 160 C 95 240 235 390 455 394 C 674 398 785 255 975 268 C 1172 282 1272 508 1490 542 C 1595 558 1670 530 1780 478"
+                      stroke="url(#home-aurora-lilac-rose)" stroke-width="124" opacity=".48" filter="url(#home-aurora-soft-blur)"/>
+            </g>
+        </svg>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-24 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-24 relative z-10">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 sm:gap-14 items-center">
 
                 <!-- متن هیرو -->
@@ -275,7 +274,7 @@
                     </p>
 
                     <div class="reveal flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4" style="--d:.3s">
-                        <a href="/courses" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl transition duration-300 shadow-xl shadow-indigo-600/25 hover:-translate-y-0.5 text-center text-sm">
+                        <a href="/courses" class="jelly-explore-button w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl transition duration-300 shadow-xl shadow-indigo-600/25 text-center text-sm">
                             <span data-content="home.cta_primary">مشاهده پکیج‌های آموزشی</span>
                             <i class="fa-solid fa-arrow-left mr-2 text-xs"></i>
                         </a>
@@ -375,7 +374,8 @@
     </section>
 
     <!-- ─────────── دوره‌ها (داینامیک) ─────────── -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+    <main class="home-main">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
 
         <section class="reveal">
             <div class="flex items-end justify-between gap-4 border-b border-gray-100 pb-5">
@@ -623,28 +623,136 @@
             </div>
         </section>
 
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
         <!-- ─────────── CTA ─────────── -->
         <section class="pt-20 md:pt-28 pb-4">
-            <div class="reveal relative overflow-hidden rounded-3xl sm:rounded-[2.5rem] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-7 sm:p-10 md:p-16 text-center shadow-2xl shadow-indigo-700/30">
-                <div class="absolute w-72 h-72 rounded-full bg-white/10 -top-24 -right-24"></div>
-                <div class="absolute w-56 h-56 rounded-full bg-black/10 -bottom-20 -left-16"></div>
-                <div class="dots absolute inset-0 opacity-40"></div>
+            <div class="reveal relative overflow-hidden rounded-3xl sm:rounded-[2.5rem] home-cta-card p-7 sm:p-10 md:p-16 text-center">
+                <div class="absolute w-72 h-72 rounded-full home-cta-orb--one -top-24 -right-24" aria-hidden="true"></div>
+                <div class="absolute w-56 h-56 rounded-full home-cta-orb--two -bottom-20 -left-16" aria-hidden="true"></div>
 
                 <div class="relative space-y-6">
-                    <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-relaxed">ریاضی قرار نیست سخت باشد؛<br class="hidden sm:inline"> فقط باید درست یادش بگیری</h2>
-                    <p class="text-indigo-100 text-sm sm:text-base font-medium max-w-xl mx-auto">همین امروز مسیر درست را شروع کن — اولین قدم چند ثانیه بیشتر طول نمی‌کشد.</p>
+                    <h2 class="home-cta-title text-2xl sm:text-3xl md:text-4xl font-black leading-relaxed">ریاضی قرار نیست سخت باشد؛<br class="hidden sm:inline"> فقط باید درست یادش بگیری</h2>
+                    <p class="home-cta-copy text-sm sm:text-base font-medium max-w-xl mx-auto">همین امروز مسیر درست را شروع کن — اولین قدم چند ثانیه بیشتر طول نمی‌کشد.</p>
                     <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <a href="/courses" class="w-full sm:w-auto bg-white text-indigo-700 font-black px-9 py-4 rounded-2xl transition duration-300 hover:-translate-y-0.5 shadow-xl text-sm">
+                        <a href="/courses" class="home-cta-primary w-full sm:w-auto font-black px-9 py-4 rounded-2xl transition duration-300 hover:-translate-y-0.5 shadow-xl text-sm">
                             شروع یادگیری
                         </a>
-                        <a href="/about-us" class="w-full sm:w-auto border border-white/40 text-white font-bold px-9 py-4 rounded-2xl transition duration-300 hover:bg-white/10 text-sm">
+                        <a href="/about-us" class="home-cta-secondary w-full sm:w-auto font-bold px-9 py-4 rounded-2xl transition duration-300 text-sm">
                             بیشتر با استاد آشنا شو
                         </a>
                     </div>
                 </div>
             </div>
         </section>
+    </div>
 
+    <!-- ─────────── FAQ — Velara-inspired layout ─────────── -->
+    <section id="faq" class="home-faq" aria-labelledby="home-faq-heading">
+        <div class="home-faq__inner">
+            <header class="home-faq__header">
+                <p class="home-faq__eyebrow" dir="ltr" data-content="home.faq_tag">04. — FAQ</p>
+                <h2 id="home-faq-heading" class="home-faq__heading" data-content="home.faq_title">پرسش‌های پرتکرار</h2>
+            </header>
+
+            <div class="home-faq__content">
+                <div class="home-faq__list reveal">
+                    <details class="home-faq__item" name="home-faq" open>
+                        <summary class="home-faq__question" aria-controls="home-faq-answer-1">
+                            <span data-content="home.faq_q1">این پکیج‌ها برای چه پایه‌ها و رشته‌هایی طراحی شده‌اند؟</span>
+                            <span class="home-faq__toggle" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path class="home-faq__plus-horizontal" d="M5 12h14" stroke-linecap="round"/>
+                                    <path class="home-faq__plus-vertical" d="M12 5v14" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                        </summary>
+                        <div class="home-faq__answer" id="home-faq-answer-1">
+                            <p data-content="home.faq_a1">پکیج‌های ریاضی برای پایه‌های نهم تا دوازدهم و رشته‌های ریاضی و تجربی ارائه می‌شوند. پایه و رشته‌ی هر محصول در صفحه‌ی جزئیات همان پکیج مشخص شده است.</p>
+                        </div>
+                    </details>
+
+                    <details class="home-faq__item" name="home-faq">
+                        <summary class="home-faq__question" aria-controls="home-faq-answer-2">
+                            <span data-content="home.faq_q2">قیمت و روش پرداخت هر پکیج را از کجا ببینم؟</span>
+                            <span class="home-faq__toggle" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path class="home-faq__plus-horizontal" d="M5 12h14" stroke-linecap="round"/>
+                                    <path class="home-faq__plus-vertical" d="M12 5v14" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                        </summary>
+                        <div class="home-faq__answer" id="home-faq-answer-2">
+                            <p data-content="home.faq_a2">قیمت به‌روز هر دوره، جزوه یا کتاب در صفحه‌ی محصول نمایش داده می‌شود؛ در صورت وجود تخفیف، قیمت قبلی و قیمت نهایی مشخص است. پرداخت از طریق درگاه بانکی و پس از افزودن محصول به سبد خرید انجام می‌شود.</p>
+                        </div>
+                    </details>
+
+                    <details class="home-faq__item" name="home-faq">
+                        <summary class="home-faq__question" aria-controls="home-faq-answer-3">
+                            <span data-content="home.faq_q3">بعد از پرداخت چطور به ویدئوها و فایل‌ها دسترسی پیدا می‌کنم؟</span>
+                            <span class="home-faq__toggle" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path class="home-faq__plus-horizontal" d="M5 12h14" stroke-linecap="round"/>
+                                    <path class="home-faq__plus-vertical" d="M12 5v14" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                        </summary>
+                        <div class="home-faq__answer" id="home-faq-answer-3">
+                            <p data-content="home.faq_a3">پس از تأیید پرداخت، دوره‌های دیجیتال در داشبورد و بخش «دوره‌های خریداری‌شده» فعال می‌شوند. فایل‌های دانلودی را هم از صفحه‌ی محصول دریافت می‌کنی.</p>
+                        </div>
+                    </details>
+
+                    <details class="home-faq__item" name="home-faq">
+                        <summary class="home-faq__question" aria-controls="home-faq-answer-4">
+                            <span data-content="home.faq_q4">کتاب یا جزوه‌ی چاپی به شهر ما هم ارسال می‌شود؟</span>
+                            <span class="home-faq__toggle" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path class="home-faq__plus-horizontal" d="M5 12h14" stroke-linecap="round"/>
+                                    <path class="home-faq__plus-vertical" d="M12 5v14" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                        </summary>
+                        <div class="home-faq__answer" id="home-faq-answer-4">
+                            <p data-content="home.faq_a4">بله، محصولات چاپی به سراسر ایران ارسال می‌شوند. اگر سبد خرید شامل کتاب یا جزوه‌ی چاپی باشد، پیش از پرداخت نشانی و کد پستی را ثبت می‌کنی.</p>
+                        </div>
+                    </details>
+
+                    <details class="home-faq__item" name="home-faq">
+                        <summary class="home-faq__question" aria-controls="home-faq-answer-5">
+                            <span data-content="home.faq_q5">اگر سوال درسی یا مشکل خرید داشتم، از کجا کمک بگیرم؟</span>
+                            <span class="home-faq__toggle" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path class="home-faq__plus-horizontal" d="M5 12h14" stroke-linecap="round"/>
+                                    <path class="home-faq__plus-vertical" d="M12 5v14" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                        </summary>
+                        <div class="home-faq__answer" id="home-faq-answer-5">
+                            <p data-content="home.faq_a5">برای راهنمایی انتخاب پکیج، پیگیری دسترسی یا رفع اشکال آموزشی، به پشتیبانی تلگرام پیام بده؛ تا روز امتحان کنارت هستیم.</p>
+                        </div>
+                    </details>
+                </div>
+
+                <aside class="home-faq__contact reveal" style="--d:.12s" aria-label="ارتباط با پشتیبانی آکادمی">
+                    <img
+                        class="home-faq__avatar"
+                        src="/assets/images/about-photo-900.jpg"
+                        alt="استاد مهدی عزیزی"
+                        width="900" height="900" loading="lazy" decoding="async">
+                    <h3 class="home-faq__contact-title">سوالی داری؟<br>با ما در تماس باش.</h3>
+                    <p class="home-faq__contact-copy" data-content="home.faq_intro">
+                        برای راهنمایی انتخاب پکیج، پیگیری خرید یا دسترسی، در تلگرام به پشتیبانی پیام بده.
+                    </p>
+                    <a class="home-faq__cta" href="https://t.me/math1360" target="_blank" rel="noopener noreferrer">
+                        <span class="home-faq__cta-dot" aria-hidden="true"></span>
+                        <span data-content="home.faq_support">شروع گفت‌وگو</span>
+                    </a>
+                </aside>
+            </div>
+        </div>
+    </section>
     </main>
 
     <div id="footer"></div>
@@ -654,6 +762,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/auth-state.js"></script>
 <script src="/js/home.js"></script>
+<script src="/js/home-faq.js"></script>
 <script src="/js/header.js"></script>
 <script src="/js/cart-badge.js"></script>
 <script>

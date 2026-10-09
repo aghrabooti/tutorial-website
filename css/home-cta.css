@@ -1,0 +1,87 @@
+/* Final homepage CTA: a light lavender halo by day, with a deep violet glow at night.
+   The blur stays on the decorative layer, not on the copy or buttons. */
+.home-cta-card {
+    isolation: isolate;
+    background-color: #faf9ff;
+    border: 1px solid rgba(99, 102, 241, .2);
+    box-shadow:
+        0 28px 72px -38px rgba(79, 70, 229, .3),
+        inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+.home-cta-card::before {
+    position: absolute;
+    z-index: -1;
+    inset: -12%;
+    border-radius: inherit;
+    background-image: radial-gradient(circle at bottom, #faf9ff 40%, #c4b5fd 47%, #faf9ff 80%);
+    filter: blur(10px);
+    content: "";
+    pointer-events: none;
+}
+
+.home-cta-title { color: #1e1b4b; }
+.home-cta-copy { color: #4c1d95; }
+
+.home-cta-primary {
+    border: 1px solid rgba(255, 255, 255, .55);
+    background: linear-gradient(145deg, #6366f1 0%, #4f46e5 100%);
+    color: #fff;
+    box-shadow: 0 12px 25px -14px rgba(79, 70, 229, .65);
+}
+
+.home-cta-primary:hover { background: linear-gradient(145deg, #4f46e5 0%, #4338ca 100%); }
+
+.home-cta-secondary {
+    border: 1px solid rgba(79, 70, 229, .32);
+    background: rgba(255, 255, 255, .55);
+    color: #4338ca;
+}
+
+.home-cta-secondary:hover { background: rgba(99, 102, 241, .1); }
+
+.home-cta-orb--one { background: rgba(99, 102, 241, .08); }
+.home-cta-orb--two { background: rgba(168, 85, 247, .1); }
+
+.home-cta-primary:focus-visible,
+.home-cta-secondary:focus-visible {
+    outline: 3px solid rgba(99, 102, 241, .55);
+    outline-offset: 4px;
+}
+
+html.dark .home-cta-card {
+    background-color: #05050b;
+    border-color: rgba(196, 181, 253, .24);
+    box-shadow:
+        0 28px 72px -38px rgba(79, 70, 229, .82),
+        inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+html.dark .home-cta-card::before {
+    background-image: radial-gradient(circle at bottom, #000000 40%, #4937a4 47%, #000000 80%);
+}
+
+html.dark .home-cta-title { color: #fff; }
+html.dark .home-cta-copy { color: #e0e7ff; }
+
+html.dark .home-cta-primary {
+    border-color: rgba(255, 255, 255, .8);
+    background: #fff;
+    color: #4338ca;
+}
+
+html.dark .home-cta-primary:hover { background: #eef2ff; }
+
+html.dark .home-cta-secondary {
+    border-color: rgba(255, 255, 255, .4);
+    background: transparent;
+    color: #fff;
+}
+
+html.dark .home-cta-secondary:hover { background: rgba(255, 255, 255, .1); }
+html.dark .home-cta-orb--one { background: rgba(255, 255, 255, .1); }
+html.dark .home-cta-orb--two { background: rgba(139, 92, 246, .16); }
+
+@media (max-width: 640px) {
+    .home-cta-card::before { inset: -8%; }
+}

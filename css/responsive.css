@@ -118,7 +118,7 @@ html.dark .site-header {
 
 /* روی موبایل، انیمیشن‌های سنگین را کم‌تر کنیم (کارایی + باتری) */
 @media (prefers-reduced-motion: reduce) {
-    .blob, .float-slow, .float-slower, .live-dot::after, .reveal {
+    .float-slow, .float-slower, .live-dot::after, .reveal {
         animation: none !important;
         transition: none !important;
     }
