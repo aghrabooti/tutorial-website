@@ -1,0 +1,124 @@
+/* RTL-friendly color-wipe CTA inspired by the supplied hover-button component. */
+.interactive-hover-button {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    min-width: 12rem;
+    min-height: 3.5rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .3);
+    border-radius: 9999px;
+    background: linear-gradient(145deg, #4f46e5 0%, #4338ca 100%);
+    box-shadow:
+        0 12px 25px -14px rgba(79, 70, 229, .72),
+        inset 0 1px 0 rgba(255, 255, 255, .22);
+    color: #fff;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.interactive-hover-button__label {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    transition: transform .3s ease, opacity .22s ease;
+}
+
+.interactive-hover-button__reveal {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    color: #fff;
+    opacity: 0;
+    transform: translateX(2.5rem);
+    transition: transform .3s ease, opacity .22s ease;
+    pointer-events: none;
+}
+
+.interactive-hover-button__reveal svg {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+}
+
+.interactive-hover-button__fill {
+    position: absolute;
+    z-index: 0;
+    top: 40%;
+    inset-inline-start: 20%;
+    width: .5rem;
+    height: .5rem;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #7e22ce 0%, #a21caf 52%, #be185d 100%);
+    transition:
+        top .34s cubic-bezier(.2, .8, .2, 1),
+        inset-inline-start .34s cubic-bezier(.2, .8, .2, 1),
+        width .34s cubic-bezier(.2, .8, .2, 1),
+        height .34s cubic-bezier(.2, .8, .2, 1);
+    pointer-events: none;
+}
+
+.interactive-hover-button:hover .interactive-hover-button__label,
+.interactive-hover-button:focus-visible .interactive-hover-button__label {
+    opacity: 0;
+    transform: translateX(-2.5rem);
+}
+
+.interactive-hover-button:hover .interactive-hover-button__reveal,
+.interactive-hover-button:focus-visible .interactive-hover-button__reveal {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.interactive-hover-button:hover .interactive-hover-button__fill,
+.interactive-hover-button:focus-visible .interactive-hover-button__fill {
+    top: 0;
+    inset-inline-start: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.interactive-hover-button:focus-visible {
+    outline: 3px solid rgba(129, 140, 248, .7);
+    outline-offset: 4px;
+}
+
+.interactive-hover-button:active { transform: scale(.98); }
+
+@media (prefers-reduced-motion: reduce) {
+    .interactive-hover-button,
+    .interactive-hover-button * {
+        transition: none !important;
+    }
+
+    .interactive-hover-button:hover .interactive-hover-button__label,
+    .interactive-hover-button:focus-visible .interactive-hover-button__label {
+        opacity: 1;
+        transform: none;
+    }
+
+    .interactive-hover-button:hover .interactive-hover-button__reveal,
+    .interactive-hover-button:focus-visible .interactive-hover-button__reveal {
+        opacity: 0;
+        transform: none;
+    }
+
+    .interactive-hover-button:hover .interactive-hover-button__fill,
+    .interactive-hover-button:focus-visible .interactive-hover-button__fill {
+        top: 40%;
+        inset-inline-start: 20%;
+        width: .5rem;
+        height: .5rem;
+    }
+
+    .interactive-hover-button:active { transform: none; }
+}
