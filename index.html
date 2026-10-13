@@ -97,9 +97,10 @@
 <link href="/css/dark-mode.css" rel="stylesheet">
 <link href="/css/responsive.css" rel="stylesheet">
 <link href="/css/home-hero.css" rel="stylesheet">
+<link href="/css/home-steps-timeline.css" rel="stylesheet">
 <link href="/css/home-cta.css" rel="stylesheet">
+<link href="/css/interactive-hover-button.css" rel="stylesheet">
 <link href="/css/faq.css" rel="stylesheet">
-<link href="/css/jelly-button.css" rel="stylesheet">
 <script src="/js/theme.js" defer></script>
 <!-- SEO:START (خودکار — با scripts/seo-inject.py ساخته می‌شود) -->
     <link rel="canonical" href="https://www.mahdiazizi.com/">
@@ -274,9 +275,17 @@
                     </p>
 
                     <div class="reveal flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4" style="--d:.3s">
-                        <a href="/courses" class="jelly-explore-button w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl transition duration-300 shadow-xl shadow-indigo-600/25 text-center text-sm">
-                            <span data-content="home.cta_primary">مشاهده پکیج‌های آموزشی</span>
-                            <i class="fa-solid fa-arrow-left mr-2 text-xs"></i>
+                        <a href="/courses" class="interactive-hover-button w-full sm:w-auto font-bold px-8 py-4 text-center text-sm">
+                            <span class="interactive-hover-button__label">
+                                <span data-content="home.cta_primary">مشاهده پکیج‌های آموزشی</span>
+                            </span>
+                            <span class="interactive-hover-button__reveal" aria-hidden="true">
+                                <span>برو بریم!</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 12H5m7 7-7-7 7-7"/>
+                                </svg>
+                            </span>
+                            <span class="interactive-hover-button__fill" aria-hidden="true"></span>
                         </a>
                         <a href="#features" class="w-full sm:w-auto bg-white/80 glass border border-gray-200 hover:border-indigo-200 text-gray-700 font-bold px-8 py-4 rounded-2xl transition duration-300 text-center text-sm">
                             <span data-content="home.cta_secondary">چرا آکادمی عزیزی؟</span>
@@ -522,50 +531,43 @@
             </div>
         </section>
 
-        <!-- ─────────── مسیر شروع ─────────── -->
-        <section class="pt-20 md:pt-28">
-            <div class="text-center space-y-3 mb-14 reveal">
+        <!-- ─────────── مسیر شروع در سه قدم ─────────── -->
+        <section class="home-steps pt-20 md:pt-28" aria-labelledby="home-steps-heading">
+            <div class="text-center space-y-3 mb-12 reveal">
                 <span class="text-xs font-black text-indigo-600 tracking-wide" data-content="home.steps_tag">شروع در ۳ قدم</span>
-                <h2 class="text-2xl sm:text-3xl font-black text-gray-950" data-content="home.steps_title">از ثبت‌نام تا نمره‌ی عالی</h2>
+                <h2 id="home-steps-heading" class="text-2xl sm:text-3xl font-black text-gray-950" data-content="home.steps_title">از ثبت‌نام تا نمره‌ی عالی</h2>
             </div>
 
-            <div class="relative grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8">
-
-                <div class="hidden md:block absolute top-8 right-[16%] left-[16%] border-t-2 border-dashed border-indigo-200"></div>
-
-                <div class="reveal relative text-center space-y-4" style="--d:.05s">
-                    <div class="relative inline-flex">
-                        <div class="w-16 h-16 rounded-3xl bg-white border border-gray-100 shadow-lg flex items-center justify-center text-indigo-600 text-2xl z-10">
-                            <i class="fa-solid fa-user-plus"></i>
-                        </div>
-                        <span class="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center z-20">۱</span>
-                    </div>
-                    <h3 class="font-black text-gray-950" data-content="home.step1_title">ثبت‌نام رایگان</h3>
-                    <p class="text-xs sm:text-sm text-gray-500 leading-relaxed max-w-xs mx-auto" data-content="home.step1_desc">با شماره موبایلت در چند ثانیه ثبت‌نام کن و پروفایل تحصیلی‌ات را کامل کن.</p>
+            <div class="home-steps__timeline" data-home-steps>
+                <div class="home-steps__rail" aria-hidden="true">
+                    <div class="home-steps__progress"></div>
                 </div>
-
-                <div class="reveal relative text-center space-y-4" style="--d:.2s">
-                    <div class="relative inline-flex">
-                        <div class="w-16 h-16 rounded-3xl bg-white border border-gray-100 shadow-lg flex items-center justify-center text-indigo-600 text-2xl z-10">
-                            <i class="fa-solid fa-cart-shopping"></i>
+                <ol class="home-steps__list">
+                    <li class="home-steps__item is-active">
+                        <span class="home-steps__node" aria-hidden="true">۱</span>
+                        <div class="home-steps__content">
+                            <span class="home-steps__step-label">قدم اول</span>
+                            <h3 data-content="home.step1_title">ثبت‌نام رایگان</h3>
+                            <p data-content="home.step1_desc">با شماره موبایلت در چند ثانیه ثبت‌نام کن و پروفایل تحصیلی‌ات را کامل کن.</p>
                         </div>
-                        <span class="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center z-20">۲</span>
-                    </div>
-                    <h3 class="font-black text-gray-950" data-content="home.step2_title">انتخاب و خرید پکیج</h3>
-                    <p class="text-xs sm:text-sm text-gray-500 leading-relaxed max-w-xs mx-auto" data-content="home.step2_desc">دوره، جزوه یا کتاب موردنیازت را به سبد اضافه کن و امن از درگاه بانکی پرداخت کن.</p>
-                </div>
-
-                <div class="reveal relative text-center space-y-4" style="--d:.35s">
-                    <div class="relative inline-flex">
-                        <div class="w-16 h-16 rounded-3xl bg-white border border-gray-100 shadow-lg flex items-center justify-center text-indigo-600 text-2xl z-10">
-                            <i class="fa-solid fa-graduation-cap"></i>
+                    </li>
+                    <li class="home-steps__item">
+                        <span class="home-steps__node" aria-hidden="true">۲</span>
+                        <div class="home-steps__content">
+                            <span class="home-steps__step-label">قدم دوم</span>
+                            <h3 data-content="home.step2_title">انتخاب و خرید پکیج</h3>
+                            <p data-content="home.step2_desc">دوره، جزوه یا کتاب موردنیازت را به سبد اضافه کن و امن از درگاه بانکی پرداخت کن.</p>
                         </div>
-                        <span class="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center z-20">۳</span>
-                    </div>
-                    <h3 class="font-black text-gray-950" data-content="home.step3_title">شروع یادگیری</h3>
-                    <p class="text-xs sm:text-sm text-gray-500 leading-relaxed max-w-xs mx-auto" data-content="home.step3_desc">بلافاصله بعد از پرداخت، دوره‌ها در داشبوردت باز می‌شوند؛ جزوه‌ها هم دانلودی، هم پستی.</p>
-                </div>
-
+                    </li>
+                    <li class="home-steps__item">
+                        <span class="home-steps__node" aria-hidden="true">۳</span>
+                        <div class="home-steps__content">
+                            <span class="home-steps__step-label">قدم سوم</span>
+                            <h3 data-content="home.step3_title">شروع یادگیری</h3>
+                            <p data-content="home.step3_desc">بلافاصله بعد از پرداخت، دوره‌ها در داشبوردت باز می‌شوند؛ جزوه‌ها هم دانلودی، هم پستی.</p>
+                        </div>
+                    </li>
+                </ol>
             </div>
         </section>
 
@@ -637,7 +639,7 @@
                     <h2 class="home-cta-title text-2xl sm:text-3xl md:text-4xl font-black leading-relaxed">ریاضی قرار نیست سخت باشد؛<br class="hidden sm:inline"> فقط باید درست یادش بگیری</h2>
                     <p class="home-cta-copy text-sm sm:text-base font-medium max-w-xl mx-auto">همین امروز مسیر درست را شروع کن — اولین قدم چند ثانیه بیشتر طول نمی‌کشد.</p>
                     <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <a href="/courses" class="home-cta-primary w-full sm:w-auto font-black px-9 py-4 rounded-2xl transition duration-300 hover:-translate-y-0.5 shadow-xl text-sm">
+                        <a href="/courses" class="home-cta-primary w-full sm:w-auto font-black px-9 py-4 rounded-2xl transition duration-300 hover:-translate-y-0.5 text-sm">
                             شروع یادگیری
                         </a>
                         <a href="/about-us" class="home-cta-secondary w-full sm:w-auto font-bold px-9 py-4 rounded-2xl transition duration-300 text-sm">
@@ -763,6 +765,7 @@
 <script src="/js/auth-state.js"></script>
 <script src="/js/home.js"></script>
 <script src="/js/home-faq.js"></script>
+<script src="/js/home-steps-timeline.js"></script>
 <script src="/js/header.js"></script>
 <script src="/js/cart-badge.js"></script>
 <script>
