@@ -140,16 +140,34 @@ check("هیچ کلید ناشناسی در HTML نیست", unknownKeys.length ==
 
 check("تعداد کلیدهای قابل ویرایش", MANIFEST_KEYS.length >= 45, `${MANIFEST_KEYS.length} کلید`);
 
-console.log("\n── پرسش‌های متداول صفحه اصلی ──");
+console.log("\n── بخش‌های اصلی صفحه‌ی خانه ──");
 
 const faqHtml = read("index.html");
 const faqCss = read("css/faq.css");
 const faqJs = read("js/home-faq.js");
-const jellyCss = read("css/jelly-button.css");
 const heroCss = read("css/home-hero.css");
 const ctaCss = read("css/home-cta.css");
-const jellyButtons = faqHtml.match(/class="[^"]*jelly-explore-button[^"]*"/g) ?? [];
+const stepsCss = read("css/home-steps-timeline.css");
+const stepsJs = read("js/home-steps-timeline.js");
+const interactiveButtonCss = read("css/interactive-hover-button.css");
+const interactiveCourseLinks = faqHtml.match(/<a href="\/courses" class="interactive-hover-button[^"]*"[\s\S]*?<\/a>/g) ?? [];
+const heroIndex = faqHtml.indexOf("<!-- ─────────── هیرو ─────────── -->");
+const finalCtaIndex = faqHtml.indexOf("<!-- ─────────── CTA ─────────── -->");
+const interactiveButtonIndex = faqHtml.indexOf('class="interactive-hover-button');
 
+check("افکت تعاملی روی دکمه‌ی اول هیرو قرار دارد، نه CTA پایانی",
+  interactiveCourseLinks.length === 1 && interactiveButtonIndex > heroIndex && interactiveButtonIndex < finalCtaIndex);
+check("متن عادی دکمه قابل ویرایش است و هاور «برو بریم!» نشان می‌دهد",
+  interactiveCourseLinks.length === 1 && interactiveCourseLinks[0].includes('data-content="home.cta_primary"') &&
+  interactiveCourseLinks[0].includes("برو بریم!"));
+check("هاور دکمه با تغییر رنگ واضح اجرا می‌شود",
+  interactiveButtonCss.includes("#4f46e5 0%, #4338ca 100%") &&
+  interactiveButtonCss.includes("#7e22ce 0%, #a21caf 52%, #be185d 100%"));
+check("استایل دکمه‌ی تعاملی بارگذاری شده و برای RTL، فوکوس و حرکت کمتر آماده است",
+  faqHtml.includes("/css/interactive-hover-button.css") && interactiveButtonCss.includes("inset-inline-start") &&
+  interactiveButtonCss.includes(":focus-visible") && interactiveButtonCss.includes("prefers-reduced-motion"));
+check("افکت Jelly از CTA هیرو برداشته شده",
+  !faqHtml.includes("jelly-explore-button") && !faqHtml.includes("/css/jelly-button.css"));
 check("پس‌زمینه‌ی شعاعی بنفش روی CTA پایانی صفحه است",
   faqHtml.includes("home-cta-card") && ctaCss.includes("radial-gradient(circle at bottom") && ctaCss.includes("#4937a4"));
 check("بلور فقط روی لایه‌ی تزئینی CTA اعمال می‌شود",
@@ -167,10 +185,18 @@ check("پس‌زمینه‌ی هیرو با موج‌های نور چندرنگ 
   faqHtml.includes('aria-hidden="true"') && faqHtml.includes("feGaussianBlur"));
 check("پس‌زمینه‌ی هیرو با تم روشن و تاریک سازگار است",
   heroCss.includes(".hero-band {") && heroCss.includes("html.dark .hero-band"));
-check("دکمه‌ی ژله‌ای فقط روی CTA اصلی صفحه اصلی است", jellyButtons.length === 1);
-check("استایل دکمه‌ی Jelly در صفحه بارگذاری می‌شود",
-  faqHtml.includes("/css/jelly-button.css") && jellyCss.includes("@keyframes jelly-explore-wobble"));
-check("انیمیشن دکمه به حرکت کمتر احترام می‌گذارد", jellyCss.includes("prefers-reduced-motion"));
+const stepItems = [...faqHtml.matchAll(/<li class="home-steps__item(?: is-active)?">([\s\S]*?)<\/li>/g)];
+check("مسیر شروع به تایم‌لاین سه‌مرحله‌ای تبدیل شده",
+  faqHtml.includes('aria-labelledby="home-steps-heading"') && faqHtml.includes("data-home-steps") && stepItems.length === 3);
+check("متن‌های قابل ویرایش هر سه قدم حفظ شده‌اند",
+  stepItems.length === 3 && ["home.step1_title", "home.step1_desc", "home.step2_title", "home.step2_desc", "home.step3_title", "home.step3_desc"]
+    .every((key) => stepItems.some((item) => item[1].includes(`data-content="${key}"`))));
+check("CSS تایم‌لاین راست‌چین، ریسپانسیو، تاریک‌سازگار و کم‌حرکت است",
+  faqHtml.includes("/css/home-steps-timeline.css") && stepsCss.includes("@media (max-width: 767px)") &&
+  stepsCss.includes("html.dark .home-steps__timeline") && stepsCss.includes("prefers-reduced-motion"));
+check("پیشرفت خط تایم‌لاین با اسکرولِ passive و requestAnimationFrame به‌روز می‌شود",
+  faqHtml.includes("/js/home-steps-timeline.js") && stepsJs.includes("requestAnimationFrame") &&
+  stepsJs.includes('addEventListener("scroll", scheduleUpdate, { passive: true })'));
 const faqItems = [...faqHtml.matchAll(/<details class="home-faq__item"([^>]*)>([\s\S]*?)<\/details>/g)];
 const ctaIndex = faqHtml.indexOf("<!-- ─────────── CTA ─────────── -->");
 const faqIndex = faqHtml.indexOf("<!-- ─────────── FAQ — Velara-inspired layout ─────────── -->");
