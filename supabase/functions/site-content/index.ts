@@ -22,6 +22,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const MAX_VALUE_LENGTH = 8000;   // سقف طول متن (کاراکتر)
@@ -104,8 +105,19 @@ Deno.serve(async (req) => {
 
       if (error) {
         console.error(error);
+
+        const message = String(error.message ?? "");
+        const tableMissing = /relation|does not exist|schema cache/i.test(message);
+
         // به‌جای خطا، شیء خالی برمی‌گردانیم تا سایت با متن پیش‌فرض کار کند
-        return jsonResponse({ success: false, content: {}, error: "خطا در خواندن محتوا" });
+        return jsonResponse({
+          success: false,
+          content: {},
+          table_missing: tableMissing,
+          error: tableMissing
+            ? "جدول site_content در دیتابیس ساخته نشده — SQL را از صفحه‌ی /deploy/site-content اجرا کنید"
+            : "خطا در خواندن محتوا",
+        });
       }
 
       const content: Record<string, string> = {};
@@ -140,13 +152,50 @@ Deno.serve(async (req) => {
         updated_by: admin.id,
       }));
 
-      const { error } = await supabaseAdmin
+      let { error } = await supabaseAdmin
         .from("site_content")
         .upsert(rows, { onConflict: "key" });
 
+      // اگر ستون updated_by با نوع id کاربر سازگار نبود (uuid/text)،
+      // به‌جای شکست کامل، بدون آن ستون ذخیره می‌کنیم.
       if (error) {
-        console.error(error);
-        return jsonResponse({ error: "خطا در ذخیره‌سازی" }, 500);
+        console.error("upsert with updated_by failed", error);
+
+        const retryRows = Object.entries(items).map(([key, value]) => ({
+          key,
+          value,
+          updated_at: new Date().toISOString(),
+        }));
+
+        const retry = await supabaseAdmin
+          .from("site_content")
+          .upsert(retryRows, { onConflict: "key" });
+
+        error = retry.error;
+
+        if (error) {
+          console.error("upsert failed", error);
+
+          const message = String(error.message ?? "");
+
+          // جدول ساخته نشده؟ پیام راهنما بده (کاربر باید migration را اجرا کند)
+          if (/relation|does not exist|schema cache/i.test(message)) {
+            return jsonResponse(
+              {
+                error:
+                  "جدول site_content در دیتابیس ساخته نشده — دستور SQL صفحه‌ی /deploy/site-content را در Supabase → SQL Editor اجرا کنید",
+                details: message,
+                table_missing: true,
+              },
+              500
+            );
+          }
+
+          return jsonResponse(
+            { error: "خطا در ذخیره‌سازی", details: message },
+            500
+          );
+        }
       }
 
       return jsonResponse({ success: true, saved: rows.length });
