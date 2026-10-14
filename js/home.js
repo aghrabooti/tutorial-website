@@ -22,10 +22,7 @@ async function fetchCourses(){
     }
 
 
-    const { data: courses, error } =
-    await db
-    .from("courses")
-    .select("*");
+    const { data: courses, error } = await getPublicCourses();
 
 
 

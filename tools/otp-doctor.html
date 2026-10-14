@@ -169,9 +169,6 @@
 /* ─────────────────────────────────────────────────────────────
    Dr (این ابزار فقط با فانکشن زنده‌ی سایت حرف می‌زند)
    ───────────────────────────────────────────────────────────── */
-const API = "https://qbsfotperzzhuimnpmto.supabase.co/functions/v1";
-const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA";
-
 const $ = (id) => document.getElementById(id);
 
 function normalizePhone(p) {
@@ -184,12 +181,9 @@ function normalizePhone(p) {
 }
 
 async function callFunction(name, payload) {
-    const res = await fetch(`${API}/${name}`, {
+    const res = await fetch(`/api/functions/${encodeURIComponent(name)}`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${ANON}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
     });
 

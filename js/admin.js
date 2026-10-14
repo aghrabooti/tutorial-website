@@ -512,11 +512,9 @@ async function loadProductsDropdown() {
     const sel = document.getElementById("pdf-course");
 
     try {
-        const { data, error } = await db
-            .from("courses")
-            .select("id, title, type");
+        const { data, error } = await getPublicCourses();
 
-        if (error) throw error;
+        if (error) throw new Error(error.message || "خطا در دریافت محصولات");
 
         // محصولات فیزیکی اول
         const rows = (data ?? []).sort(

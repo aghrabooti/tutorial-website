@@ -14,9 +14,8 @@
     var CACHE_KEY = "site_content_cache_v1";
     var API_FUNCTION = "site-content";
 
-    /* اگر فانکشن site-content روی سرور نباشد (مثلاً هنوز ساخته نشده)،
-       هر بار صدا زدنش یک خطای قرمز CORS در کنسول می‌سازد. پس یک‌بار
-       امتحان می‌کنیم و بعدش مدتی بی‌سر‌و‌صدا رد می‌شویم.
+    /* اگر route عمومی محتوای سایت در دسترس نباشد، سایت با متن‌های HTML
+       پیش‌فرض می‌ماند و مدتی درخواست را تکرار نمی‌کند.
        برای تلاش دوباره‌ی فوری: window.SiteContent.refresh() */
     var SKIP_KEY = "site_content_skip_v1";
     var SKIP_MS = 6 * 60 * 60 * 1000; // شش ساعت
@@ -134,28 +133,18 @@
     /* ── گرفتن مقدارها از سرور ── */
 
     async function fetchContent() {
-        var payload = { action: "get" };
-
         try {
             if (typeof apiCall === "function") {
-                var res = await apiCall(API_FUNCTION, payload);
+                var res = await apiCall(API_FUNCTION, { action: "get" });
                 return res && res.content ? res.content : null;
             }
 
-            // اگر api.js در صفحه نبود، مستقیم صدا می‌زنیم
-            var base = "https://qbsfotperzzhuimnpmto.supabase.co/functions/v1";
-            var anon =
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA";
-
-            var response = await fetch(base + "/" + API_FUNCTION, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: "Bearer " + anon,
-                },
-                body: JSON.stringify(payload),
+            // fallback برای صفحه‌هایی که api.js را بارگذاری نمی‌کنند
+            var response = await fetch("/api/site-content", {
+                method: "GET",
+                headers: { "Accept": "application/json" },
+                cache: "no-store",
             });
-
             var data = await response.json();
             return data && data.content ? data.content : null;
         } catch (e) {
