@@ -314,17 +314,21 @@ const doctorProfile = read("tools/profile-doctor.html");
 const servePy = read("tools/serve.py");
 
 check("ابزار دکتر پروفایل وجود دارد", doctorProfile.length > 1500);
-check("فانکشن update-profile را زنده صدا می‌زند",
-    doctorProfile.includes('`${API}/update-profile`'));
+check("ابزار update-profile را از مسیر same-origin صدا می‌زند",
+    doctorProfile.includes('fetch("/api/functions/update-profile"') &&
+    !doctorProfile.includes("supabase.co/functions/v1") &&
+    !doctorProfile.includes("SUPABASE_ANON_KEY"));
 check("خطای ۵۰۲ را تشخیص می‌دهد", doctorProfile.includes("=== 502"));
-check("دستور SQL ساخت ستون‌های grade و major را دارد",
-    doctorProfile.includes("add column if not exists grade") &&
-    doctorProfile.includes("add column if not exists major"));
-check("مسیر ستون‌ها را از information_schema می‌خواند",
-    doctorProfile.includes("information_schema.columns"));
+check("پروفایل doctor به DB مقصد وصل می‌شود، نه Supabase",
+    doctorProfile.includes("DATABASE_URL") && doctorProfile.includes("PostgreSQL self-hosted"));
+check("schema را فقط read-only از information_schema می‌خواند و ALTER موردی ندارد",
+    doctorProfile.includes("information_schema.columns") &&
+    !doctorProfile.includes("alter table public.site_users"));
 check("سرور مسیر /profile-doctor را می‌شناسد", servePy.includes("/profile-doctor"));
-check("update-profile در فهرست صفحه‌ی Deploy هست",
-    servePy.includes('"name": "update-profile"'));
+check("ابزار دکتر پروفایل مسیر Next را هدف می‌گیرد، نه deploy کردن Edge Function",
+    doctorProfile.includes("route Next") &&
+    !doctorProfile.includes("/deploy/update-profile") &&
+    !doctorProfile.includes("Edge Functions"));
 
 console.log(`\n${failed === 0 ? "ALL CORS CHECKS PASSED ✅" : `${failed} تست شکست خورد ❌`}`);
 console.log(`(${passed} تست موفق)`);

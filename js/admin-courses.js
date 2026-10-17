@@ -576,11 +576,12 @@ function pickFile(accept) {
     });
 }
 
-async function putToSignedUrl(url, file) {
+async function putToSignedUrl(url, file, uploadToken) {
     const res = await fetch(url, {
         method: "PUT",
         headers: {
             "Content-Type": file.type || "application/octet-stream",
+            "Authorization": `Bearer ${uploadToken}`,
         },
         body: file,
     });
@@ -620,6 +621,7 @@ window.uploadCourseImage = async () => {
             token,
             kind: "image",
             filename: file.name,
+            content_type: file.type,
         });
 
         if (!res.success) {
@@ -628,7 +630,7 @@ window.uploadCourseImage = async () => {
         }
 
         setUploadStatus("در حال ارسال عکس...", null);
-        await putToSignedUrl(res.upload_url, file);
+        await putToSignedUrl(res.upload_url, file, res.upload_token);
 
         document.getElementById("edit-image").value = res.public_url;
 
@@ -673,7 +675,7 @@ window.uploadCoursePdf = async () => {
         }
 
         setUploadStatus("در حال ارسال فایل...", null);
-        await putToSignedUrl(res.upload_url, file);
+        await putToSignedUrl(res.upload_url, file, res.upload_token);
 
         setUploadStatus(
             "فایل آپلود شد ✓ — خریداران از صفحه‌ی محصول دانلود می‌کنند",

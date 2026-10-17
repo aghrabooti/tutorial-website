@@ -1,0 +1,57 @@
+# فهرست آمادگی استقرار روی VPS
+
+**وضعیت ثبت‌شده: ۱۷ اکتبر ۲۰۲۶**
+
+این فهرست بین «کد موجود در مخزن»، «آزموده‌شده با mock»، و «واقعاً آماده‌ی اجرا روی VPS» تفاوت می‌گذارد. مالک تأیید کرده است که برای راه‌اندازی تازه، انتقال داده‌ی قدیمی لازم نیست و دیتابیس می‌تواند خالی شروع شود. این تصمیم نیاز به حفظ داده‌ی قدیمی را برمی‌دارد، اما نیاز به schema، ساخت حساب مدیر، پشتیبان‌گیری از داده‌ی جدید و آزمون عملی را حذف نمی‌کند. دامنه‌های فعلی ثابت می‌مانند.
+
+## خلاصه‌ی وضعیت
+
+- **استقرار production هنوز آماده نیست.** ۳۱ route/handler function و دو GET در Next اکنون از PostgreSQL استفاده می‌کنند؛ کد runtime دیگر SDK/کلید Supabase لازم ندارد و پراکسی Edge allowlist خالی دارد. بااین‌حال هیچ‌کدام روی PostgreSQL واقعی اجرا نشده‌اند و migration/Compose/backup/restore عملی validate نشده‌اند.
+- گروه‌های منتقل‌شده شامل دوره‌های عمومی، حساب/نشست، OTP، سبد و نشانی، دسترسی/جلسه/دانلود فایل، تمام routeهای مدیریت، `site_content` و چرخه‌ی درخواست/تأیید پرداخت هستند. Storage فایل نیز محلی/HMAC است؛ سرویس‌های پیامک و زرین‌پال همچنان بیرونی‌اند.
+- Compose، role محدود برنامه، startup migration، volumeهای DB/Storage، health readiness، ساخت تصادفی `.env`، bootstrap مدیر اولیه، backup رمزگذاری‌شده و restore تخریبی اضافه شده‌اند. `bootstrap-ubuntu.sh` نصب Docker روی Ubuntu 24.04 و `start.sh` ساخت/اجرای stack را یک‌فرمانی می‌کنند؛ وب فقط روی `127.0.0.1:8080` bind می‌شود و reverse proxy/TLS عمومی در مخزن نیست. این‌ها هنوز در این محیط با Docker/PostgreSQL/age واقعی اجرا نشده‌اند.
+- suite تست شامل smoke schema با PGlite/WASM است؛ PGlite آزمون شبکه/نسخه‌ی سرور مقصد نیست. در این sandbox هیچ Docker volume، PostgreSQL server واقعی، staging، reverse proxy/TLS عمومی، Zarinpal sandbox زنده یا restore drill آزموده نشده است.
+- Supabase را روشن نگه دارید تا backup/rollback و دوره‌ی پایش پایان یابد. نسخه‌ی self-hosted را هنوز روی دامنه‌ی اصلی cutover نکنید؛ DB مقصد می‌تواند خالی باشد اما باید schema معتبر، مدیر اولیه، دوره‌ی قابل‌ساخت و flow عملیاتی آزمایش‌شده داشته باشد.
+
+## مواردی که باید ساخته یا تکمیل شوند
+
+| اولویت | مورد / دامنه | اکنون چه چیزی موجود است؟ | چرا deploy-ready نیست؟ | کار لازم و معیار پذیرش |
+|---|---|---|---|---|
+| P0 | PostgreSQL در Compose | سرویس PostgreSQL 17، volume پایدار، role برنامه، healthcheck، migration service، وابستگی Next به migration موفق و launcher یک‌فرمانی اضافه شده‌اند؛ migration runner timezone UTC دارد. | YAML و smoke schema در PGlite پاس شده‌اند، اما Compose/DDL/role privileges/volume با Docker و PostgreSQL server واقعی هنوز اجرا نشده‌اند. | اجرای دستی stack روی VPS/staging disposable؛ بررسی log migration، `pg_isready`، role برنامه (بدون superuser)، مجوزهای DML، migration تکراری و readiness endpoint. |
+| P0 | APIهای عمومی دوره | `GET /api/courses` و `get-course` از PostgreSQL می‌خوانند. | دیتابیس تازه فعلاً بدون دوره است؛ routeهایشان به `DATABASE_URL` نیاز دارند و در Docker متصل نشده‌اند. | وصل‌کردن Compose؛ افزودن داده‌ی اولیه‌ی اختیاری یا راهی برای ساخت دوره از پنل؛ تست browser end-to-end با یک دوره‌ی ایجادشده. |
+| P0 | احراز هویت و نشست | ورود/ثبت‌نام، بررسی/خروج نشست، پروفایل، تغییر رمز و احراز نقش admin به PostgreSQL منتقل شده‌اند؛ همه‌ی routeهای مصرف‌کننده‌ی نشست نیز token hash PostgreSQL را بررسی می‌کنند. bootstrap تعاملی `scripts/create-admin.js` موجود است. | همه‌چیز با mock است؛ مهاجرت واقعی خالی، ساخت مدیر و ثبت‌نام تا ورود/دانلود روی PostgreSQL واقعی اجرا نشده. token همچنان در `localStorage` است. | اجرای schema و bootstrap روی staging، تست ثبت‌نام/OTP/ورود/خروج/مدیریت/دانلود، rate-limit و audit امنیتی. |
+| P0 | OTP | ذخیره، cooldown، تأیید و مصرف OTP در PostgreSQL transaction انجام می‌شود؛ OTP کد خام ذخیره نمی‌کند و ترتیب ثبت‌نام `otp-verify` سپس `register-user` حفظ شده است. تست‌های mock بعد از انتقال ۶/۶ هستند. | اتصال واقعی PostgreSQL و پیامک staging، rate limit سطح شبکه/IP و آزمون هم‌زمانی هنوز انجام نشده است. | اجرای migration و route روی staging؛ آزمون provider پیامک، cooldown/expiry/تلاش هم‌زمان، نرخ‌دهی و عدم افشای OTP. |
+| P0 | فروش، سبد، نشانی و دسترسی دوره | `add-to-cart`, `get-cart`, `remove-from-cart`, `get-my-address`, `save-shipping-address`, `get-my-courses`, `check-course-access`, `get-course-sessions` و `get-course-file` به queryهای PostgreSQL منتقل و mock-test شده‌اند؛ دسترسی خرید بر `orders.status='paid'` تکیه دارد و حذف سبد به مالک محدود است. | SQL/UUID/آرایه‌ها و constraintها با PostgreSQL واقعی آزموده نشده‌اند؛ از آن‌جا که DB تازه است، consistency با سفارش‌های قدیمی به‌عنوان migration مطرح نیست. | اجرای migration و تست e2e روی DB خالی؛ تست concurrency روی cart، مالکیت denied، آدرس، لینک جلسه و PDF؛ بازبینی consistency سفارش‌های جدید. |
+| P0 | پرداخت و سفارش | `payment-request` و `payment-verify` اکنون سفارش و سبد را با PostgreSQL می‌خوانند/می‌نویسند؛ row lock/transaction برای تأیید و idempotency، پاک‌کردن cart و ایجاد مرسوله پیاده شده‌اند. تست mock ۴/۴ است. | API زرین‌پال واقعی، race/concurrency با DB واقعی، authority unique و callback از دامنه‌ی staging اجرا نشده‌اند؛ failure بین ثبت سفارش و ذخیره‌ی authority نیازمند e2e/reconciliation است. | تست کامل با Zarinpal sandbox و PostgreSQL واقعی؛ تأیید race، retry، timeout، سفارش فیزیکی/دیجیتال، reconciliation و callback HTTPS؛ production فقط پس از این gate. |
+| P0 | مدیریت و محتوا | همه‌ی ۱۰ route مدیریت (دوره، جلسه، کاربر، سفارش، داشبورد، shipment و upload URL) و read/write/reset `site_content` از PostgreSQL استفاده می‌کنند؛ auth admin server-side است. | Mock tests فقط قرارداد را پوشش می‌دهند؛ پنل مرورگر کامل، مدیر اولیه و آپلود از UI روی staging اجرا نشده‌اند. | اجرای `create-admin`, ساخت یک دوره/جلسه، و تست پنل کامل و مجوز admin/non-admin روی DB واقعی. |
+| P0 | Storage محلی | volume پایدار، permission initializer، HMAC upload/download، quota پیش‌فرض 1 GiB، عکس عمومی در Nginx و PDF خصوصی streamشده پیاده شده‌اند؛ `get-course-file` نشست و مالکیت پرداخت‌شده را از PostgreSQL می‌سنجد. Bucketهای قدیمی خالی و سقف برنامه‌ریزی‌شده 1 GiB است. | filesystem testها موقتی/mock هستند؛ volume/Nginx واقعی، concurrency، permission، backup و restore اجرا نشده‌اند. قفل quota فقط برای یک نمونه‌ی Next است. | آزمون volume Docker، concurrency/quota/stream/permission، عکس و PDF در browser، backup و restore فایل؛ در صورت چند worker quota را بین‌فرایندی کنید. |
+| P1 | ساخت دیتابیس خالی / داده‌ی پایه | migration بازسازی‌شده‌ی ۱۱ جدول، Compose fresh-volume و script تعاملی ساخت مدیر اولیه اضافه شده‌اند؛ شروع از DB خالی قابل‌قبول است. | schema از catalog ناقص بازسازی شده و روی PostgreSQL واقعی اجرا نشده؛ دوره/محتوای اولیه خالی است؛ script مدیر هم روی DB واقعی آزموده نشده است. | اجرای migration روی PostgreSQL 17.x و بررسی DDL/constraintها؛ اجرای `create-admin.js`؛ تصمیم درباره‌ی seed دوره (می‌تواند خالی بماند، اما باید پنل admin بعداً دوره بسازد). |
+| P1 | secrets و environment | `.env.example` برای PostgreSQL، Storage HMAC، پیامک و پرداخت است؛ Supabase SDK و secretهای Supabase از Next runtime حذف شده‌اند. DB admin فقط به migration service می‌رود و app role جداست. | `.env` واقعی، rotation و secret manager انتخاب/راه‌اندازی نشده‌اند؛ secretهای SMS/Zarinpal روی staging validate نشده‌اند. | ذخیره‌ی `.env` با مجوز محدود یا secret manager، چرخش کلیدها، ثبت نکردن secret در Git/bundle/log و بازبینی image/runtime. |
+| P1 | دامنه، HTTPS و شبکه | وب روی `127.0.0.1:8080` bind می‌شود؛ reverse proxy عمومی/TLS در Compose بسته‌بندی نشده‌اند و برای start کردن stack لازم نیستند. دامنه‌های فعلی ثابت می‌مانند. | VPS، DNS و proxy واقعی هنوز انتخاب/تغییر/آزمایش نشده‌اند؛ TLS و firewall/IPv6 هم بیرون از این مخزن باید بررسی شوند. | Ubuntu 24.04 x86_64؛ پس از gateهای staging/backup/rollback، reverse proxy موجود را برای دامنه‌های فعلی به `127.0.0.1:8080` وصل کنید؛ SSH محدود، PostgreSQL غیرعمومی و HTTPS را پیش از production/payment callback تأیید کنید. |
+| P1 | backup و rollback | scriptهای `backup.sh` و `restore.sh` برای dump PostgreSQL و Storage رمزگذاری‌شده با age، checksum، retention و restore تخریبیِ نیازمند تأیید اضافه شده‌اند. | scriptها روی Docker/age واقعی اجرا نشده‌اند؛ زمان‌بندی، مقصد خارج VPS، نگهداری کلید خصوصی age و restore drill هنوز راه‌اندازی نشده‌اند. | نصب age روی میزبان، مقصد جدا از VPS، کلید age خارج از VPS، schedule و retention؛ اجرای restore drill روی staging و تست rollback DNS/image. Supabase پیش از این gate خاموش نمی‌شود. |
+| P1 | آزمون integration / staging | suite legacy/browser و smoke schema در PGlite پاس شده‌اند؛ تست‌های Next نیز ۶۵/۶۵ و production build موفق‌اند؛ readiness endpoint برای DB/Storage موجود است. | PGlite فقط SQL/schema/constraintها را در WASM بررسی می‌کند؛ در این sandbox Docker/psql نیست. هیچ VPS، proxy/TLS عمومی، provider زنده یا restore drill آزموده نشده؛ backup/restore هنوز فقط script است. | روی staging واقعی startup، migration، backup/restore و flow ثبت‌نام تا خرید/مدیریت/دانلود را اجرا کنید. |
+| P2 | مشاهده‌پذیری و نگه‌داری | restart policy، healthcheck و endpoint `/api/health/ready` برای DB/Storage موجود است. | هشدار دیسک/backup، log rotation و برنامه‌ی patch سرور کامل/نصب نشده‌اند. | محدودیت/چرخش log، هشدار فضای دیسک/backup و runbook به‌روزرسانی/بازگشت؛ endpoint readiness را هم در reverse proxy واقعی بررسی کنید. |
+| P2 | عملیات و امنیت کاربردی | token در `localStorage` می‌ماند و routeها `no-store` هستند. | CSP/rate limit عمومی، سیاست حذف حساب/داده، ریکاوری رمز و مانیتور brute force به‌عنوان یک طرح کامل بررسی نشده‌اند. | threat review؛ rate limit ورود/OTP، هدرهای امنیتی و برنامه‌ی بازیابی قبل از بازکردن production. |
+
+## ترتیب اجرای باقی‌مانده
+
+کدنویسی انتقال API/Storage و routeهای Next تکمیل شده؛ کار باقی‌مانده عمدتاً اعتبارسنجی زیرساخت و سناریوهای واقعی است.
+
+1. **Staging پایه:** روی میزبان disposable با Docker Compose بالا بیاورید، PostgreSQL 17 را از volume خالی migrate کنید و role محدود/ready check را بیازمایید.
+2. **Auth و OTP:** first-admin را از TTY بسازید؛ سپس ثبت‌نام (ابتدا `otp-verify` و بعد `register-user`)، ورود/خروج و SMS provider را روی PostgreSQL واقعی بررسی کنید.
+3. **مدیریت و محتوای شروع:** مدیر دوره/جلسه و محتوای سایت را از پنل بسازد؛ چون DB تازه است seed/انتقال داده‌ی قدیمی لازم نیست.
+4. **سبد، دسترسی و فایل:** خرید آزمایشی، مالکیت، لینک جلسه، upload تصویر و دانلود خصوصی PDF را با volume واقعی آزمایش کنید.
+5. **پرداخت:** زرین‌پال sandbox، HTTPS callback، retry/idempotency، timeout، concurrency و سفارش فیزیکی/دیجیتال را end-to-end بررسی کنید.
+6. **عملیات:** backup رمزگذاری‌شده را به مقصد خارج VPS بفرستید و DB + Storage را روی staging دیگر restore کنید؛ سپس rollback DNS/image را تمرین کنید.
+7. **Cutover:** پس از توقف/تسویه‌ی سفارش‌های قدیمی درحال‌پرداخت، با اعلام ثبت‌نام مجدد کاربران و DB خالی دامنه‌ی فعلی را تغییر دهید. Supabase قدیمی تا پایان rollback window و پایش روشن می‌ماند؛ پس از اولین write، روشن‌ماندن آن به‌تنهایی rollback داده را فراهم نمی‌کند.
+
+## معیار نهایی «آماده‌ی deploy»
+
+- [ ] Compose از فایل `.env` اعتبارسنجی‌شده بالا می‌آید؛ DB port روی host publish نشده است.
+- [ ] migrationهای خالی از صفر با PostgreSQL هدف اجرا می‌شوند؛ role برنامه superuser نیست.
+- [ ] first-admin قابل ساخت امن است و ورود/خروج/OTP کار می‌کند.
+- [ ] همه‌ی APIهای active browser-facing به PostgreSQL یا سرویس‌های بیرونیِ عمدی وصل‌اند؛ هیچ query لازم به Supabase باقی نمانده است.
+- [ ] Storage محلی در restart باقی می‌ماند؛ عکس public و PDF private است؛ فایل بیش از سقف یا غیرمجاز رد می‌شود.
+- [ ] flow خرید sandbox، callback، idempotency، دسترسی دوره و پنل مدیر روی staging قبول شده‌اند.
+- [ ] backup خارج VPS و restore آن برای DB و فایل آزمایش شده است؛ rollback عملی است.
+- [ ] HTTPS، دامنه‌های ثابت، firewall، log/health/readiness و هشدار backup/دیسک بررسی شده‌اند.
+- [ ] Supabase فقط پس از پایان این معیارها و دوره‌ی rollback خاموش می‌شود.

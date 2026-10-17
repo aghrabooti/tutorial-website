@@ -1,0 +1,125 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:?Set POSTGRES_ADMIN_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Set POSTGRES_ADMIN_PASSWORD in .env}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+      APP_DB_USER: ${APP_DB_USER:?Set APP_DB_USER in .env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Set APP_DB_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init/10-create-app-role.sh:/docker-entrypoint-initdb.d/10-create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    # Deliberately no published 5432 port. Use an SSH tunnel for administration.
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: deploy/self-hosted/next.Dockerfile
+    command: ["node", "scripts/migrate.js"]
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      TZ: UTC
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set MIGRATION_DATABASE_URL in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  storage-init:
+    image: alpine:3.22
+    restart: "no"
+    command:
+      - sh
+      - -ec
+      - |
+        mkdir -p /storage/course-files /storage/course-images
+        chown -R 1001:1001 /storage
+        chmod 755 /storage /storage/course-images
+        chmod 700 /storage/course-files
+        find /storage/course-images -type f -exec chmod 644 {} +
+    volumes:
+      - storage-data:/storage
+
+  next-app:
+    build:
+      context: ../..
+      dockerfile: deploy/self-hosted/next.Dockerfile
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      TZ: UTC
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      STORAGE_ROOT: /var/lib/tutorial-storage
+      STORAGE_MAX_BYTES: ${STORAGE_MAX_BYTES:-1073741824}
+      STORAGE_SIGNING_SECRET: ${STORAGE_SIGNING_SECRET:?Set STORAGE_SIGNING_SECRET in .env}
+      ZARINPAL_MERCHANT_ID: ${ZARINPAL_MERCHANT_ID:-}
+      ZARINPAL_SANDBOX: ${ZARINPAL_SANDBOX:-false}
+      ZARINPAL_CALLBACK_URL: ${ZARINPAL_CALLBACK_URL:-}
+      PRICE_TO_RIAL_FACTOR: ${PRICE_TO_RIAL_FACTOR:-10}
+      SMS_IR_API_KEY: ${SMS_IR_API_KEY:-}
+      SMSIR_API_KEY: ${SMSIR_API_KEY:-}
+      SMS_IR_TEMPLATE_ID: ${SMS_IR_TEMPLATE_ID:-}
+      SMSIR_TEMPLATE_ID: ${SMSIR_TEMPLATE_ID:-}
+      SMS_IR_LINE_NUMBER: ${SMS_IR_LINE_NUMBER:-}
+      SMSIR_LINE_NUMBER: ${SMSIR_LINE_NUMBER:-}
+      SMS_IR_OTP_PARAMETER: ${SMS_IR_OTP_PARAMETER:-}
+      SMSIR_OTP_PARAMETER: ${SMSIR_OTP_PARAMETER:-}
+      KAVENEGAR_API_KEY: ${KAVENEGAR_API_KEY:-}
+      OTP_COOLDOWN_SECONDS: ${OTP_COOLDOWN_SECONDS:-60}
+      OTP_DEBUG: ${OTP_DEBUG:-false}
+    expose:
+      - "3000"
+    volumes:
+      - storage-data:/var/lib/tutorial-storage
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      storage-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health/ready').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 15s
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/self-hosted/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      next-app:
+        condition: service_healthy
+    volumes:
+      - storage-data:/srv/tutorial-storage:ro
+    ports:
+      # فقط reverse proxy روی همان سرور به این پورت وصل شود.
+      - "127.0.0.1:8080:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  postgres-data:
+  storage-data:

@@ -6,6 +6,8 @@ const here = path.dirname(new URL(import.meta.url).pathname);
 
 const steps = [
   ["node", ["build.mjs"]],
+  ["node", ["--test", "postgres-schema.test.mjs"]],
+  ["node", ["--test", "api-migration.test.mjs"]],
   ["node", ["shipments.test.mjs"]],
   ["node", ["payments.test.mjs"]],
   ["node", ["admin-panel.test.cjs"]],

@@ -1,4 +1,5 @@
-# پیکربندی پروژه برای Supabase CLI (دیپلوی فانکشنها از GitHub Actions)
+# LEGACY: تنظیمات Supabase CLI برای نسخه‌ی قبلی؛ runtime self-hosted از آن استفاده نمی‌کند.
+# deploy و migrations از این پروژه در workflow عادی عمداً disabled هستند.
 project_id = "qbsfotperzzhuimnpmto"
 
 # دیپلوی قطعی: احراز هویت همهی فانکشنها داخل خودشان با توکن سشن انجام میشود

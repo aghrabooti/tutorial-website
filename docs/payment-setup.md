@@ -1,180 +1,80 @@
 # راه‌اندازی پرداخت زرین‌پال و ارسال پستی
 
-این سند سه بخش دارد:
+این راهنما تنظیم routeهای فعال Next.js را توضیح می‌دهد. کدهای Supabase Edge قدیمی در مخزن باقی مانده‌اند، اما مسیر فعال مرورگر نیستند و secretهای Edge به‌تنهایی routeهای Next را پیکربندی نمی‌کنند.
 
-1. **فعال‌سازی درگاه واقعی پرداخت** (زرین‌پال production)
-2. **مرسوله‌های پستی** — چرا خرید کتاب/جزوه باید در پنل مدیریت دیده شود و چطور تضمین شده است
-3. **دیپلوی** فانکشن‌ها و اجرای مهاجرت دیتابیس
-
-| قطعه | مسیر |
+| کار | مسیر فعال |
 |---|---|
-| ساخت سفارش و اتصال به درگاه | `supabase/functions/payment-request` |
-| تأیید پرداخت + ساخت مرسوله | `supabase/functions/payment-verify` |
+| ساخت سفارش و شروع پرداخت | `apps/next-app/app/api/functions/payment-request/route.js` |
+| تأیید پرداخت و ساخت مرسوله | `apps/next-app/app/api/functions/payment-verify/route.js` |
+| وضعیت درگاه در پنل | route `admin-overview` در Next، با همان تنظیم‌های زرین‌پال |
 | صفحه‌ی بازگشت از درگاه | `payment-result.html` + `js/payment-result.js` |
-| لیست/مدیریت مرسوله‌های پستی | `supabase/functions/admin-shipments` + تب «مرسوله‌های پستی» در `admin.html` |
-| مهاجرت دیتابیس (ایمن و idempotent) | `supabase/migrations/20260921000001_shipping_and_orders.sql` |
-| دیپلوی خودکار | `deploy/deploy-functions.github-workflow.yml` → کپی در `.github/workflows/deploy-functions.yml` |
+| لیست و مدیریت مرسوله‌ها | route `admin-shipments` در Next + تب «مرسوله‌های پستی» در `admin.html` |
+| schema سفارش/مرسوله | `apps/next-app/db/migrations/0001_initial_schema.sql` و runner self-hosted |
 
----
+## ۱) متغیرهای محیط سرور
 
-## ۱) فعال‌سازی درگاه واقعی (production)
+مقدارها را در محیطی بگذارید که **Next.js** را اجرا می‌کند. برای Compose، فایل `.env.example` را به `.env` محلی تبدیل کنید و Compose را با `--env-file .env` اجرا کنید؛ نمونه‌ی کامل در [`deploy/self-hosted/README.md`](../deploy/self-hosted/README.md) است.
 
-کد به‌صورت پیش‌فرض روی **درگاه واقعی** است. فقط سه secret لازم است:
-
-| نام secret | مقدار |
+| متغیر | مقدار |
 |---|---|
-| `ZARINPAL_MERCHANT_ID` | مرچنت‌کد ۳۶ کاراکتری از پنل `my.zarinpal.com` |
-| `ZARINPAL_SANDBOX` | `false` (برای درگاه واقعی) |
-| `ZARINPAL_CALLBACK_URL` | `https://<دامنه‌ی سایت>/payment-result` |
-| `PRICE_TO_RIAL_FACTOR` | اگر قیمت‌ها **تومان** است `10`، اگر ریال است `1` |
+| `DATABASE_URL` | اتصال private به PostgreSQL role محدود برنامه؛ داخل Compose از host `db` استفاده می‌شود |
+| `ZARINPAL_MERCHANT_ID` | مرچنت‌کد ۳۶ کاراکتری/UUID زرین‌پال |
+| `ZARINPAL_SANDBOX` | برای staging مقدار `true`؛ فقط پس از آزمون برای production مقدار `false` |
+| `ZARINPAL_CALLBACK_URL` | آدرس عمومی بازگشت، مانند `https://example.com/payment-result` |
+| `PRICE_TO_RIAL_FACTOR` | اگر قیمت DB به تومان است `10`؛ اگر به ریال است `1` |
 
-### روش الف) از GitHub (پیشنهادی)
+Runtime self-hosted به Supabase URL/anon/service-role نیاز ندارد؛ dependency و routeهای فعال از آن جدا شده‌اند. کلیدهای Zarinpal فقط در environment سرور باشند، نه `NEXT_PUBLIC_*`. بعد از تغییر environment، سرویس Next را restart/redeploy کنید.
 
-GitHub → **Actions** → **Deploy Supabase Edge Functions** → **Run workflow** و پر کردن:
+### Staging و production
 
-- `zarinpal_merchant_id` = مرچنت‌کد واقعی
-- `zarinpal_sandbox` = `false`
-- `zarinpal_callback_url` = `https://<دامنه‌ی سایت>/payment-result`
-- `migrate_database` = `true`
+- ابتدا روی staging با `ZARINPAL_SANDBOX=true` کار کنید. `payment-request` در هر دو حالت مرچنت‌کد UUID-مانند و آدرس callback می‌خواهد؛ callback سندباکس هم باید مقدار داشته باشد. مرچنت تستی `00000000-0000-0000-0000-000000000000` نیز به‌طور خودکار سندباکس را انتخاب می‌کند.
+- برای پرداخت واقعی، مرچنت‌کد واقعی را تنظیم کنید، `ZARINPAL_SANDBOX=false` بگذارید و callback را روی HTTPS و دامنه‌ی ثبت‌شده در زرین‌پال قرار دهید. اگر مرچنت‌کد یا callback نامعتبر باشد، شروع پرداخت fail-closed می‌شود؛ به‌جای پیکربندی ناقص، به سندباکس بی‌صدا نمی‌افتد.
+- `admin-overview` از همین environment استفاده می‌کند؛ کارت وضعیت، صرفاً آینه‌ی secretهای Edge نیست.
+- هرگز از صفحه‌ی staging پرداخت واقعی نگیرید. قبل از فعال‌سازی production، callback، مبلغ و سفارش را روی سندباکس بررسی کنید.
 
-این ورک‌فلو هم فانکشن‌ها را دیپلوی می‌کند، هم مهاجرت دیتابیس را اجرا می‌کند و هم
-secret ها را می‌نویسد.
+## ۲) مسیر کامل خرید فیزیکی
 
-### روش ب) از Supabase
-
-```bash
-supabase secrets set \
-  ZARINPAL_MERCHANT_ID="<مرچنت‌کد-۳۶-کاراکتری>" \
-  ZARINPAL_SANDBOX="false" \
-  ZARINPAL_CALLBACK_URL="https://<دامنه‌ی-شما>/payment-result" \
-  PRICE_TO_RIAL_FACTOR="10"
-```
-
-> `ZARINPAL_MERCHANT_ID` را **هرگز** داخل کد یا ریپو نگذارید.
-
-### بررسی این‌که درگاه واقعی فعال است
-
-در پنل مدیریت → تب **داشبورد** → کارت **«وضعیت درگاه پرداخت»**:
-
-- سبز: `زرین‌پال — درگاه واقعی ✅` + مرچنت‌کد ماسک‌شده + آدرس بازگشت
-- زرد: `سندباکس (آزمایشی) ⚠️` → یعنی یا `ZARINPAL_SANDBOX=true` است یا مرچنت‌کد تنظیم نشده
-
-### قواعد مهم
-
-- مرچنت‌کد باید **۳۶ کاراکتر و UUID-مانند** باشد؛ در غیر این صورت پرداخت با خطای
-  واضح فارسی متوقف می‌شود (و به‌جای درگاه واقعی، بی‌سروصدا به سندباکس سقوط نمی‌کند).
-- مرچنت‌کد تستی `00000000-0000-0000-0000-000000000000` خودکار روی سندباکس اجرا می‌شود.
-- `ZARINPAL_CALLBACK_URL` برای درگاه واقعی **باید https و روی دامنه‌ی ثبت‌شده در
-  زرین‌پال** باشد.
-- اگر وسط راه sandbox/production عوض شد، `payment-verify` خودش محیط درست را از
-  روی `authority` تشخیص می‌دهد (authority های سندباکس با `S` شروع می‌شوند) و در
-  صورت لازم یک‌بار روی محیط دیگر هم تلاش می‌کند؛ پس تراکنش نیمه‌کاره بی‌نتیجه نمی‌ماند.
-
----
-
-## ۲) مرسوله‌های پستی: چرا خرید کتاب/جزوه باید در پنل دیده شود
-
-قاعده‌ی تشخیص «محصول فیزیکی» (در `payment-request`، `payment-verify`،
-`admin-shipments`، `admin-orders` و `admin-overview` یکسان است):
+قاعده‌ی تشخیص محصول فیزیکی (در routeهای پرداخت و مدیریت مرسوله):
 
 ```text
-ستون courses.requires_shipping = true   یا   courses.type ∈ { book, lecture }
+courses.requires_shipping = true  یا  courses.type ∈ { book, lecture }
 ```
 
-### مسیر کامل یک خرید پستی
+1. کاربر محصول را به سبد می‌افزاید و «ادامه پرداخت» را می‌زند.
+2. اگر محصول فیزیکی باشد و نشانی تأییدشده وجود نداشته باشد، `payment-request` پاسخ `needs_address: true` می‌دهد و مرورگر کاربر را به `/shipping-address` هدایت می‌کند.
+3. پس از ثبت/تأیید نشانی، درخواست پرداخت تکرار می‌شود. قیمت و مشخصات هر محصول از دیتابیس خوانده و در سفارش snapshot می‌شود؛ قیمت ارسالی مرورگر مبنای پرداخت نیست.
+4. پس از پرداخت، `payment-verify` مرجع زرین‌پال را بررسی می‌کند، سفارش را `paid` می‌کند و برای سفارش فیزیکی از نشانی کاربر مرسوله می‌سازد. تأیید تکراری idempotent است و نباید دسترسی/مرسوله‌ی تکراری ایجاد کند.
+5. `admin-shipments` سفارش‌های فیزیکی پرداخت‌شده‌ی قدیمی را هم بررسی می‌کند و در صورت نیاز مرسوله را خودترمیم می‌کند؛ سفارش بدون نشانی برای رسیدگی مدیر گزارش می‌شود.
 
-1. کاربر کتاب/جزوه را به سبد اضافه می‌کند و «ادامه پرداخت» را می‌زند.
-2. `payment-request` اگر سبد محصول فیزیکی داشته باشد و نشانی ثبت/تأیید نشده باشد،
-   کاربر را به `/shipping-address` می‌فرستد (`needs_address: true`).
-3. پس از ثبت نشانی، دوباره `payment-request` صدا زده می‌شود؛ در اسنپ‌شات هر قلم
-   سفارش مقدار `requires_shipping` ذخیره می‌شود (تا بعداً قابل تشخیص باشد).
-4. پس از پرداخت موفق، `payment-verify` سفارش را `paid` می‌کند و **مرسوله‌ی پستی**
-   (ردیف جدول `shipments`) را با نشانی کاربر می‌سازد.
-5. در پنل مدیریت → تب «مرسوله‌های پستی» مرسوله با نشانی، اقلام، کد پیگیری پرداخت و
-   دکمه‌ی «ثبت ارسال ✓» دیده می‌شود.
+## ۳) schema دیتابیس
 
-### خودترمیمی (مهم)
+در مقصد self-hosted، runner فایل `apps/next-app/db/migrations/0001_initial_schema.sql` را روی PostgreSQL مستقل اجرا می‌کند؛ آن را روی پروژه‌ی Supabase اجرا نکنید. schema از inventory ساختاری بازسازی شده و هنوز با PostgreSQL واقعی validate نشده است. روی staging disposable از صفر اجرا کنید، constraintها/نوع ستون‌ها را بررسی کنید و پیش از production backup/restore drill بگذرانید. دیتابیس خالی پذیرفته شده، اما مدیر و حداقل یک دوره باید از پنل ساخته شوند.
 
-هنگام باز شدن تب «مرسوله‌های پستی» (و همچنین با دکمه‌ی
-**«ساخت مرسوله‌های جامانده»**) تابع `admin-shipments`:
+## ۴) اجرا و بررسی
 
-- همه‌ی سفارش‌های `paid` را که محصول فیزیکی دارند بررسی می‌کند،
-- اگر مرسوله‌شان ساخته نشده باشد، از روی `user_addresses` **خودکار می‌سازد**
-  (پس خریدهای قبلی هم در پنل ظاهر می‌شوند)،
-- اگر نشانی کاربر ثبت نشده باشد، سفارش در فهرست با کارت قرمز
-  «بدون مرسوله ⚠️» و شماره‌ی تماس مشتری نمایش داده می‌شود تا از قلم نیفتد.
+برای اجرای Next و Nginx از دستورهای `deploy/self-hosted/README.md` پیروی کنید. مسیرهای مرورگر هم‌مبدأ هستند:
 
-پس از این تغییر، هیچ خریدی (نه خریدهای جدید و نه خریدهای قبلی) بی‌صدا از تب
-مرسوله‌ها جا نمی‌ماند.
+- `POST /api/functions/payment-request`
+- `POST /api/functions/payment-verify`
+- `POST /api/functions/admin-shipments`
+- `POST /api/functions/admin-overview`
 
----
+تغییر محیط پس از deploy را با restart سرویس اعمال کنید. `supabase/functions/payment-request` و `payment-verify` فقط نسخه‌های قدیمی Edge هستند؛ برای فعال‌کردن routeهای Next نیازی به deploy مجدد Edge Function یا ذخیره‌ی متغیرهای پرداخت در Secrets آن نیست.
 
-## ۳) ساخت جدول‌ها و مهاجرت دیتابیس
-
-فایل `supabase/migrations/20260921000001_shipping_and_orders.sql` ایمن و
-idempotent است (چند بار اجرا شود بی‌خطر است و چیزی حذف نمی‌کند):
-
-- جدول `shipments` را می‌سازد و ستون‌های جامانده را اضافه می‌کند
-  (`order_id, user_id, full_name, phone, province, city, address, postal_code,
-  status, tracking_code, sent_at, created_at, updated_at`)
-- ایندکس یکتای `order_id` را **فقط اگر داده‌ی تکراری نباشد** می‌سازد
-- جدول `user_addresses` و یکتایی `user_id` را تضمین می‌کند
-- ستون‌های جدول `orders` (`course_ids`, `source`, `items`, `card_pan`, `verified_at`) را تضمین می‌کند
-- `courses.requires_shipping` را برای محصولات `book` و `lecture` روی `true` می‌گذارد
-- در پایان گزارشی در لاگ می‌دهد: تعداد سفارش‌های موفق، پستی، مرسوله‌ها و بدون مرسوله
-
-اجرا از GitHub (پیشنهادی): ورک‌فلوی دیپلوی با `migrate_database=true`.
-اجرای دستی: کل فایل را در Supabase → SQL Editor اجرا کنید.
-
-> توابع هیچ‌کدام به constraint یکتا **وابسته نیستند** (اول می‌خوانند، بعد
-> insert/update می‌زنند) تا روی هر ساختاری از جدول کار کنند.
-
----
-
-## ۴) دیپلوی فانکشن‌ها
-
-نسخه‌ی اصلاح‌شده‌ی ورک‌فلو در `deploy/deploy-functions.github-workflow.yml` است؛
-یک‌بار آن را در `.github/workflows/deploy-functions.yml` کپی کنید (توضیح در
-`deploy/README.md`). این ورک‌فلو (نیاز به secret `SUPABASE_ACCESS_TOKEN` در
-تنظیمات ریپوزیتوری) **همه‌ی** فانکشن‌های پوشه‌ی `supabase/functions` را دیپلوی
-می‌کند، مهاجرت SQL را اجرا می‌کند و از همان برنچی که اجرا شده چک‌اوت می‌کند:
+آزمون محلی با mock:
 
 ```bash
-supabase functions deploy --project-ref qbsfotperzzhuimnpmto
+cd apps/next-app
+npm test
+npm run build
 ```
 
-به‌صورت دستی هم می‌توانید همان دستور را با CLI اجرا کنید (بدون نیاز به Docker).
-`supabase/config.toml` برای همه‌ی فانکشن‌ها `verify_jwt = false` گذاشته است چون
-احراز هویت داخل خود فانکشن‌ها با توکن سشن انجام می‌شود.
+پیش از cutover، در staging واقعی این سناریوها را با زرین‌پال sandbox انجام دهید:
 
----
+- خرید دیجیتال و خرید کتاب/جزوه؛
+- ردشدن checkout فیزیکی بدون نشانی؛
+- callback موفق، انصراف/پرداخت ناموفق و refresh صفحه‌ی نتیجه؛
+- تکرار verify بدون ساخت سفارش/مرسوله‌ی اضافی؛
+- تطبیق `orders.amount_rial`, `status`, `authority`, `ref_id` و اطلاعات `shipments`.
 
-## ۵) تست
-
-### سندباکس
-
-1. مرچنت‌کد را موقتاً روی UUID تستی بگذارید یا `ZARINPAL_SANDBOX=true`.
-2. یک کتاب/جزوه‌ی ارزان را خرید کنید و در صفحه‌ی سندباکس «پرداخت موفق» را بزنید.
-3. انتظار:
-   - `orders.status = paid` با `ref_id`
-   - **ردیف جدید در `shipments`** و نمایش در تب «مرسوله‌های پستی»
-   - خالی شدن سبد
-   - نشانی کاربر در کارت مرسوله
-4. سناریوهای منفی: دکمه‌ی «انصراف» درگاه، رفرش صفحه‌ی نتیجه (نباید مرسوله دوباره ساخته شود).
-
-### درگاه واقعی
-
-1. یک خرید واقعی با مبلغ کم.
-2. در پنل زرین‌پال `ref_id` را با `orders.ref_id` تطبیق دهید.
-3. در تب «مرسوله‌های پستی» مرسوله را ببینید و بعد از ارسال، کد رهگیری را ثبت کنید.
-
----
-
-## ۶) چک‌لیست «رفتن روی production»
-
-- [ ] مرچنت‌کد واقعی ست شده (`ZARINPAL_MERCHANT_ID`)
-- [ ] `ZARINPAL_SANDBOX=false`
-- [ ] `ZARINPAL_CALLBACK_URL` روی دامنه‌ی ثبت‌شده در زرین‌پال و با https
-- [ ] در داشبورد پنل مدیریت، کارت درگاه سبز است («درگاه واقعی ✅»)
-- [ ] مهاجرت SQL اجرا شده (گزارش «بدون مرسوله: 0»)
-- [ ] یک خرید واقعی آزمایشی با مبلغ کم + بررسی مرسوله و کد رهگیری
+تست‌های محلی به سرویس زنده وصل نمی‌شوند؛ آزمون staging و بررسی logها پیش از فعال‌سازی درگاه واقعی الزامی است.

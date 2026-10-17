@@ -52,9 +52,9 @@
   <div class="card">
     <h1>دکتر پروفایل</h1>
     <p class="sub">
-      این صفحه دو چیز را بررسی می‌کند: (۱) فانکشن <code>update-profile</code> روی سرور
-      سالم است یا نه، (۲) ستون‌های لازم در جدول کاربران وجود دارند یا نه.
-      مشکل «خطا موقع ذخیره‌ی کاربر» تقریباً همیشه یکی از این دو است.
+      این صفحه دو چیز را بررسی می‌کند: (۱) route هم‌مبدأ <code>update-profile</code> و
+      دسترسی سرور به جست‌وجوی نشست، (۲) وجود ستون‌های لازم در جدول کاربران.
+      توکن آزمایشی عمداً نامعتبر است؛ پاسخ ۴۰۱ با پیام «نشست معتبر نیست» طبیعی است.
     </p>
 
     <button id="check">۱) بررسی فانکشن update-profile</button>
@@ -63,37 +63,26 @@
   </div>
 
   <div class="card">
-    <h2>۲) بررسی ستون‌های جدول کاربران</h2>
+    <h2>۲) بررسی schema در PostgreSQL self-hosted</h2>
     <p class="sub" style="margin-bottom:10px">
-      این دستور را در <b>Supabase → SQL Editor</b> اجرا کنید. باید چهار ستون
-      <code>first_name</code>، <code>last_name</code>، <code>grade</code>،
-      <code>major</code> را نشان بدهد.
+      این دستور را در SSH سرور از ریشه‌ی مخزن اجرا کنید؛ خروجی نام/نوع ستون‌های
+      <code>site_users</code> را نشان می‌دهد و secretها را چاپ نمی‌کند.
     </p>
-    <pre>select column_name, data_type
-from information_schema.columns
-where table_schema = 'public'
-  and table_name = 'site_users'
-order by ordinal_position;</pre>
+    <pre>docker compose --env-file .env -f deploy/self-hosted/compose.yaml exec db psql -U postgres -d tutorial_website -c "select column_name, data_type from information_schema.columns where table_schema='public' and table_name='site_users' order by ordinal_position;"</pre>
     <button id="copyCheck" class="ghost">کپی دستور بررسی</button>
-
-    <p class="sub" style="margin:18px 0 10px">
-      اگر <code>grade</code> یا <code>major</code> نبود، این دستور آن‌ها را اضافه می‌کند
-      (بقیه‌ی اطلاعات دست نمی‌خورد):
+    <p class="sub" style="margin:18px 0 0">
+      schema مقصد را با migrationهای versioned مدیریت کنید؛ برای رفع خطا در production
+      دستور <code>ALTER TABLE</code> موردی اجرا نکنید. ابتدا log سرویس <code>migrate</code>
+      و backup را بررسی کنید.
     </p>
-    <pre>alter table public.site_users
-  add column if not exists grade text,
-  add column if not exists major text;</pre>
-    <button id="copyFix" class="ghost">کپی دستور اصلاح</button>
   </div>
 
   <div class="card">
     <h2>۳) اگر باز هم خطا داد</h2>
     <ol>
-      <li>کد تازه‌ی فانکشن را از صفحه‌ی
-          <a href="/deploy/update-profile">/deploy/update-profile</a> کپی کنید.</li>
-      <li>در Supabase → Edge Functions → <code>update-profile</code>، کد قبلی را پاک و
-          کد تازه را پیست کنید → <b>Deploy</b>.</li>
-      <li>دوباره دکمه‌ی «بررسی فانکشن» بالای همین صفحه را بزنید.</li>
+      <li>پاسخ ۴۰۱ «نشست معتبر نیست» برای توکن آزمایشی طبیعی است؛ یعنی route Next درخواست را پردازش کرده و نشست مطابقی پیدا نشده است.</li>
+      <li>اگر ۵۰۰ یا ۵۰۳ دیدید، logهای <code>next-app</code> و <code>db</code> را بررسی کنید؛ مقدارهای <code>DATABASE_URL</code> و وضعیت migration را فقط در سرور بررسی کنید.</li>
+      <li>اگر پیام مربوط به ستون <code>grade</code> یا <code>major</code> دیدید، migration و خروجی دستور read-only بخش ۲ را بررسی کنید؛ روی production دستی schema را تغییر ندهید.</li>
       <li>در مرورگر، صفحه‌ی <code>/complete-profile</code> را با Ctrl+Shift+R
           (رفرش سخت) دوباره باز کنید و فرم را ذخیره کنید.</li>
     </ol>
@@ -102,9 +91,6 @@ order by ordinal_position;</pre>
 </div>
 
 <script>
-const API = "https://qbsfotperzzhuimnpmto.supabase.co/functions/v1";
-const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFic2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA";
-
 const $ = (id) => document.getElementById(id);
 
 function verdict(cls, title, details) {
@@ -118,20 +104,15 @@ $("check").addEventListener("click", async () => {
 
     let res;
     try {
-        res = await fetch(`${API}/update-profile`, {
+        res = await fetch("/api/functions/update-profile", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${ANON}`,
-            },
+            headers: { "Content-Type": "application/json" },
             // توکن عمداً بی‌اعتبار است؛ فقط می‌خواهیم ببینیم فانکشن جواب می‌دهد
             body: JSON.stringify({ token: "diagnostic-test", first_name: "ت", last_name: "ت", grade: "11" }),
         });
     } catch (e) {
-        verdict("v-bad", "❌ فانکشن جواب نداد (CORS یا شبکه)",
-            "یعنی پاسخ سرور هدر <code>Access-Control-Allow-Origin</code> ندارد. " +
-            "کد تازه را از <a href=\"/deploy/update-profile\">/deploy/update-profile</a> " +
-            "روی Supabase بگذارید و دوباره Deploy کنید." +
+        verdict("v-bad", "❌ API هم‌مبدأ در دسترس نیست",
+            "دسترسی به Next/Nginx، اتصال داخلی PostgreSQL و وضعیت migration را در logهای VPS بررسی کنید." +
             `<br><span class="muted">${e.message}</span>`);
         $("check").disabled = false;
         return;
@@ -143,21 +124,19 @@ $("check").addEventListener("click", async () => {
     $("raw").style.display = "";
     $("raw").textContent = `HTTP ${res.status}\n` + JSON.stringify(body, null, 2);
 
-    if (res.status === 401) {
-        verdict("v-ok", "✅ فانکشن سالم است",
-            "جواب درست داد: «نشست معتبر نیست» برای توکن آزمایشی طبیعی است؛ " +
-            "یعنی کد روی سرور نصب شده و CORS هم درست است. اگر در سایت باز هم خطا دیدید، " +
-            "احتمالاً مشکل ستون‌های دیتابیس است (بخش ۲ بالا).");
+    if (res.status === 401 && body?.error === "نشست معتبر نیست") {
+        verdict("v-ok", "✅ route Next و جست‌وجوی نشست پاسخ دادند",
+            "«نشست معتبر نیست» برای توکن آزمایشی طبیعی است. اگر فرم واقعی خطا می‌دهد، " +
+            "جزئیات پاسخ را ببینید و ستون‌های دیتابیس را در بخش ۲ بررسی کنید.");
     } else if (res.status === 502 || res.status === 504) {
-        verdict("v-bad", "❌ فانکشن روی سرور خراب است (۵۰۲)",
-            "کد فعلیِ روی Supabase ناقص/خالی است. کد تازه را از " +
-            "<a href=\"/deploy/update-profile\">/deploy/update-profile</a> کپی کنید و " +
-            "کل محتوای فانکشن را جایگزین و Deploy کنید.");
+        verdict("v-bad", "❌ سرور API در دسترس نیست",
+            "پاسخ ۵۰۲/۵۰۴ از Next یا reverse proxy آمده است؛ logهای Next/Nginx و سلامت سرویس را بررسی کنید.");
+    } else if (res.status === 503) {
+        verdict("v-bad", "❌ یکی از وابستگی‌های server-side آماده نیست",
+            "آمادگی PostgreSQL، migration و (برای OTP) provider پیامک را در health/logهای VPS بررسی کنید.");
     } else if (res.status === 400) {
-        verdict("v-warn", "⚠️ فانکشن جواب می‌دهد ولی کد دیگری روی سرور است",
-            "پاسخ «اطلاعات ناقص است» آمد، در حالی که این ابزار داده‌ی کامل فرستاد. " +
-            "کد تازه را از <a href=\"/deploy/update-profile\">/deploy/update-profile</a> " +
-            "دوباره Deploy کنید.");
+        verdict("v-warn", "⚠️ داده‌ی آزمایشی توسط route رد شد",
+            "درخواست کامل فرستاده شده است؛ نسخه‌ی route و بدنه‌ی پاسخ را در logها بررسی کنید.");
     } else if (body && body.error && /mine|column|schema/i.test(String(body.error))) {
         verdict("v-warn", "⚠️ ستون‌های دیتابیس مشکل دارند",
             "پیام سرور: " + body.error + " — دستور بخش ۲ بالا را اجرا کنید.");
@@ -187,8 +166,6 @@ async function copyText(text, btn, label) {
 $("copyCheck").addEventListener("click", (e) =>
     copyText($("copyCheck").previousElementSibling.textContent, e.target, "کپی شد"));
 
-$("copyFix").addEventListener("click", (e) =>
-    copyText($("copyFix").previousElementSibling.textContent, e.target, "کپی شد"));
 </script>
 </body>
 </html>

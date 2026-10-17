@@ -512,11 +512,9 @@ async function loadProductsDropdown() {
     const sel = document.getElementById("pdf-course");
 
     try {
-        const { data, error } = await db
-            .from("courses")
-            .select("id, title, type");
+        const { data, error } = await getPublicCourses();
 
-        if (error) throw error;
+        if (error) throw new Error(error.message || "خطا در دریافت محصولات");
 
         // محصولات فیزیکی اول
         const rows = (data ?? []).sort(
@@ -539,10 +537,13 @@ async function loadProductsDropdown() {
     }
 }
 
-async function uploadToSignedUrl(uploadUrl, file, statusEl) {
+async function uploadToSignedUrl(uploadUrl, file, statusEl, uploadToken) {
     const put = await fetch(uploadUrl, {
         method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
+        headers: {
+            "Content-Type": file.type || "application/octet-stream",
+            "Authorization": `Bearer ${uploadToken}`,
+        },
         body: file,
     });
 
@@ -591,7 +592,7 @@ function initFileTab() {
             if (!res.success) throw new Error(res.error || "خطا در مجوز آپلود");
 
             pdfStatus.textContent = "در حال ارسال فایل...";
-            await uploadToSignedUrl(res.upload_url, file, pdfStatus);
+            await uploadToSignedUrl(res.upload_url, file, pdfStatus, res.upload_token);
 
             pdfStatus.className = "mt-3 text-sm text-green-600";
             pdfStatus.textContent = "آپلود شد ✓ — فایل محصول به‌روزرسانی شد";
@@ -627,12 +628,13 @@ function initFileTab() {
                 token,
                 kind: "image",
                 filename: file.name,
+                content_type: file.type,
             });
 
             if (!res.success) throw new Error(res.error || "خطا در مجوز آپلود");
 
             imgStatus.textContent = "در حال ارسال فایل...";
-            await uploadToSignedUrl(res.upload_url, file, imgStatus);
+            await uploadToSignedUrl(res.upload_url, file, imgStatus, res.upload_token);
 
             document.getElementById("img-url").value = res.public_url;
             document.getElementById("img-url-box").classList.remove("hidden");
