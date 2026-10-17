@@ -1,6 +1,6 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { query } from "../../../../lib/postgres.js";
+import { findActivePostgresAdmin } from "../../../../lib/admin-auth.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
-import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,26 +10,6 @@ function isPhysicalCourse(course) {
   if (course.requires_shipping === true) return true;
   const type = String(course.type ?? "").trim().toLowerCase();
   return type === "book" || type === "lecture";
-}
-
-async function loadPhysicalCourseIds(supabase) {
-  const ids = new Set();
-  const { data, error } = await supabase
-    .from("courses")
-    .select("id, type, requires_shipping");
-
-  if (!error) {
-    for (const course of data ?? []) {
-      if (isPhysicalCourse(course)) ids.add(String(course.id));
-    }
-    return ids;
-  }
-
-  const retry = await supabase.from("courses").select("id, type");
-  for (const course of retry.data ?? []) {
-    if (isPhysicalCourse(course)) ids.add(String(course.id));
-  }
-  return ids;
 }
 
 export async function POST(request) {
@@ -44,46 +24,51 @@ export async function POST(request) {
   if (!isValidSessionToken(token)) return jsonNoStore({ error: "توکن ارسال نشده" }, 401);
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const auth = await findActivePostgresAdmin(token);
+    if (auth.error && !auth.expired) throw auth.error;
+    if (auth.userError) throw auth.userError;
     if (!auth.admin) return jsonNoStore({ error: "دسترسی غیرمجاز — فقط مدیر" }, 403);
 
-    const { data: orders, error } = await supabase
-      .from("orders")
-      .select("id, user_id, amount_rial, status, source, items, course_ids, ref_id, created_at")
-      .order("created_at", { ascending: false })
-      .limit(200);
+    const { rows: orders } = await query(
+      `SELECT id, user_id, amount_rial, status, source, items, course_ids, ref_id, created_at
+       FROM public.orders
+       ORDER BY created_at DESC
+       LIMIT 200`
+    );
+    const { rows: courses } = await query(
+      "SELECT id, type, requires_shipping FROM public.courses"
+    );
+    const physicalCourseIds = new Set(
+      courses.filter(isPhysicalCourse).map((course) => String(course.id))
+    );
 
-    if (error) {
-      console.error("[api/functions/admin-orders] Order lookup failed:", error);
-      return jsonNoStore({ error: "خطا در خواندن سفارش‌ها" }, 500);
-    }
-
-    const physicalCourseIds = await loadPhysicalCourseIds(supabase);
-    const orderIds = (orders ?? []).map((order) => String(order.id));
-
+    const orderIds = orders.map((order) => String(order.id));
     let shipmentsByOrder = {};
     if (orderIds.length > 0) {
-      const { data: shipments } = await supabase
-        .from("shipments")
-        .select("order_id, status, tracking_code")
-        .in("order_id", orderIds);
+      const { rows: shipments } = await query(
+        `SELECT order_id, status, tracking_code
+         FROM public.shipments
+         WHERE order_id = ANY($1::uuid[])`,
+        [orderIds]
+      );
       shipmentsByOrder = Object.fromEntries(
-        (shipments ?? []).map((shipment) => [String(shipment.order_id), shipment])
+        shipments.map((shipment) => [String(shipment.order_id), shipment])
       );
     }
 
-    const userIds = [...new Set((orders ?? []).map((order) => order.user_id))];
+    const userIds = [...new Set(orders.map((order) => String(order.user_id)))];
     let usersById = {};
     if (userIds.length > 0) {
-      const { data: users } = await supabase
-        .from("site_users")
-        .select("id, first_name, last_name, phone")
-        .in("id", userIds);
-      usersById = Object.fromEntries((users ?? []).map((u) => [String(u.id), u]));
+      const { rows: users } = await query(
+        `SELECT id, first_name, last_name, phone
+         FROM public.site_users
+         WHERE id::text = ANY($1::text[])`,
+        [userIds]
+      );
+      usersById = Object.fromEntries(users.map((user) => [String(user.id), user]));
     }
 
-    const rows = (orders ?? []).map((order) => {
+    const rows = orders.map((order) => {
       const user = usersById[String(order.user_id)] ?? {};
       const items = Array.isArray(order.items) ? order.items : [];
       const courseIds = Array.isArray(order.course_ids) && order.course_ids.length > 0
@@ -111,12 +96,10 @@ export async function POST(request) {
 
     return jsonNoStore({ success: true, orders: rows });
   } catch (error) {
-    const missingConfig = String(error?.message ?? "").startsWith(
-      "Missing server environment variable:"
-    );
-    console.error("[api/functions/admin-orders] Request failed:", error);
+    const missingConfig = String(error?.message ?? "").startsWith("Missing server environment variable:");
+    console.error("[api/functions/admin-orders] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
-      { error: missingConfig ? "سرویس سفارش‌ها تنظیم نشده است" : error?.message ?? "خطای سرور" },
+      { error: missingConfig ? "سرویس سفارش‌ها تنظیم نشده است" : "خطا در خواندن سفارش‌ها" },
       missingConfig ? 503 : 500
     );
   }

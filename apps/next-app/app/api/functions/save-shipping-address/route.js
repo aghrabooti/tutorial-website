@@ -1,6 +1,5 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
-import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
-import { findActiveSessionUser } from "../../../../lib/session-user.js";
+import { query } from "../../../../lib/postgres.js";
+import { findActivePostgresSessionUser, isValidSessionToken, jsonNoStore } from "../../../../lib/session-token.js";
 import { toLatinDigits } from "../../../../lib/phone.js";
 
 export const runtime = "nodejs";
@@ -27,15 +26,12 @@ export async function POST(request) {
   const postalCode = toLatinDigits(String(body?.postal_code ?? "").trim()).replace(/\s/g, "");
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSessionUser(
-      supabase,
-      token,
-      "id,phone,first_name,last_name"
-    );
+    const sessionResult = await findActivePostgresSessionUser(token, ["id"]);
+    if (sessionResult.error && !sessionResult.expired) throw sessionResult.error;
     if (!sessionResult.session || !sessionResult.user) {
       return jsonNoStore({ error: "نشست معتبر نیست" }, 401);
     }
+    if (sessionResult.userError) throw sessionResult.userError;
 
     if (!fullName || !phone || !province || !city || !address || !postalCode) {
       return jsonNoStore({ error: "لطفاً همه‌ی فیلدها را کامل کنید" }, 400);
@@ -47,51 +43,29 @@ export async function POST(request) {
       return jsonNoStore({ error: "کد پستی باید ۱۰ رقم باشد" }, 400);
     }
 
-    const userId = String(sessionResult.user.id);
-    const payload = {
-      user_id: userId,
-      full_name: fullName,
-      phone,
-      province,
-      city,
-      address,
-      postal_code: postalCode,
-      updated_at: new Date().toISOString(),
-    };
-
-    const { data: existing, error: readError } = await supabase
-      .from("user_addresses")
-      .select("user_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (readError) console.error("[api/functions/save-shipping-address] Address lookup failed:", readError);
-
-    const writeResult = existing
-      ? await supabase.from("user_addresses").update(payload).eq("user_id", userId)
-      : await supabase.from("user_addresses").insert(payload);
-
-    if (writeResult.error) {
-      if (writeResult.error.code === "23505") {
-        const retry = await supabase
-          .from("user_addresses")
-          .update(payload)
-          .eq("user_id", userId);
-        if (!retry.error) return jsonNoStore({ success: true });
-      }
-
-      console.error("[api/functions/save-shipping-address] Address save failed:", writeResult.error);
-      return jsonNoStore({ error: "خطا در ذخیره آدرس" }, 500);
-    }
+    await query(
+      `INSERT INTO public.user_addresses
+         (user_id, full_name, phone, province, city, address, postal_code, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         full_name = EXCLUDED.full_name,
+         phone = EXCLUDED.phone,
+         province = EXCLUDED.province,
+         city = EXCLUDED.city,
+         address = EXCLUDED.address,
+         postal_code = EXCLUDED.postal_code,
+         updated_at = NOW()`,
+      [String(sessionResult.user.id), fullName, phone, province, city, address, postalCode]
+    );
 
     return jsonNoStore({ success: true });
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(
       "Missing server environment variable:"
     );
-    console.error("[api/functions/save-shipping-address] Request failed:", error);
+    console.error("[api/functions/save-shipping-address] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
-      { error: missingConfig ? "سرویس نشانی تنظیم نشده است" : error?.message ?? "خطای سرور" },
+      { error: missingConfig ? "سرویس نشانی تنظیم نشده است" : "خطا در ذخیره آدرس" },
       missingConfig ? 503 : 500
     );
   }

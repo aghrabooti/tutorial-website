@@ -331,13 +331,17 @@
                 token,
                 kind: "site",
                 filename: file.name || "site-image.jpg",
+                content_type: optimized.type,
             });
 
             if (!res?.upload_url) throw new Error(res?.error || "خطا در ساخت لینک آپلود");
 
             const put = await fetch(res.upload_url, {
                 method: "PUT",
-                headers: { "Content-Type": optimized.type || "application/octet-stream" },
+                headers: {
+                    "Content-Type": optimized.type || "application/octet-stream",
+                    "Authorization": `Bearer ${res.upload_token}`,
+                },
                 body: optimized,
             });
 

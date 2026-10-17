@@ -1,4 +1,4 @@
-import { createPublicSupabaseClient } from "../../../../lib/supabase-server.js";
+import { query } from "../../../../lib/postgres.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,24 +28,25 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createPublicSupabaseClient();
-    const { data: course, error } = await supabase
-      .from("courses")
-      .select("id, title, description, image_url, price, type")
-      .eq("id", String(rawId).trim())
-      .single();
-
-    if (error || !course) {
-      if (error) console.error("[api/functions/get-course] Read failed:", error);
-      return json({ success: false, error: "course not found" }, 404);
-    }
-
+    const { rows } = await query(
+      `SELECT id, title, description, image_url, price, type
+       FROM public.courses
+       WHERE id = $1
+       LIMIT 1`,
+      [String(rawId).trim()]
+    );
+    const course = rows[0] ?? null;
+    if (!course) return json({ success: false, error: "course not found" }, 404);
     return json({ success: true, course });
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(
       "Missing server environment variable:"
     );
-    console.error("[api/functions/get-course] Request failed:", error);
+    // Invalid UUID text cannot match a UUID column; preserve the old not-found response.
+    if (error?.code === "22P02") {
+      return json({ success: false, error: "course not found" }, 404);
+    }
+    console.error("[api/functions/get-course] PostgreSQL read failed:", error?.message ?? error);
     return json(
       { success: false, error: "course service unavailable" },
       missingConfig ? 503 : 500

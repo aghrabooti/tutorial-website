@@ -9,7 +9,7 @@
   • og: / twitter: (برای اشتراک‌گذاری زیبا در تلگرام و واتساپ)
   • favicon + apple-touch-icon + theme-color
   • داده‌ی ساختاریافته‌ی JSON-LD (Person / EducationalOrganization / WebSite)
-  • در صفحه‌ی دوره‌ها: Schema دوره‌های موجود در دیتابیس (فقط برای موتورهای جستجو)
+  • در صفحه‌ی دوره‌ها: Schema دوره‌های موجود در snapshot محلی (فقط برای موتورهای جستجو)
 
 ایمن است: چند بار هم اجرا شود، بلاک تکراری نمی‌سازد.
 
@@ -20,7 +20,6 @@ import json
 import pathlib
 import re
 import sys
-import urllib.request
 
 SITE = "https://www.mahdiazizi.com"
 
@@ -44,17 +43,10 @@ SUPPORT_URL = "https://t.me/math1360"
 
 # ── تأیید مالکیت گوگل (Google Search Console) ──
 # دو راه دارید؛ هر کدام راحت‌تر بود:
-#   ۱) TXT record در پنل Vercel → کاری در این فایل لازم نیست
+#   ۱) TXT record در پنل DNS دامنه → کاری در این فایل لازم نیست
 #   ۲) متا تگ → مقداری که گوگل می‌دهد را داخل کوتیشن زیر بگذارید و اسکریپت را اجرا کنید
 #      مثال: GOOGLE_SITE_VERIFICATION = "abcdEFGH1234567890"
 GOOGLE_SITE_VERIFICATION = ""
-
-SUPABASE_URL = "https://qbsfotperzzhuimnpmto.supabase.co"
-ANON_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFi"
-    "c2ZvdHBlcnp6aHVpbW5wbXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTM2NzIsImV4cCI6"
-    "MjA5OTI4OTY3Mn0.N8Pv0hz3yKLcTVvwfiRlKW-yEE-d4vc1rkroZBglyTA"
-)
 
 # نکته: سایتمپ در فایل ریشه‌ی sitemap.xml نگهداری می‌شود؛
 # صفحات تراکنشی (سبد خرید، ورود، داشبورد، پنل) عمداً در آن نیستند.
@@ -256,25 +248,19 @@ COURSES_FILE = ROOT / "scripts" / "seo-courses.json"
 
 
 def fetch_courses():
-    """اول از فایل محلی (اسنپ‌شات) و اگر نبود از API می‌خواند."""
-    if COURSES_FILE.exists():
-        try:
-            data = json.loads(COURSES_FILE.read_text(encoding="utf-8"))
-            print(f"  · {len(data)} دوره از {COURSES_FILE.name} خوانده شد")
-            return data
-        except Exception as exc:  # noqa: BLE001
-            print(f"  ! خواندن {COURSES_FILE.name} ممکن نشد ({exc})")
+    """فقط از snapshot محلی می‌خواند؛ ساخت SEO نباید به سرویس runtime وصل شود."""
+    if not COURSES_FILE.exists():
+        print(f"  · {COURSES_FILE.name} موجود نیست — Schema دوره‌ها رد شد")
+        return []
 
     try:
-        req = urllib.request.Request(
-            f"{SUPABASE_URL}/rest/v1/courses?select=id,title,description,grade,major,"
-            "price,discount_price,image_url,type&limit=60",
-            headers={"apikey": ANON_KEY, "Authorization": f"Bearer {ANON_KEY}"},
-        )
-        with urllib.request.urlopen(req, timeout=15) as res:
-            return json.loads(res.read().decode())
-    except Exception as exc:  # noqa: BLE001
-        print(f"  ! دریافت دوره‌ها ممکن نشد ({exc}) — Schema دوره‌ها رد شد")
+        data = json.loads(COURSES_FILE.read_text(encoding="utf-8"))
+        if not isinstance(data, list):
+            raise ValueError("ریشه‌ی snapshot باید آرایه باشد")
+        print(f"  · {len(data)} دوره از {COURSES_FILE.name} خوانده شد")
+        return data
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        print(f"  ! خواندن {COURSES_FILE.name} ممکن نشد ({exc}) — Schema دوره‌ها رد شد")
         return []
 
 
@@ -359,7 +345,11 @@ def main():
             print(f"! {name}: تگ </head> پیدا نشد")
             continue
 
-        html = html.replace("</head>", block + "</head>", 1)
+        loader_marker = "<!-- LOADER:START"
+        if loader_marker in html:
+            html = html.replace(loader_marker, block + loader_marker, 1)
+        else:
+            html = html.replace("</head>", block + "</head>", 1)
         path.write_text(html, encoding="utf-8")
         changed += 1
 

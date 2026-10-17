@@ -431,11 +431,11 @@ check("کد را با otp-verify بررسی می‌کند", doctor.includes('cal
 check("پیام حالت توسعه را تشخیص می‌دهد", doctor.includes("sms_configured"));
 check("قفل ۶۰ ثانیه‌ای را تشخیص می‌دهد", doctor.includes("retry_after"));
 check("خطای پنل پیامکی را تشخیص می‌دهد", doctor.includes("sms_failed"));
-check("SQL پاک‌کردن قفل را می‌سازد", doctor.includes("delete from public.otp_codes"));
-check("مسیر تنظیم سکرت sms.ir را توضیح می‌دهد",
+check("دور زدن دستی cooldown را تشویق نمی‌کند", !doctor.includes("delete from public.otp_codes") && doctor.includes("ردیف OTP را دستی حذف نکنید"));
+check("مسیر تنظیم متغیرهای sms.ir در environment سرور Next را توضیح می‌دهد",
     doctor.includes("SMS_IR_API_KEY") && doctor.includes("SMS_IR_TEMPLATE_ID") &&
     doctor.includes("SMSIR_API_KEY") && doctor.includes("SMSIR_TEMPLATE_ID") &&
-    doctor.includes("Secrets"));
+    doctor.includes("environment سرویس Next.js"));
 check("مسیر ساخت قالب در پنل sms.ir را توضیح می‌دهد",
     doctor.includes("#CODE#") && doctor.includes("ارسال سریع"));
 check("راهنمای ارسال با خط اختصاصی (Bulk) را هم دارد",
@@ -444,7 +444,9 @@ check("نام سکرت ناقص را در تشخیص نشان می‌دهد", do
 check("کد وضعیت پنل را در تشخیص نشان می‌دهد", doctor.includes("sms_status"));
 check("about Kavenegar still documented as fallback",
     doctor.includes("KAVENEGAR_API_KEY"));
-check("فقط به فانکشن زنده وصل می‌شود (بدون ذخیره‌ی چیزی)",
+check("فقط endpoint هم‌مبدأ را صدا می‌زند و به DB مستقیم وصل نمی‌شود",
+    doctor.includes('"send-otp": "/api/functions/send-otp"') &&
+    doctor.includes('"otp-verify": "/api/functions/otp-verify"') &&
     !doctor.includes("localStorage") && !doctor.includes("supabase.co/rest"));
 
 console.log("\n── فایل ابزار در سرور ──");
@@ -452,21 +454,17 @@ console.log("\n── فایل ابزار در سرور ──");
 const serve = read("tools/serve.py");
 check("سرور مسیر /otp-doctor را می‌شناسد", serve.includes("/otp-doctor"));
 check("لینک ابزار در صفحه‌ی دانلود هست", serve.includes('href="/otp-doctor"'));
-check("صفحه‌ی «گذاشتن کد روی سرور» وجود دارد", serve.includes("/deploy"));
-check("همان فایل send-otp را برای کپی می‌خواند",
-    serve.includes('supabase/functions/send-otp/index.ts'));
-check("انگشت‌نگاشت نسخه (sha256) را نشان می‌دهد", serve.includes("hashlib.sha256"));
-check("فایل خام .ts هم قابل دانلود است", serve.includes("/send-otp.ts"));
-check("برای هر فانکشن یک صفحه‌ی کپی جدا هست", serve.includes('path.startswith("/deploy/")'));
-check("فهرست فانکشن‌های نیازمند Deploy کامل است",
-    ["register-user", "site-content", "check-session", "logout-user", "send-otp"]
-        .every((n) => serve.includes(`"name": "${n}"`)));
-check("راهنمای ساخت فانکشن تازه (Create a new function) هست",
-    serve.includes("Create a new function"));
-check("site-content به‌عنوان «اختیاری» علامت خورده", serve.includes('"optional": True'));
-check("تأکید شده که فانکشن تازه‌ای ساخته نمی‌شود", serve.includes("هیچ فانکشن تازه‌ای لازم نیست"));
-check("راهنمای خاموش‌کردن Enforce JWT برای فانکشن عمومی هست",
-    serve.includes("Enforce JWT verification"));
+check("صفحه‌ی آرشیو legacy به‌جای deploy فعال Edge وجود دارد",
+    serve.includes("/deploy") && serve.includes("آرشیو legacy Edge Functions"));
+check("کد Edge قدیمی فقط برای بررسی قابل دانلود است",
+    serve.includes('supabase/functions/send-otp/index.ts') && serve.includes("legacy .ts downloads"));
+check("صفحه‌های کپی/deploy تک‌تک Edgeها غیرفعال‌اند",
+    serve.includes("def deploy_function_page(name):") && serve.includes("return None"));
+check("هشدار می‌دهد APIهای مرورگر در Next.js هستند و allowlist خالی است",
+    serve.includes("Next.js") && serve.includes("allowlist پراکسی compatibility خالی"));
+check("ابزار deploy قدیمی را برای API فعال تبلیغ نمی‌کند",
+    !serve.includes("Create a new function") && !serve.includes('"name": "send-otp"') &&
+    !serve.includes('"optional": True'));
 
 /* ═══════════════════════════════════════════════════════════════ */
 

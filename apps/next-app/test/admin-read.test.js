@@ -9,10 +9,18 @@ import { POST as updateCourse } from "../app/api/functions/admin-update-course/r
 import { POST as saveCourseSessions } from "../app/api/functions/admin-save-sessions/route.js";
 import { POST as getAdminOverview } from "../app/api/functions/admin-overview/route.js";
 import { POST as getAdminUploadUrl } from "../app/api/functions/admin-upload-url/route.js";
+import { POST as updateSiteContent } from "../app/api/functions/site-content/route.js";
+import { verifyStorageToken } from "../lib/local-storage.js";
+import { hashSessionToken } from "../lib/session-token.js";
+import {
+  installPostgresPoolForTests,
+  resetPostgresPoolForTests,
+} from "../lib/postgres.js";
 
 const envKeys = [
-  "SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
+  "DATABASE_URL",
+  "NODE_ENV",
+  "STORAGE_SIGNING_SECRET",
   "ZARINPAL_MERCHANT_ID",
   "ZARINPAL_SANDBOX",
   "ZARINPAL_CALLBACK_URL",
@@ -24,8 +32,8 @@ const session = { id: "session-1", user_id: "admin-1", expires_at: "2099-01-01T0
 const admin = { id: "admin-1", role: "admin" };
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
+  process.env.NODE_ENV = "test";
 }
 
 function makeRequest(path, body) {
@@ -36,28 +44,37 @@ function makeRequest(path, body) {
   });
 }
 
-function mockAdmin(respond, { role = "admin" } = {}) {
+function mockPostgres(handler) {
   const requests = [];
-  globalThis.fetch = async (input, init = {}) => {
-    const url = new URL(String(input));
-    const request = { url, method: init.method ?? "GET", init };
-    requests.push(request);
-
-    if (url.pathname.endsWith("/user_sessions")) return Response.json(session);
-    if (
-      url.pathname.endsWith("/site_users") &&
-      url.searchParams.get("select")?.replace(/\s/g, "") === "id,role" &&
-      request.method === "GET"
-    ) {
-      return Response.json(role ? { ...admin, role } : null);
-    }
-    return respond(request);
+  const runQuery = async (text, values = []) => {
+    requests.push({ text, values });
+    if (/^(BEGIN|COMMIT|ROLLBACK)$/i.test(text.trim())) return { rows: [], rowCount: 0 };
+    return handler(text, values);
   };
+  installPostgresPoolForTests({
+    query: runQuery,
+    async connect() {
+      return { query: runQuery, release() {} };
+    },
+  });
   return requests;
+}
+
+function mockPostgresAdmin(respond, { role = "admin" } = {}) {
+  return mockPostgres((text, values) => {
+    if (text.includes("FROM public.user_sessions")) {
+      return { rows: [{ id: session.id, user_id: admin.id, expired: false }], rowCount: 1 };
+    }
+    if (text.includes("FROM public.site_users") && /SELECT\s+id,\s*role/i.test(text)) {
+      return { rows: role ? [{ ...admin, role }] : [], rowCount: role ? 1 : 0 };
+    }
+    return respond(text, values);
+  });
 }
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  resetPostgresPoolForTests();
   for (const key of envKeys) {
     if (previousEnv[key] === undefined) delete process.env[key];
     else process.env[key] = previousEnv[key];
@@ -66,7 +83,7 @@ afterEach(() => {
 
 test("admin API rejects non-admin sessions before reading privileged data", async () => {
   setTestEnv();
-  const requests = mockAdmin(() => {
+  const requests = mockPostgresAdmin(() => {
     throw new Error("privileged query must not run for a student");
   }, { role: "student" });
 
@@ -82,9 +99,9 @@ test("admin API rejects non-admin sessions before reading privileged data", asyn
 test("POST /api/functions/admin-get-courses returns the established course fields", async () => {
   setTestEnv();
   const courses = [{ id: "course-1", title: "ریاضی", type: "course", price: 100 }];
-  mockAdmin((request) => {
-    if (request.url.pathname.endsWith("/courses")) return Response.json(courses);
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+  mockPostgresAdmin((text) => {
+    if (text.includes("FROM public.courses")) return { rows: courses, rowCount: courses.length };
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await getAdminCourses(
@@ -98,9 +115,12 @@ test("POST /api/functions/admin-get-courses returns the established course field
 test("POST /api/functions/admin-get-sessions returns sessions ordered by sequence", async () => {
   setTestEnv();
   const sessions = [{ id: "s1", session_number: 1 }, { id: "s2", session_number: 2 }];
-  mockAdmin((request) => {
-    if (request.url.pathname.endsWith("/course_sessions")) return Response.json(sessions);
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+  const queries = mockPostgresAdmin((text, values) => {
+    if (text.includes("FROM public.course_sessions")) {
+      assert.deepEqual(values, ["course-1"]);
+      return { rows: sessions, rowCount: sessions.length };
+    }
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await getAdminSessions(
@@ -117,9 +137,11 @@ test("POST /api/functions/admin-get-sessions returns sessions ordered by sequenc
 test("POST /api/functions/admin-users keeps the limited safe user projection", async () => {
   setTestEnv();
   const users = [{ id: "user-1", phone: "989120000000", first_name: "سارا", last_name: "رضایی", role: "student" }];
-  mockAdmin((request) => {
-    if (request.url.pathname.endsWith("/site_users")) return Response.json(users);
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+  mockPostgresAdmin((text) => {
+    if (text.includes("FROM public.site_users") && text.includes("LIMIT 300")) {
+      return { rows: users, rowCount: users.length };
+    }
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await getAdminUsers(
@@ -144,17 +166,18 @@ test("POST /api/functions/admin-orders decorates orders with customer and shipme
     ref_id: 98765,
     created_at: "2026-10-14T00:00:00.000Z",
   };
-  const requests = mockAdmin((request) => {
-    const path = request.url.pathname;
-    if (path.endsWith("/orders")) return Response.json([order]);
-    if (path.endsWith("/courses")) {
-      return Response.json([{ id: "book-1", type: "book", requires_shipping: true }]);
+  const queries = mockPostgresAdmin((text) => {
+    if (text.includes("FROM public.orders")) return { rows: [order], rowCount: 1 };
+    if (text.includes("FROM public.courses")) {
+      return { rows: [{ id: "book-1", type: "book", requires_shipping: true }], rowCount: 1 };
     }
-    if (path.endsWith("/shipments")) {
-      return Response.json([{ order_id: "order-1", status: "sent", tracking_code: "TR-1" }]);
+    if (text.includes("FROM public.shipments")) {
+      return { rows: [{ order_id: "order-1", status: "sent", tracking_code: "TR-1" }], rowCount: 1 };
     }
-    if (path.endsWith("/site_users")) return Response.json([customer]);
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+    if (text.includes("FROM public.site_users") && text.includes("first_name")) {
+      return { rows: [customer], rowCount: 1 };
+    }
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await getAdminOrders(
@@ -178,17 +201,18 @@ test("POST /api/functions/admin-orders decorates orders with customer and shipme
     shipment_status: "sent",
     tracking_code: "TR-1",
   });
-  assert.ok(requests.some((request) => request.url.pathname.endsWith("/shipments")));
+  assert.ok(queries.some((query) => query.text.includes("FROM public.shipments")));
 });
 
 test("POST /api/functions/admin-create-course stores normalized optional fields and returns the created course", async () => {
   setTestEnv();
   const course = { id: "course-new", title: "ریاضی", type: "course", price: 120 };
-  const requests = mockAdmin((request) => {
-    if (request.url.pathname.endsWith("/courses") && request.method === "POST") {
-      return Response.json(course, { status: 201 });
+  const queries = mockPostgresAdmin((text, values) => {
+    if (text.includes("INSERT INTO public.courses")) {
+      assert.deepEqual(values, ["ریاضی", "11", null, "course", null, 120, null, null, null]);
+      return { rows: [course], rowCount: 1 };
     }
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await createCourse(
@@ -208,27 +232,19 @@ test("POST /api/functions/admin-create-course stores normalized optional fields 
     course,
     message: "محتوا ساخته شد",
   });
-  const insert = requests.find((request) => request.url.pathname.endsWith("/courses") && request.method === "POST");
-  assert.deepEqual(JSON.parse(insert.init.body), {
-    title: "ریاضی",
-    grade: "11",
-    category: null,
-    type: "course",
-    description: null,
-    price: 120,
-    discount_price: null,
-    image_url: null,
-    major: null,
-  });
+  const insert = queries.find((query) => query.text.includes("INSERT INTO public.courses"));
+  assert.deepEqual(insert.values, ["ریاضی", "11", null, "course", null, 120, null, null, null]);
 });
 
 test("POST /api/functions/admin-update-course only updates editable fields and converts empty values to null", async () => {
   setTestEnv();
-  const requests = mockAdmin((request) => {
-    if (request.url.pathname.endsWith("/courses") && request.method === "PATCH") {
-      return new Response(null, { status: 204 });
+  const queries = mockPostgresAdmin((text, values) => {
+    if (text.startsWith("UPDATE public.courses")) {
+      assert.match(text, /title = \$1, major = \$2 WHERE id = \$3/);
+      assert.deepEqual(values, ["جبر", null, "course-1"]);
+      return { rows: [], rowCount: 1 };
     }
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await updateCourse(
@@ -246,24 +262,22 @@ test("POST /api/functions/admin-update-course only updates editable fields and c
     success: true,
     message: "دوره با موفقیت بروزرسانی شد",
   });
-  const update = requests.find((request) => request.method === "PATCH");
-  assert.deepEqual(JSON.parse(update.init.body), { title: "جبر", major: null });
-  assert.equal(update.url.searchParams.get("id"), "eq.course-1");
+  const update = queries.find((query) => query.text.startsWith("UPDATE public.courses"));
+  assert.deepEqual(update.values, ["جبر", null, "course-1"]);
 });
 
 test("POST /api/functions/admin-save-sessions deletes removed rows and upserts the validated list", async () => {
   setTestEnv();
-  const requests = mockAdmin((request) => {
-    if (request.url.pathname.endsWith("/course_sessions") && request.method === "GET") {
-      return Response.json([{ id: "session-1" }, { id: "session-deleted" }]);
+  const queries = mockPostgresAdmin(async (text, values) => {
+    if (text.startsWith("SELECT id FROM public.course_sessions")) {
+      return { rows: [{ id: "session-1" }, { id: "session-deleted" }], rowCount: 2 };
     }
-    if (request.url.pathname.endsWith("/course_sessions") && request.method === "DELETE") {
-      return new Response(null, { status: 204 });
+    if (text.startsWith("DELETE FROM public.course_sessions")) {
+      assert.deepEqual(values, ["course-1", ["session-1"]]);
+      return { rows: [], rowCount: 1 };
     }
-    if (request.url.pathname.endsWith("/course_sessions") && request.method === "POST") {
-      return new Response(null, { status: 201 });
-    }
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+    if (text.startsWith("INSERT INTO public.course_sessions")) return { rows: [], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await saveCourseSessions(
@@ -279,33 +293,15 @@ test("POST /api/functions/admin-save-sessions deletes removed rows and upserts t
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { success: true });
-  const deletion = requests.find((request) => request.method === "DELETE");
-  assert.equal(deletion.url.searchParams.get("id"), "in.(session-deleted)");
-  const upsert = requests.find((request) => request.method === "POST");
-  assert.deepEqual(JSON.parse(upsert.init.body), [
-    {
-      id: "session-1",
-      course_id: "course-1",
-      session_number: 1,
-      title: "مقدمه",
-      video_url: null,
-      is_online: true,
-      online_url: "https://live.example/class",
-      scheduled_at: null,
-    },
-    {
-      course_id: "course-1",
-      session_number: 2,
-      title: "تمرین",
-      video_url: "/video.mp4",
-      is_online: false,
-      online_url: null,
-      scheduled_at: null,
-    },
-  ]);
+  const deletion = queries.find((query) => query.text.startsWith("DELETE FROM public.course_sessions"));
+  assert.deepEqual(deletion.values, ["course-1", ["session-1"]]);
+  const upserts = queries.filter((query) => query.text.startsWith("INSERT INTO public.course_sessions"));
+  assert.equal(upserts.length, 2);
+  assert.deepEqual(upserts[0].values, ["session-1", "course-1", 1, "مقدمه", null, true, "https://live.example/class", null]);
+  assert.deepEqual(upserts[1].values, ["course-1", 2, "تمرین", "/video.mp4", false, null, null]);
 });
 
-test("POST /api/functions/admin-overview reports sales, shipping gaps, and mirrored gateway status", async () => {
+test("POST /api/functions/admin-overview reports sales, shipping gaps, and shared server-side gateway status", async () => {
   setTestEnv();
   process.env.ZARINPAL_MERCHANT_ID = "12345678-1234-1234-1234-123456789abc";
   process.env.ZARINPAL_SANDBOX = "false";
@@ -315,26 +311,22 @@ test("POST /api/functions/admin-overview reports sales, shipping gaps, and mirro
     { id: "order-book", amount_rial: 150, items: [{ course_id: "book-1" }], course_ids: ["book-1"] },
     { id: "order-course", amount_rial: 200, items: [{ course_id: "course-1" }], course_ids: ["course-1"] },
   ];
-  const requests = mockAdmin((request) => {
-    const path = request.url.pathname;
-    if (request.method === "HEAD" && path.endsWith("/site_users")) {
-      return new Response(null, { status: 200, headers: { "content-range": "0-0/12" } });
+  const queries = mockPostgresAdmin((text) => {
+    if (text.includes("COUNT(*)::int AS count FROM public.site_users")) return { rows: [{ count: 12 }], rowCount: 1 };
+    if (text.includes("COUNT(*)::int AS count FROM public.orders")) return { rows: [{ count: 4 }], rowCount: 1 };
+    if (text.includes("FROM public.orders") && text.includes("LIMIT 500")) return { rows: paidOrders, rowCount: paidOrders.length };
+    if (text.includes("COUNT(*)::int AS count FROM public.shipments")) return { rows: [{ count: 2 }], rowCount: 1 };
+    if (text.includes("FROM public.courses")) {
+      return {
+        rows: [
+          { id: "book-1", type: "book", requires_shipping: true },
+          { id: "course-1", type: "course", requires_shipping: false },
+        ],
+        rowCount: 2,
+      };
     }
-    if (request.method === "HEAD" && path.endsWith("/orders")) {
-      return new Response(null, { status: 200, headers: { "content-range": "0-0/4" } });
-    }
-    if (request.method === "HEAD" && path.endsWith("/shipments")) {
-      return new Response(null, { status: 200, headers: { "content-range": "0-0/2" } });
-    }
-    if (path.endsWith("/orders")) return Response.json(paidOrders);
-    if (path.endsWith("/courses")) {
-      return Response.json([
-        { id: "book-1", type: "book", requires_shipping: true },
-        { id: "course-1", type: "course", requires_shipping: false },
-      ]);
-    }
-    if (path.endsWith("/shipments")) return Response.json([]);
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+    if (text.includes("FROM public.shipments WHERE order_id")) return { rows: [], rowCount: 0 };
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await getAdminOverview(
@@ -359,34 +351,107 @@ test("POST /api/functions/admin-overview reports sales, shipping gaps, and mirro
     price_to_rial_factor: 10,
     problems: [],
   });
-  assert.ok(requests.length >= 8);
+  assert.ok(queries.length >= 8);
 });
 
-test("POST /api/functions/admin-upload-url signs an image upload and returns its public URL", async () => {
-  setTestEnv();
-  const requests = mockAdmin((request) => {
-    if (request.url.pathname.includes("/storage/v1/object/upload/sign/")) {
-      return Response.json({
-        url: `${request.url.pathname.replace("/storage/v1", "")}?token=signed-upload-token`,
-      });
-    }
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+test("POST /api/functions/admin-upload-url issues a scoped short-lived local upload token to a PostgreSQL admin", async () => {
+  process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
+  process.env.STORAGE_SIGNING_SECRET = "x".repeat(64);
+  const queries = [];
+  installPostgresPoolForTests({
+    async query(text, values = []) {
+      queries.push({ text, values });
+      if (text.includes("FROM public.user_sessions")) {
+        return { rows: [{ id: "session-1", user_id: "admin-1", expired: false }], rowCount: 1 };
+      }
+      if (text.includes("FROM public.site_users")) {
+        return { rows: [{ id: "admin-1", role: "admin" }], rowCount: 1 };
+      }
+      throw new Error(`Unexpected SQL: ${text}`);
+    },
   });
 
   const response = await getAdminUploadUrl(
     makeRequest("/api/functions/admin-upload-url", {
-      token: "admin-token",
+      token: "admin-session-token",
       kind: "image",
       filename: "Cover Photo.JPG",
+      content_type: "image/jpeg",
     })
   );
   const body = await response.json();
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
-  assert.match(body.path, /^courses\/\d+-cover-photo.jpg$/);
-  assert.equal(body.upload_url, `https://project.supabase.test/storage/v1/object/upload/sign/course-images/${body.path}?token=signed-upload-token`);
-  assert.equal(body.public_url, `https://project.supabase.test/storage/v1/object/public/course-images/${body.path}`);
-  const storageRequest = requests.find((request) => request.url.pathname.includes("/storage/v1/object/upload/sign/"));
-  assert.equal(storageRequest.method, "POST");
+  assert.match(body.path, /^courses\/[0-9a-f-]+-cover-photo.jpg$/);
+  assert.equal(body.upload_url, "/api/storage/upload");
+  assert.equal(body.public_url, `/storage/course-images/${body.path}`);
+  assert.equal(typeof body.upload_token, "string");
+  const claims = verifyStorageToken(body.upload_token, "upload");
+  assert.deepEqual(
+    { bucket: claims.bucket, path: claims.path, maxBytes: claims.maxBytes, overwrite: claims.overwrite },
+    { bucket: "course-images", path: body.path, maxBytes: 10 * 1024 * 1024, overwrite: false }
+  );
+  assert.equal(queries.length, 2);
+  assert.deepEqual(queries[0].values, [hashSessionToken("admin-session-token")]);
+  assert.deepEqual(queries[1].values, ["admin-1"]);
+});
+
+test("POST /api/functions/site-content saves sanitized content with PostgreSQL admin attribution", async () => {
+  setTestEnv();
+  process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
+  const queries = mockPostgres(async (text) => {
+    if (/^(BEGIN|COMMIT|ROLLBACK)$/i.test(text.trim())) return { rows: [], rowCount: 0 };
+    if (text.includes("FROM public.user_sessions")) {
+      return { rows: [{ id: "session-1", user_id: "admin-1", expired: false }], rowCount: 1 };
+    }
+    if (text.includes("FROM public.site_users")) {
+      return { rows: [{ id: "admin-1", role: "admin" }], rowCount: 1 };
+    }
+    if (text.includes("INSERT INTO public.site_content")) return { rows: [], rowCount: 2 };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
+
+  const response = await updateSiteContent(makeRequest("/api/functions/site-content", {
+    token: "admin-token",
+    action: "set",
+    items: {
+      "home.title": "عنوان تازه",
+      "bad key": "ignored",
+      "course.description": "x".repeat(8005),
+    },
+  }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { success: true, saved: 2 });
+  const upsert = queries.find((query) => query.text.includes("INSERT INTO public.site_content"));
+  assert.match(upsert.text, /ON CONFLICT \(key\) DO UPDATE/);
+  assert.deepEqual(upsert.values, ["home.title", "عنوان تازه", "admin-1", "course.description", "x".repeat(8000), "admin-1"]);
+  assert.deepEqual(queries[0].values, [hashSessionToken("admin-token")]);
+});
+
+test("POST /api/functions/site-content resets only valid keys for an active PostgreSQL admin", async () => {
+  setTestEnv();
+  process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
+  const queries = mockPostgres(async (text) => {
+    if (text.includes("FROM public.user_sessions")) {
+      return { rows: [{ id: "session-1", user_id: "admin-1", expired: false }], rowCount: 1 };
+    }
+    if (text.includes("FROM public.site_users")) {
+      return { rows: [{ id: "admin-1", role: "admin" }], rowCount: 1 };
+    }
+    if (text.includes("DELETE FROM public.site_content")) return { rows: [], rowCount: 2 };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
+
+  const response = await updateSiteContent(makeRequest("/api/functions/site-content", {
+    token: "admin-token",
+    action: "reset",
+    keys: ["home.title", "not valid", "course.description"],
+  }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { success: true, removed: 2 });
+  const deletion = queries.find((query) => query.text.includes("DELETE FROM public.site_content"));
+  assert.match(deletion.text, /key = ANY\(\$1::text\[\]\)/);
+  assert.deepEqual(deletion.values, [["home.title", "course.description"]]);
 });

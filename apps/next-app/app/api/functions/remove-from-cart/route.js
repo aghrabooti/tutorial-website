@@ -1,6 +1,5 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
-import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
-import { findActiveSessionUser } from "../../../../lib/session-user.js";
+import { query } from "../../../../lib/postgres.js";
+import { findActivePostgresSessionUser, isValidSessionToken, jsonNoStore } from "../../../../lib/session-token.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,36 +19,30 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSessionUser(supabase, token);
+    const sessionResult = await findActivePostgresSessionUser(token);
+    if (sessionResult.error && !sessionResult.expired) throw sessionResult.error;
     if (!sessionResult.session) {
       return jsonNoStore(
         { success: false, error: sessionResult.expired ? "session expired" : "invalid session" },
         401
       );
     }
-    if (!sessionResult.user) {
-      return jsonNoStore({ success: false, error: "user not found" }, 404);
-    }
+    if (sessionResult.userError) throw sessionResult.userError;
+    if (!sessionResult.user) return jsonNoStore({ success: false, error: "user not found" }, 404);
 
-    const { data: deleted, error } = await supabase
-      .from("cart_items")
-      .delete()
-      .eq("id", cartItemId)
-      .eq("user_id", sessionResult.user.id)
-      .select();
-
-    if (error) {
-      console.error("[api/functions/remove-from-cart] Delete failed:", error);
-      return jsonNoStore({ success: false, error: error.message }, 500);
-    }
+    const { rows: deleted } = await query(
+      `DELETE FROM public.cart_items
+       WHERE id = $1 AND user_id = $2
+       RETURNING *`,
+      [cartItemId, sessionResult.user.id]
+    );
 
     return jsonNoStore({ success: true, message: "removed from cart", deleted });
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(
       "Missing server environment variable:"
     );
-    console.error("[api/functions/remove-from-cart] Request failed:", error);
+    console.error("[api/functions/remove-from-cart] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
       {
         success: false,

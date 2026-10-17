@@ -7,16 +7,16 @@ import { POST as getMyAddress } from "../app/api/functions/get-my-address/route.
 import { POST as saveShippingAddress } from "../app/api/functions/save-shipping-address/route.js";
 import { POST as getMyCourses } from "../app/api/functions/get-my-courses/route.js";
 import { POST as checkCourseAccess } from "../app/api/functions/check-course-access/route.js";
+import {
+  installPostgresPoolForTests,
+  resetPostgresPoolForTests,
+} from "../lib/postgres.js";
+import { hashSessionToken } from "../lib/session-token.js";
 
-const envKeys = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+const envKeys = ["DATABASE_URL", "NODE_ENV"];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
 
-const session = {
-  id: "session-1",
-  user_id: "user-1",
-  expires_at: "2099-01-01T00:00:00.000Z",
-};
 const user = { id: "user-1", phone: "989120000000", first_name: "سارا", last_name: "رضایی" };
 const course = {
   id: "course-1",
@@ -30,10 +30,19 @@ const course = {
   type: "course",
   major: "ریاضی",
 };
+const address = {
+  full_name: "سارا رضایی",
+  phone: "09123456789",
+  province: "تهران",
+  city: "تهران",
+  address: "خیابان آزادی",
+  postal_code: "1234567890",
+  updated_at: "2026-01-01T00:00:00.000Z",
+};
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
+  process.env.NODE_ENV = "test";
 }
 
 function makeRequest(path, body) {
@@ -44,32 +53,39 @@ function makeRequest(path, body) {
   });
 }
 
-function mockCommerce(respond) {
-  const requests = [];
-  globalThis.fetch = async (input, init = {}) => {
-    const url = new URL(String(input));
-    const request = {
-      url,
-      method: init.method ?? "GET",
-      body: init.body ? JSON.parse(init.body) : null,
-      init,
-    };
-    requests.push(request);
-
-    if (url.pathname.endsWith("/user_sessions") && request.method === "GET") {
-      return Response.json(session);
+function mockPostgres(respond) {
+  const queries = [];
+  const runQuery = async (text, values = []) => {
+    queries.push({ text, values });
+    if (/^(BEGIN|COMMIT|ROLLBACK)$/i.test(text.trim())) return { rows: [], rowCount: 0 };
+    if (text.includes("FROM public.user_sessions")) {
+      return {
+        rows: [{ id: "session-1", user_id: "user-1", expired: false }],
+        rowCount: 1,
+      };
     }
-    if (url.pathname.endsWith("/site_users") && request.method === "GET") {
-      return Response.json(user);
-    }
-
-    return respond(request);
+    if (text.includes("FROM public.site_users")) return { rows: [user], rowCount: 1 };
+    return respond(text, values, queries);
   };
-  return requests;
+  installPostgresPoolForTests({
+    query: runQuery,
+    async connect() {
+      return { query: runQuery, release() {} };
+    },
+  });
+  globalThis.fetch = async (input) => {
+    throw new Error(`Unexpected external request: ${String(input)}`);
+  };
+  return queries;
 }
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  const currentNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = "test";
+  resetPostgresPoolForTests();
+  if (currentNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = currentNodeEnv;
   for (const key of envKeys) {
     if (previousEnv[key] === undefined) delete process.env[key];
     else process.env[key] = previousEnv[key];
@@ -78,18 +94,11 @@ afterEach(() => {
 
 test("POST /api/functions/add-to-cart checks ownership and adds an unpurchased course", async () => {
   setTestEnv();
-  const requests = mockCommerce((request) => {
-    if (request.url.pathname.endsWith("/courses") && request.method === "GET") {
-      return Response.json({ id: "course-1" });
-    }
-    if (request.url.pathname.endsWith("/user_purchases")) return Response.json(null);
-    if (request.url.pathname.endsWith("/cart_items") && request.method === "GET") {
-      return Response.json(null);
-    }
-    if (request.url.pathname.endsWith("/cart_items") && request.method === "POST") {
-      return new Response(null, { status: 201 });
-    }
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+  const queries = mockPostgres(async (text) => {
+    if (text.includes("FROM public.courses")) return { rows: [{ id: "course-1" }], rowCount: 1 };
+    if (text.includes("AS purchased")) return { rows: [{ purchased: false }], rowCount: 1 };
+    if (text.includes("INSERT INTO public.cart_items")) return { rows: [{ id: "cart-1" }], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await addToCart(
@@ -98,17 +107,17 @@ test("POST /api/functions/add-to-cart checks ownership and adds an unpurchased c
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { success: true, message: "added to cart" });
-  const insert = requests.find((request) => request.url.pathname.endsWith("/cart_items") && request.method === "POST");
-  assert.deepEqual(insert.body, { user_id: "user-1", course_id: "course-1" });
-  assert.equal(requests[0].url.searchParams.get("token_hash")?.length, 67);
+  const insert = queries.find((query) => query.text.includes("INSERT INTO public.cart_items"));
+  assert.deepEqual(insert.values, ["user-1", "course-1"]);
+  assert.deepEqual(queries[0].values, [hashSessionToken("commerce-token")]);
 });
 
-test("POST /api/functions/add-to-cart refuses a course already purchased", async () => {
+test("POST /api/functions/add-to-cart refuses paid or recorded purchases before insertion", async () => {
   setTestEnv();
-  const requests = mockCommerce((request) => {
-    if (request.url.pathname.endsWith("/courses")) return Response.json({ id: "course-1" });
-    if (request.url.pathname.endsWith("/user_purchases")) return Response.json({ id: "purchase-1" });
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+  const queries = mockPostgres(async (text) => {
+    if (text.includes("FROM public.courses")) return { rows: [{ id: "course-1" }], rowCount: 1 };
+    if (text.includes("AS purchased")) return { rows: [{ purchased: true }], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await addToCart(
@@ -117,16 +126,47 @@ test("POST /api/functions/add-to-cart refuses a course already purchased", async
 
   assert.equal(response.status, 409);
   assert.deepEqual(await response.json(), { success: false, error: "already purchased" });
-  assert.equal(requests.some((request) => request.url.pathname.endsWith("/cart_items")), false);
+  assert.equal(queries.some((query) => query.text.includes("INSERT INTO public.cart_items")), false);
+});
+
+test("POST /api/functions/add-to-cart treats concurrent duplicate inserts as already in cart", async () => {
+  setTestEnv();
+  mockPostgres(async (text) => {
+    if (text.includes("FROM public.courses")) return { rows: [{ id: "course-1" }], rowCount: 1 };
+    if (text.includes("AS purchased")) return { rows: [{ purchased: false }], rowCount: 1 };
+    if (text.includes("INSERT INTO public.cart_items")) return { rows: [], rowCount: 0 };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
+  const response = await addToCart(
+    makeRequest("/api/functions/add-to-cart", { token: "commerce-token", course_id: "course-1" })
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { success: true, message: "already in cart" });
 });
 
 test("POST /api/functions/get-cart preserves nested course rows and total calculations", async () => {
   setTestEnv();
-  mockCommerce((request) => {
-    if (request.url.pathname.endsWith("/cart_items")) {
-      return Response.json([{ id: "cart-1", created_at: "2026-01-01T00:00:00Z", courses: course }]);
+  mockPostgres(async (text) => {
+    if (text.includes("INNER JOIN public.courses")) {
+      return {
+        rows: [{
+          cart_item_id: "cart-1",
+          created_at: "2026-01-01T00:00:00.000Z",
+          course_id: course.id,
+          course_title: course.title,
+          course_description: course.description,
+          course_price: course.price,
+          course_discount_price: course.discount_price,
+          course_image_url: course.image_url,
+          course_grade: course.grade,
+          course_category: course.category,
+          course_type: course.type,
+          course_major: course.major,
+        }],
+        rowCount: 1,
+      };
     }
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await getCart(makeRequest("/api/functions/get-cart", { token: "commerce-token" }));
@@ -134,7 +174,7 @@ test("POST /api/functions/get-cart preserves nested course rows and total calcul
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
-  assert.equal(body.items[0].courses.id, "course-1");
+  assert.deepEqual(body.items, [{ id: "cart-1", created_at: "2026-01-01T00:00:00.000Z", courses: course }]);
   assert.equal(body.total_price, 150);
   assert.equal(body.total_discount, 50);
   assert.equal(body.count, 1);
@@ -142,11 +182,13 @@ test("POST /api/functions/get-cart preserves nested course rows and total calcul
 
 test("POST /api/functions/remove-from-cart scopes deletion to the session owner", async () => {
   setTestEnv();
-  const requests = mockCommerce((request) => {
-    if (request.url.pathname.endsWith("/cart_items") && request.method === "DELETE") {
-      return Response.json([{ id: "cart-1" }]);
+  const queries = mockPostgres(async (text, values) => {
+    if (text.startsWith("DELETE FROM public.cart_items")) {
+      assert.match(text, /WHERE id = \$1 AND user_id = \$2/);
+      assert.deepEqual(values, ["cart-1", "user-1"]);
+      return { rows: [{ id: "cart-1" }], rowCount: 1 };
     }
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await removeFromCart(
@@ -162,32 +204,19 @@ test("POST /api/functions/remove-from-cart scopes deletion to the session owner"
     message: "removed from cart",
     deleted: [{ id: "cart-1" }],
   });
-  const deletion = requests.find((request) => request.method === "DELETE");
-  assert.equal(deletion.url.searchParams.get("id"), "eq.cart-1");
-  assert.equal(deletion.url.searchParams.get("user_id"), "eq.user-1");
+  assert.ok(queries.some((query) => query.text.startsWith("DELETE FROM public.cart_items")));
 });
 
 test("shipping address routes convert Persian digits and save/retrieve the user's address", async () => {
   setTestEnv();
-  const address = {
-    full_name: "سارا رضایی",
-    phone: "09123456789",
-    province: "تهران",
-    city: "تهران",
-    address: "خیابان آزادی",
-    postal_code: "1234567890",
-    updated_at: "2026-01-01T00:00:00.000Z",
-  };
-  const requests = mockCommerce((request) => {
-    if (request.url.pathname.endsWith("/user_addresses") && request.method === "GET") {
-      return request.url.searchParams.get("select") === "user_id"
-        ? Response.json({ user_id: "user-1" })
-        : Response.json(address);
+  const queries = mockPostgres(async (text, values) => {
+    if (text.startsWith("INSERT INTO public.user_addresses")) {
+      assert.match(text, /ON CONFLICT \(user_id\) DO UPDATE/);
+      assert.deepEqual(values, ["user-1", "سارا رضایی", "09123456789", "تهران", "تهران", "خیابان آزادی", "1234567890"]);
+      return { rows: [], rowCount: 1 };
     }
-    if (request.url.pathname.endsWith("/user_addresses") && request.method === "PATCH") {
-      return new Response(null, { status: 204 });
-    }
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+    if (text.startsWith("SELECT full_name, phone, province")) return { rows: [address], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const saveResponse = await saveShippingAddress(
@@ -203,30 +232,35 @@ test("shipping address routes convert Persian digits and save/retrieve the user'
   );
   assert.equal(saveResponse.status, 200);
   assert.deepEqual(await saveResponse.json(), { success: true });
-  const update = requests.find((request) => request.url.pathname.endsWith("/user_addresses") && request.method === "PATCH");
-  assert.equal(update.body.phone, "09123456789");
-  assert.equal(update.body.postal_code, "1234567890");
-  assert.equal(update.body.user_id, "user-1");
 
   const readResponse = await getMyAddress(
     makeRequest("/api/functions/get-my-address", { token: "commerce-token" })
   );
   assert.equal(readResponse.status, 200);
   assert.deepEqual(await readResponse.json(), { success: true, address });
+  assert.ok(queries.some((query) => query.text.startsWith("INSERT INTO public.user_addresses")));
+  assert.ok(queries.some((query) => query.text.startsWith("SELECT full_name, phone, province")));
 });
 
 test("POST /api/functions/get-my-courses returns unique paid courses in the legacy wrapper shape", async () => {
   setTestEnv();
   const course2 = { ...course, id: "course-2", title: "دوره‌ی دوم" };
-  const requests = mockCommerce((request) => {
-    if (request.url.pathname.endsWith("/orders")) {
-      return Response.json([
-        { course_ids: ["course-1", "course-2"] },
-        { course_ids: ["course-1"] },
-      ]);
+  const queries = mockPostgres(async (text, values) => {
+    if (text.includes("FROM public.orders")) {
+      assert.deepEqual(values, ["user-1"]);
+      return {
+        rows: [
+          { course_ids: ["course-1", "course-2"] },
+          { course_ids: ["course-1"] },
+        ],
+        rowCount: 2,
+      };
     }
-    if (request.url.pathname.endsWith("/courses")) return Response.json([course, course2]);
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+    if (text.includes("FROM public.courses")) {
+      assert.deepEqual(values, [["course-1", "course-2"]]);
+      return { rows: [course2, course], rowCount: 2 };
+    }
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await getMyCourses(
@@ -236,16 +270,21 @@ test("POST /api/functions/get-my-courses returns unique paid courses in the lega
 
   assert.equal(response.status, 200);
   assert.deepEqual(body.courses, [{ courses: course }, { courses: course2 }]);
-  const courseQuery = requests.find((request) => request.url.pathname.endsWith("/courses"));
-  assert.equal(courseQuery.url.searchParams.get("id"), "in.(course-1,course-2)");
+  assert.ok(queries.some((query) => query.text.includes("status = 'paid'")));
 });
 
 test("POST /api/functions/check-course-access reports paid ownership from orders", async () => {
   setTestEnv();
-  const requests = mockCommerce((request) => {
-    if (request.url.pathname.endsWith("/courses")) return Response.json(course);
-    if (request.url.pathname.endsWith("/orders")) return Response.json([{ id: "order-1" }]);
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
+  const queries = mockPostgres(async (text, values) => {
+    if (text.includes("FROM public.courses")) {
+      assert.deepEqual(values, ["course-1"]);
+      return { rows: [course], rowCount: 1 };
+    }
+    if (text.includes("FROM public.orders")) {
+      assert.deepEqual(values, ["user-1", "course-1"]);
+      return { rows: [{ owned: 1 }], rowCount: 1 };
+    }
+    throw new Error(`Unexpected SQL: ${text}`);
   });
 
   const response = await checkCourseAccess(
@@ -260,6 +299,5 @@ test("POST /api/functions/check-course-access reports paid ownership from orders
   assert.equal(body.success, true);
   assert.equal(body.purchased, true);
   assert.deepEqual(body.course, course);
-  const orderQuery = requests.find((request) => request.url.pathname.endsWith("/orders"));
-  assert.equal(orderQuery.url.searchParams.get("course_ids"), "ov.{course-1}");
+  assert.ok(queries.some((query) => query.text.includes("$2 = ANY(course_ids)")));
 });

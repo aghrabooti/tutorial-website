@@ -319,11 +319,11 @@ check("ابزار update-profile را از مسیر same-origin صدا می‌ز
     !doctorProfile.includes("supabase.co/functions/v1") &&
     !doctorProfile.includes("SUPABASE_ANON_KEY"));
 check("خطای ۵۰۲ را تشخیص می‌دهد", doctorProfile.includes("=== 502"));
-check("دستور SQL ساخت ستون‌های grade و major را دارد",
-    doctorProfile.includes("add column if not exists grade") &&
-    doctorProfile.includes("add column if not exists major"));
-check("مسیر ستون‌ها را از information_schema می‌خواند",
-    doctorProfile.includes("information_schema.columns"));
+check("پروفایل doctor به DB مقصد وصل می‌شود، نه Supabase",
+    doctorProfile.includes("DATABASE_URL") && doctorProfile.includes("PostgreSQL self-hosted"));
+check("schema را فقط read-only از information_schema می‌خواند و ALTER موردی ندارد",
+    doctorProfile.includes("information_schema.columns") &&
+    !doctorProfile.includes("alter table public.site_users"));
 check("سرور مسیر /profile-doctor را می‌شناسد", servePy.includes("/profile-doctor"));
 check("ابزار دکتر پروفایل مسیر Next را هدف می‌گیرد، نه deploy کردن Edge Function",
     doctorProfile.includes("route Next") &&

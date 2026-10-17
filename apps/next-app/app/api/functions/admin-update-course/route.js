@@ -1,11 +1,11 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { query } from "../../../../lib/postgres.js";
+import { findActivePostgresAdmin } from "../../../../lib/admin-auth.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
-import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const editableFields = [
+const editableFields = new Set([
   "title",
   "grade",
   "category",
@@ -15,7 +15,7 @@ const editableFields = [
   "discount_price",
   "image_url",
   "major",
-];
+]);
 
 export async function POST(request) {
   let body;
@@ -32,34 +32,31 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const auth = await findActivePostgresAdmin(token);
+    if (auth.error && !auth.expired) throw auth.error;
+    if (auth.userError) throw auth.userError;
     if (!auth.session) return jsonNoStore({ success: false, error: "جلسه معتبر نیست" }, 401);
     if (!auth.admin) return jsonNoStore({ success: false, error: "دسترسی غیر مجاز" }, 403);
 
-    const updateData = {};
-    for (const field of editableFields) {
-      if (Object.hasOwn(body, field)) {
-        updateData[field] = body[field] === "" ? null : body[field];
-      }
-    }
-
-    if (Object.keys(updateData).length === 0) {
+    const updates = Object.entries(body)
+      .filter(([field]) => editableFields.has(field))
+      .map(([field, value]) => [field, value === "" ? null : value]);
+    if (updates.length === 0) {
       return jsonNoStore({ success: false, error: "هیچ تغییری ارسال نشده" }, 400);
     }
 
-    const { error } = await supabase.from("courses").update(updateData).eq("id", courseId);
-    if (error) {
-      console.error("[api/functions/admin-update-course] Course update failed:", error);
-      return jsonNoStore({ success: false, error: error.message }, 500);
-    }
+    const values = updates.map(([, value]) => value);
+    values.push(courseId);
+    const setClause = updates.map(([field], index) => `${field} = $${index + 1}`).join(", ");
+    await query(
+      `UPDATE public.courses SET ${setClause} WHERE id = $${values.length}`,
+      values
+    );
 
     return jsonNoStore({ success: true, message: "دوره با موفقیت بروزرسانی شد" });
   } catch (error) {
-    const missingConfig = String(error?.message ?? "").startsWith(
-      "Missing server environment variable:"
-    );
-    console.error("[api/functions/admin-update-course] Request failed:", error);
+    const missingConfig = String(error?.message ?? "").startsWith("Missing server environment variable:");
+    console.error("[api/functions/admin-update-course] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
       {
         success: false,

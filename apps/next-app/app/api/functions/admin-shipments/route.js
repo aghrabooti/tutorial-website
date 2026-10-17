@@ -1,6 +1,6 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { query } from "../../../../lib/postgres.js";
+import { findActivePostgresAdmin } from "../../../../lib/admin-auth.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
-import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,88 +25,64 @@ function needsShipping(order, physicalCourseIds) {
   return courseIds.some((id) => physicalCourseIds.has(id));
 }
 
-async function loadPhysicalCourseIds(supabase) {
-  const ids = new Set();
-  const { data, error } = await supabase
-    .from("courses")
-    .select("id, type, requires_shipping");
-
-  if (!error) {
-    for (const course of data ?? []) {
-      if (isPhysicalCourse(course)) ids.add(String(course.id));
-    }
-    return ids;
-  }
-
-  console.error("[api/functions/admin-shipments] Course select fallback:", error);
-  const retry = await supabase.from("courses").select("id, type");
-  for (const course of retry.data ?? []) {
-    if (isPhysicalCourse(course)) ids.add(String(course.id));
-  }
-  return ids;
+async function loadPhysicalCourseIds() {
+  const { rows: courses } = await query(
+    "SELECT id, type, requires_shipping FROM public.courses"
+  );
+  return new Set(courses.filter(isPhysicalCourse).map((course) => String(course.id)));
 }
 
-async function createShipmentFromOrder(supabase, order) {
-  const { data: address, error: addressError } = await supabase
-    .from("user_addresses")
-    .select("*")
-    .eq("user_id", String(order.user_id))
-    .maybeSingle();
-
-  if (addressError) console.error("[api/functions/admin-shipments] Address lookup failed:", addressError);
+async function createShipmentFromOrder(order) {
+  const { rows: addresses } = await query(
+    `SELECT full_name, phone, province, city, address, postal_code
+     FROM public.user_addresses
+     WHERE user_id = $1
+     LIMIT 1`,
+    [String(order.user_id)]
+  );
+  const address = addresses[0];
   if (!address) return { created: false, missing_address: true };
 
-  const now = new Date().toISOString();
-  const { data: inserted, error } = await supabase
-    .from("shipments")
-    .insert({
-      order_id: String(order.id),
-      user_id: String(order.user_id),
-      full_name: address.full_name,
-      phone: address.phone,
-      province: address.province,
-      city: address.city,
-      address: address.address,
-      postal_code: address.postal_code,
-      status: "pending",
-      created_at: now,
-      updated_at: now,
-    })
-    .select("id")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[api/functions/admin-shipments] Shipment insert failed:", error);
-    return { created: false, error: error.message };
-  }
-
-  return { created: true, shipment_id: inserted?.id ?? null };
+  const { rows: inserted } = await query(
+    `INSERT INTO public.shipments
+       (order_id, user_id, full_name, phone, province, city, address, postal_code, status, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW(), NOW())
+     ON CONFLICT (order_id) DO NOTHING
+     RETURNING id`,
+    [
+      String(order.id),
+      String(order.user_id),
+      address.full_name,
+      address.phone,
+      address.province,
+      address.city,
+      address.address,
+      address.postal_code,
+    ]
+  );
+  if (inserted.length === 0) return { created: false, error: "shipment already exists" };
+  return { created: true, shipment_id: inserted[0].id };
 }
 
-async function resyncMissingShipments(supabase, physicalCourseIds) {
-  const { data: orders, error } = await supabase
-    .from("orders")
-    .select("id, user_id, amount_rial, ref_id, status, source, items, course_ids, created_at")
-    .eq("status", "paid")
-    .order("created_at", { ascending: false })
-    .limit(300);
-
-  if (error) {
-    console.error("[api/functions/admin-shipments] Orders lookup failed:", error);
-    return { created: 0, missing_address: 0, failed: 0, needs_shipping: 0 };
-  }
-
-  const relevant = (orders ?? []).filter((order) => needsShipping(order, physicalCourseIds));
+async function resyncMissingShipments(physicalCourseIds) {
+  const { rows: orders } = await query(
+    `SELECT id, user_id, amount_rial, ref_id, status, source, items, course_ids, created_at
+     FROM public.orders
+     WHERE status = 'paid'
+     ORDER BY created_at DESC
+     LIMIT 300`
+  );
+  const relevant = orders.filter((order) => needsShipping(order, physicalCourseIds));
   if (relevant.length === 0) {
     return { created: 0, missing_address: 0, failed: 0, needs_shipping: 0 };
   }
 
   const orderIds = relevant.map((order) => String(order.id));
-  const { data: existing } = await supabase
-    .from("shipments")
-    .select("order_id")
-    .in("order_id", orderIds);
-  const haveShipment = new Set((existing ?? []).map((shipment) => String(shipment.order_id)));
+  const { rows: existing } = await query(
+    "SELECT order_id FROM public.shipments WHERE order_id = ANY($1::uuid[])",
+    [orderIds]
+  );
+  const haveShipment = new Set(existing.map((shipment) => String(shipment.order_id)));
 
   let created = 0;
   let missingAddress = 0;
@@ -115,7 +91,7 @@ async function resyncMissingShipments(supabase, physicalCourseIds) {
 
   for (const order of relevant) {
     if (haveShipment.has(String(order.id))) continue;
-    const result = await createShipmentFromOrder(supabase, order);
+    const result = await createShipmentFromOrder(order);
     if (result.created) created++;
     else if (result.missing_address) missingAddress++;
     else {
@@ -146,78 +122,71 @@ export async function POST(request) {
   if (!isValidSessionToken(token)) return jsonNoStore({ error: "توکن ارسال نشده" }, 401);
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const auth = await findActivePostgresAdmin(token);
+    if (auth.error && !auth.expired) throw auth.error;
+    if (auth.userError) throw auth.userError;
     if (!auth.admin) return jsonNoStore({ error: "دسترسی غیرمجاز — فقط مدیر" }, 403);
 
     if (action === "mark_sent") {
       const shipmentId = body?.shipment_id;
       if (!shipmentId) return jsonNoStore({ error: "شناسه‌ی مرسوله ارسال نشده" }, 400);
 
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from("shipments")
-        .update({
-          status: "sent",
-          tracking_code: String(body?.tracking_code ?? "").trim() || null,
-          sent_at: now,
-          updated_at: now,
-        })
-        .eq("id", shipmentId);
-
-      if (error) {
-        console.error("[api/functions/admin-shipments] Mark sent failed:", error);
-        return jsonNoStore({ error: "خطا در ثبت ارسال" }, 500);
-      }
+      await query(
+        `UPDATE public.shipments
+         SET status = 'sent',
+             tracking_code = $1,
+             sent_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $2`,
+        [String(body?.tracking_code ?? "").trim() || null, shipmentId]
+      );
       return jsonNoStore({ success: true });
     }
 
     let sync = null;
     if (action === "resync") {
-      const ids = await loadPhysicalCourseIds(supabase);
-      sync = await resyncMissingShipments(supabase, ids);
+      const ids = await loadPhysicalCourseIds();
+      sync = await resyncMissingShipments(ids);
     }
 
-    const physicalCourseIds = await loadPhysicalCourseIds(supabase);
-    const autoSync = await resyncMissingShipments(supabase, physicalCourseIds);
+    const physicalCourseIds = await loadPhysicalCourseIds();
+    const autoSync = await resyncMissingShipments(physicalCourseIds);
     if (!sync) sync = autoSync;
 
-    const { data: shipments, error: shipmentError } = await supabase
-      .from("shipments")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(300);
-    if (shipmentError) {
-      console.error("[api/functions/admin-shipments] Shipment list failed:", shipmentError);
-      return jsonNoStore({ error: "خطا در خواندن مرسوله‌ها" }, 500);
-    }
+    const { rows: shipments } = await query(
+      `SELECT * FROM public.shipments
+       ORDER BY created_at DESC
+       LIMIT 300`
+    );
+    const { rows: paidOrders } = await query(
+      `SELECT id, user_id, amount_rial, ref_id, status, source, items, course_ids, created_at
+       FROM public.orders
+       WHERE status = 'paid'
+       ORDER BY created_at DESC
+       LIMIT 300`
+    );
 
-    const { data: paidOrders } = await supabase
-      .from("orders")
-      .select("id, user_id, amount_rial, ref_id, status, source, items, course_ids, created_at")
-      .eq("status", "paid")
-      .order("created_at", { ascending: false })
-      .limit(300);
-
-    const physicalOrders = (paidOrders ?? []).filter((order) => needsShipping(order, physicalCourseIds));
+    const physicalOrders = paidOrders.filter((order) => needsShipping(order, physicalCourseIds));
     const ordersById = Object.fromEntries(physicalOrders.map((order) => [String(order.id), order]));
     const userIds = [...new Set([
-      ...(shipments ?? []).map((shipment) => String(shipment.user_id ?? "")),
+      ...shipments.map((shipment) => String(shipment.user_id ?? "")),
       ...physicalOrders.map((order) => String(order.user_id)),
     ])].filter(Boolean);
 
     let usersById = {};
     if (userIds.length > 0) {
-      const { data: users } = await supabase
-        .from("site_users")
-        .select("id, first_name, last_name, phone")
-        .in("id", userIds);
-      usersById = Object.fromEntries((users ?? []).map((user) => [String(user.id), user]));
+      const { rows: users } = await query(
+        `SELECT id, first_name, last_name, phone
+         FROM public.site_users
+         WHERE id::text = ANY($1::text[])`,
+        [userIds]
+      );
+      usersById = Object.fromEntries(users.map((user) => [String(user.id), user]));
     }
 
     const itemTitles = (order) => orderItems(order).map((item) => item.title).filter(Boolean);
-    const orderIdsWithShipment = new Set((shipments ?? []).map((shipment) => String(shipment.order_id)));
-    const rows = (shipments ?? []).map((shipment) => {
+    const orderIdsWithShipment = new Set(shipments.map((shipment) => String(shipment.order_id)));
+    const rows = shipments.map((shipment) => {
       const order = ordersById[String(shipment.order_id)] ?? {};
       const user = usersById[String(shipment.user_id ?? order.user_id)] ?? {};
       return {
@@ -265,18 +234,15 @@ export async function POST(request) {
           user_name: [user.first_name, user.last_name].filter(Boolean).join(" ").trim() || null,
           user_phone: user.phone ?? null,
           no_shipment: true,
-          note: sync?.errors?.[String(order.id)] ?? null,
         };
       });
 
     return jsonNoStore({ success: true, shipments: rows, missing_shipments: missingShipments, sync });
   } catch (error) {
-    const missingConfig = String(error?.message ?? "").startsWith(
-      "Missing server environment variable:"
-    );
-    console.error("[api/functions/admin-shipments] Request failed:", error);
+    const missingConfig = String(error?.message ?? "").startsWith("Missing server environment variable:");
+    console.error("[api/functions/admin-shipments] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
-      { error: missingConfig ? "سرویس مرسوله‌ها تنظیم نشده است" : error?.message ?? "خطای سرور" },
+      { error: missingConfig ? "سرویس مرسوله‌ها تنظیم نشده است" : "خطا در پردازش مرسوله‌ها" },
       missingConfig ? 503 : 500
     );
   }

@@ -1,16 +1,19 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { POST as adminShipments } from "../app/api/functions/admin-shipments/route.js";
+import {
+  installPostgresPoolForTests,
+  resetPostgresPoolForTests,
+} from "../lib/postgres.js";
 
-const envKeys = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+const envKeys = ["DATABASE_URL", "NODE_ENV"];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
-const originalFetch = globalThis.fetch;
-const session = { id: "session-1", user_id: "admin-1", expires_at: "2099-01-01T00:00:00.000Z" };
+const session = { id: "session-1", user_id: "admin-1" };
 const admin = { id: "admin-1", role: "admin" };
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
+  process.env.NODE_ENV = "test";
 }
 
 function makeRequest(body) {
@@ -21,12 +24,28 @@ function makeRequest(body) {
   });
 }
 
-function isAdminSelect(url) {
-  return url.searchParams.get("select")?.replace(/\s/g, "") === "id,role";
+function mockPostgres(respond) {
+  const queries = [];
+  const runQuery = async (text, values = []) => {
+    queries.push({ text, values });
+    if (text.includes("FROM public.user_sessions")) {
+      return { rows: [{ ...session, expired: false }], rowCount: 1 };
+    }
+    if (text.includes("FROM public.site_users") && /SELECT\s+id,\s*role/i.test(text)) {
+      return { rows: [admin], rowCount: 1 };
+    }
+    return respond(text, values, queries);
+  };
+  installPostgresPoolForTests({ query: runQuery });
+  return queries;
 }
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  const currentNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = "test";
+  resetPostgresPoolForTests();
+  if (currentNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = currentNodeEnv;
   for (const key of envKeys) {
     if (previousEnv[key] === undefined) delete process.env[key];
     else process.env[key] = previousEnv[key];
@@ -35,16 +54,15 @@ afterEach(() => {
 
 test("POST /api/functions/admin-shipments marks a shipment sent with a normalized tracking code", async () => {
   setTestEnv();
-  const requests = [];
-  globalThis.fetch = async (input, init = {}) => {
-    const url = new URL(String(input));
-    const request = { url, method: init.method ?? "GET", init };
-    requests.push(request);
-    if (url.pathname.endsWith("/user_sessions")) return Response.json(session);
-    if (url.pathname.endsWith("/site_users") && isAdminSelect(url)) return Response.json(admin);
-    if (url.pathname.endsWith("/shipments") && request.method === "PATCH") return new Response(null, { status: 204 });
-    throw new Error(`Unexpected request: ${request.method} ${url}`);
-  };
+  const queries = mockPostgres(async (text, values) => {
+    if (text.includes("UPDATE public.shipments")) {
+      assert.match(text, /status = 'sent'/);
+      assert.match(text, /sent_at = NOW\(\)/);
+      assert.deepEqual(values, ["12345", "shipment-1"]);
+      return { rows: [], rowCount: 1 };
+    }
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await adminShipments(
     makeRequest({ token: "admin-token", action: "mark_sent", shipment_id: "shipment-1", tracking_code: " 12345 " })
@@ -52,14 +70,7 @@ test("POST /api/functions/admin-shipments marks a shipment sent with a normalize
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { success: true });
-  const update = requests.find((request) => request.method === "PATCH");
-  const updatedShipment = JSON.parse(update.init.body);
-  assert.equal(updatedShipment.status, "sent");
-  assert.equal(updatedShipment.tracking_code, "12345");
-  assert.ok(Number.isFinite(Date.parse(updatedShipment.sent_at)));
-  assert.ok(Number.isFinite(Date.parse(updatedShipment.updated_at)));
-  assert.equal(updatedShipment.sent_at, updatedShipment.updated_at);
-  assert.equal(update.url.searchParams.get("id"), "eq.shipment-1");
+  assert.ok(queries.some((query) => query.text.includes("UPDATE public.shipments")));
 });
 
 test("POST /api/functions/admin-shipments self-heals paid physical orders and reports missing addresses", async () => {
@@ -89,7 +100,6 @@ test("POST /api/functions/admin-shipments self-heals paid physical orders and re
     },
   ];
   const address = {
-    user_id: "user-with-address",
     full_name: "علی رضایی",
     phone: "09120000000",
     province: "تهران",
@@ -102,35 +112,43 @@ test("POST /api/functions/admin-shipments self-heals paid physical orders and re
     { id: "user-no-address", first_name: "سارا", last_name: "محمدی", phone: "09121111111" },
   ];
   let shipments = [];
-  const requests = [];
-
-  globalThis.fetch = async (input, init = {}) => {
-    const url = new URL(String(input));
-    const request = { url, method: init.method ?? "GET", init, body: init.body ? JSON.parse(init.body) : null };
-    requests.push(request);
-    const table = url.pathname.split("/").at(-1);
-
-    if (table === "user_sessions") return Response.json(session);
-    if (table === "site_users" && isAdminSelect(url)) return Response.json(admin);
-    if (table === "courses") return Response.json([{ id: "book-1", type: "book", requires_shipping: true }]);
-    if (table === "orders") return Response.json(paidOrders);
-    if (table === "user_addresses") {
-      return url.searchParams.get("user_id") === "eq.user-with-address"
-        ? Response.json(address)
-        : Response.json(null);
+  let insertedShipmentValues;
+  const queries = mockPostgres(async (text, values) => {
+    if (text.includes("FROM public.courses")) {
+      return { rows: [{ id: "book-1", type: "book", requires_shipping: true }], rowCount: 1 };
     }
-    if (table === "shipments" && request.method === "POST") {
-      const inserted = { id: "shipment-1", ...request.body };
+    if (text.includes("FROM public.orders")) return { rows: paidOrders, rowCount: paidOrders.length };
+    if (text.includes("SELECT order_id FROM public.shipments")) {
+      return { rows: shipments.map(({ order_id }) => ({ order_id })), rowCount: shipments.length };
+    }
+    if (text.includes("FROM public.user_addresses")) {
+      return values[0] === "user-with-address" ? { rows: [address], rowCount: 1 } : { rows: [], rowCount: 0 };
+    }
+    if (text.startsWith("INSERT INTO public.shipments")) {
+      insertedShipmentValues = values;
+      const inserted = {
+        id: "shipment-1",
+        order_id: values[0],
+        user_id: values[1],
+        full_name: values[2],
+        phone: values[3],
+        province: values[4],
+        city: values[5],
+        address: values[6],
+        postal_code: values[7],
+        status: "pending",
+        created_at: "2026-10-14T11:00:00.000Z",
+        updated_at: "2026-10-14T11:00:00.000Z",
+        sent_at: null,
+        tracking_code: null,
+      };
       shipments = [inserted, ...shipments];
-      return Response.json({ id: inserted.id }, { status: 201 });
+      return { rows: [{ id: inserted.id }], rowCount: 1 };
     }
-    if (table === "shipments" && request.method === "GET" && url.searchParams.get("select") === "order_id") {
-      return Response.json(shipments.map(({ order_id }) => ({ order_id })));
-    }
-    if (table === "shipments" && request.method === "GET") return Response.json(shipments);
-    if (table === "site_users") return Response.json(users);
-    throw new Error(`Unexpected request: ${request.method} ${url}`);
-  };
+    if (text.includes("SELECT * FROM public.shipments")) return { rows: shipments, rowCount: shipments.length };
+    if (text.includes("FROM public.site_users") && text.includes("first_name")) return { rows: users, rowCount: users.length };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await adminShipments(makeRequest({ token: "admin-token", action: "list" }));
   const body = await response.json();
@@ -147,7 +165,8 @@ test("POST /api/functions/admin-shipments self-heals paid physical orders and re
   assert.equal(body.missing_shipments[0].order_id, "order-missing-address");
   assert.equal(body.missing_shipments[0].phone, "09121111111");
   assert.equal(body.missing_shipments[0].no_shipment, true);
-  const insert = requests.find((request) => request.method === "POST" && request.url.pathname.endsWith("/shipments"));
-  assert.equal(insert.body.status, "pending");
-  assert.equal(insert.body.order_id, "order-book");
+  assert.deepEqual(insertedShipmentValues, [
+    "order-book", "user-with-address", "علی رضایی", "09120000000", "تهران", "تهران", "خیابان آزادی", "1234567890",
+  ]);
+  assert.ok(queries.some((query) => query.text.includes("ON CONFLICT (order_id) DO NOTHING")));
 });

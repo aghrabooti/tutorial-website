@@ -1,7 +1,7 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { query } from "../../../../lib/postgres.js";
 import { hashPassword, verifyPassword } from "../../../../lib/password-hash.js";
 import {
-  findActiveSession,
+  findActivePostgresSession,
   isValidSessionToken,
   jsonNoStore,
 } from "../../../../lib/session-token.js";
@@ -29,15 +29,14 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSession(supabase, token);
+    const sessionResult = await findActivePostgresSession(token);
     if (!sessionResult.session) {
       if (sessionResult.error && !sessionResult.expired) {
-        console.error("[api/functions/change-password] Session lookup failed:", sessionResult.error);
+        console.error("[api/functions/change-password] PostgreSQL session lookup failed:", sessionResult.error?.message ?? sessionResult.error);
         return jsonNoStore({ error: "خطا در بررسی نشست" }, 500);
       }
       if (sessionResult.error) {
-        console.error("[api/functions/change-password] Expired session cleanup failed:", sessionResult.error);
+        console.error("[api/functions/change-password] Expired session cleanup failed:", sessionResult.error?.message ?? sessionResult.error);
       }
       return jsonNoStore(
         { error: sessionResult.expired ? "نشست منقضی شده است" : "نشست معتبر نیست" },
@@ -45,46 +44,41 @@ export async function POST(request) {
       );
     }
 
-    const { data: user } = await supabase
-      .from("site_users")
-      .select("id,password_hash")
-      .eq("id", sessionResult.session.user_id)
-      .maybeSingle();
-
-    if (!user) {
-      return jsonNoStore({ error: "کاربر پیدا نشد" }, 404);
-    }
-
+    const { rows } = await query(
+      "SELECT id, password_hash FROM public.site_users WHERE id = $1 LIMIT 1",
+      [sessionResult.session.user_id]
+    );
+    const user = rows[0] ?? null;
+    if (!user) return jsonNoStore({ error: "کاربر پیدا نشد" }, 404);
     if (!(await verifyPassword(currentPassword, user.password_hash))) {
       return jsonNoStore({ error: "رمز عبور فعلی اشتباه است" }, 403);
     }
 
     const newHash = await hashPassword(newPassword);
-    const { error: updateError } = await supabase
-      .from("site_users")
-      .update({ password_hash: newHash })
-      .eq("id", user.id);
+    await query(
+      "UPDATE public.site_users SET password_hash = $2 WHERE id = $1",
+      [user.id, newHash]
+    );
 
-    if (updateError) {
-      console.error("[api/functions/change-password] Password update failed:", updateError);
-      return jsonNoStore({ error: "خطا در ذخیره‌ی رمز جدید" }, 500);
+    // Preserve old behavior: revoking other sessions is best-effort after password save.
+    try {
+      await query(
+        `UPDATE public.user_sessions SET is_active = false
+         WHERE user_id = $1 AND id <> $2`,
+        [user.id, sessionResult.session.id]
+      );
+    } catch (error) {
+      console.error("[api/functions/change-password] Other session revocation failed:", error?.message ?? error);
     }
-
-    // Preserve old behavior: a failure while revoking other sessions does not undo the password change.
-    await supabase
-      .from("user_sessions")
-      .update({ is_active: false })
-      .eq("user_id", user.id)
-      .neq("id", sessionResult.session.id);
 
     return jsonNoStore({ success: true });
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(
       "Missing server environment variable:"
     );
-    console.error("[api/functions/change-password] Request failed:", error);
+    console.error("[api/functions/change-password] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
-      { error: missingConfig ? "سرویس تغییر رمز تنظیم نشده است" : error?.message ?? "خطای سرور" },
+      { error: missingConfig ? "سرویس تغییر رمز تنظیم نشده است" : "خطا در ذخیره‌ی رمز جدید" },
       missingConfig ? 503 : 500
     );
   }

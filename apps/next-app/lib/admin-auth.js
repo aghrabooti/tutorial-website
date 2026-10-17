@@ -1,8 +1,8 @@
 import "server-only";
-import { findActiveSessionUser } from "./session-user.js";
+import { findActivePostgresSessionUser } from "./session-token.js";
 
-export async function findActiveAdmin(supabase, token) {
-  const result = await findActiveSessionUser(supabase, token, "id, role");
+export async function findActivePostgresAdmin(token) {
+  const result = await findActivePostgresSessionUser(token, ["id", "role"]);
   return {
     ...result,
     admin: result.user?.role === "admin" ? result.user : null,

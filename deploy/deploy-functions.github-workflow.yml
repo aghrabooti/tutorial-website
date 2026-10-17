@@ -1,5 +1,9 @@
-name: Deploy Supabase Edge Functions
+name: ARCHIVED — do not run (Supabase Edge)
 
+# LEGACY ARCHIVE — نسخه‌ی self-hosted برای PostgreSQL/Storage محلی است و این workflow آن را deploy نمی‌کند.
+# Edge source و این فایل فقط برای بررسی/rollback نگه‌داری شده‌اند؛ workflow فعال در .github عمداً disabled است.
+# هیچ migration مقصد self-hosted را با این فایل یا scripts/apply-migrations.py روی Supabase اجرا نکنید.
+#
 # دیپلوی همه‌ی فانکشن‌های Edge (شامل توابع پنل مدیریت و پرداخت) + مهاجرت SQL
 #
 # از GitHub → Actions → Deploy Supabase Edge Functions → Run workflow اجرا کنید.

@@ -1,6 +1,0 @@
-# نمونه برای Caddy نصب‌شده روی خود VPS.
-# فقط وقتی DNS دامنه به این VPS اشاره می‌کند، گواهی TLS صادر خواهد شد.
-# اگر www.admin.mahdiazizi.com رکورد DNS ندارد، آن نام را از این فهرست حذف کنید.
-mahdiazizi.com, www.mahdiazizi.com, admin.mahdiazizi.com, www.admin.mahdiazizi.com {
-    reverse_proxy 127.0.0.1:8080
-}

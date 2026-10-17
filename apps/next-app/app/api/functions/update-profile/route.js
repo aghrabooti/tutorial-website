@@ -1,6 +1,6 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { query } from "../../../../lib/postgres.js";
 import {
-  findActiveSession,
+  findActivePostgresSession,
   isValidSessionToken,
   jsonNoStore,
 } from "../../../../lib/session-token.js";
@@ -30,15 +30,14 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSession(supabase, token);
+    const sessionResult = await findActivePostgresSession(token);
     if (!sessionResult.session) {
       if (sessionResult.error && !sessionResult.expired) {
-        console.error("[api/functions/update-profile] Session lookup failed:", sessionResult.error);
+        console.error("[api/functions/update-profile] PostgreSQL session lookup failed:", sessionResult.error?.message ?? sessionResult.error);
         return jsonNoStore({ success: false, error: "خطا در بررسی نشست" }, 500);
       }
       if (sessionResult.error) {
-        console.error("[api/functions/update-profile] Expired session cleanup failed:", sessionResult.error);
+        console.error("[api/functions/update-profile] Expired session cleanup failed:", sessionResult.error?.message ?? sessionResult.error);
       }
       return jsonNoStore(
         {
@@ -49,48 +48,26 @@ export async function POST(request) {
       );
     }
 
-    const { data: user, error } = await supabase
-      .from("site_users")
-      .update({
-        first_name: firstName,
-        last_name: lastName,
-        grade,
-        major: grade === "9" ? "" : major,
-      })
-      .eq("id", sessionResult.session.user_id)
-      .select("id,phone,first_name,last_name,grade,major")
-      .single();
-
-    if (error) {
-      console.error("[api/functions/update-profile] Profile update failed:", error);
-      const message = String(error.message ?? "");
-      if (/column|schema cache/i.test(message)) {
-        return jsonNoStore(
-          {
-            success: false,
-            error:
-              "ستون‌های grade و major در جدول site_users وجود ندارند — دستور SQL آماده در ابزار /profile-doctor را اجرا کنید",
-            details: message,
-          },
-          500
-        );
-      }
-      return jsonNoStore(
-        { success: false, error: "خطا در ذخیره اطلاعات", details: message },
-        500
-      );
-    }
-
+    const { rows } = await query(
+      `UPDATE public.site_users
+       SET first_name = $2, last_name = $3, grade = $4, major = $5
+       WHERE id = $1
+       RETURNING id, phone, first_name, last_name, grade, major`,
+      [sessionResult.session.user_id, firstName, lastName, grade, grade === "9" ? "" : major]
+    );
+    const user = rows[0] ?? null;
+    if (!user) return jsonNoStore({ success: false, error: "کاربر پیدا نشد" }, 404);
     return jsonNoStore({ success: true, user });
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(
       "Missing server environment variable:"
     );
-    console.error("[api/functions/update-profile] Request failed:", error);
+    console.error("[api/functions/update-profile] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
       {
         success: false,
-        error: missingConfig ? "سرویس پروفایل تنظیم نشده است" : error?.message ?? "خطای سرور",
+        error: missingConfig ? "سرویس پروفایل تنظیم نشده است" : "خطا در ذخیره اطلاعات",
+        ...(error?.code ? { details: String(error.code) } : {}),
       },
       missingConfig ? 503 : 500
     );

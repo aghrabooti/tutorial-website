@@ -72,7 +72,7 @@ test("session validation and logout use same-origin Next routes and retain the t
   assert.ok(!apiSource.includes("SUPABASE_SERVICE_ROLE_KEY"));
 });
 
-test("public site-content reads use Next and writes use the same-origin Edge compatibility route", async () => {
+test("public site-content reads and admin writes use dedicated same-origin Next routes", async () => {
   const { sandbox, calls } = makeApiContext();
   await sandbox.apiCall("site-content", { action: "get" });
   await sandbox.apiCall("site-content", { action: null });
@@ -195,15 +195,30 @@ test("admin upload URLs use the dedicated same-origin Next route", async () => {
   assert.equal(calls[0].options.headers.Authorization, undefined);
 });
 
-test("unmigrated Edge-backed functions use the same-origin compatibility route", async () => {
+test("the seven migrated Edge APIs use dedicated same-origin Next routes", async () => {
   const { sandbox, calls } = makeApiContext();
+  await sandbox.apiCall("get-course-file", { token: "session", course_id: "course-1" });
+  await sandbox.apiCall("get-course-sessions", { token: "session", course_id: "course-1" });
+  await sandbox.apiCall("otp-verify", { phone: "09120000000", code: "123456", purpose: "register" });
+  await sandbox.apiCall("payment-request", { token: "session" });
+  await sandbox.apiCall("payment-verify", { authority: "A-1" });
   await sandbox.apiCall("send-otp", { phone: "09120000000" });
+  await sandbox.apiCall("site-content", { token: "admin", action: "set", items: { "home.title": "new" } });
 
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "/api/functions/send-otp");
-  assert.equal(calls[0].options.method, "POST");
-  assert.equal(calls[0].options.headers.Authorization, undefined);
-  assert.deepEqual(JSON.parse(calls[0].options.body), { phone: "09120000000" });
+  assert.deepEqual(calls.map((call) => call.url), [
+    "/api/functions/get-course-file",
+    "/api/functions/get-course-sessions",
+    "/api/functions/otp-verify",
+    "/api/functions/payment-request",
+    "/api/functions/payment-verify",
+    "/api/functions/send-otp",
+    "/api/functions/site-content",
+  ]);
+  for (const call of calls) {
+    assert.equal(call.options.method, "POST");
+    assert.equal(call.options.headers.Authorization, undefined);
+  }
+  assert.deepEqual(JSON.parse(calls[5].options.body), { phone: "09120000000" });
 });
 
 test("public course cards use the same-origin endpoint rather than Supabase JS", async () => {
@@ -265,6 +280,13 @@ test("every browser apiCall function is handled locally or by the explicit Edge 
     "admin-overview",
     "admin-upload-url",
     "admin-shipments",
+    "get-course-file",
+    "get-course-sessions",
+    "otp-verify",
+    "payment-request",
+    "payment-verify",
+    "send-otp",
+    "site-content",
   ]);
   const allowlistSource = proxySource.match(/const EDGE_FUNCTIONS = new Set\(\[([\s\S]*?)\]\);/);
   assert.ok(allowlistSource, "proxy allowlist should exist");
@@ -284,4 +306,52 @@ test("every browser apiCall function is handled locally or by the explicit Edge 
     assert.ok(!source.includes("supabase.co/functions/v1"));
     assert.ok(!source.includes("SUPABASE_ANON_KEY"));
   }
+  const otpDoctor = read("tools/otp-doctor.html");
+  assert.ok(otpDoctor.includes('"send-otp": "/api/functions/send-otp"'));
+  assert.ok(otpDoctor.includes('"otp-verify": "/api/functions/otp-verify"'));
+  assert.ok(!otpDoctor.includes("/api/functions/${encodeURIComponent"));
+});
+
+test("self-hosted Compose wires runtime config and keeps public ingress outside the stack", () => {
+  const envExample = read(".env.example");
+  const compose = read("deploy/self-hosted/compose.yaml");
+  const requiredVariables = [
+    "DATABASE_URL",
+    "STORAGE_SIGNING_SECRET",
+    "ZARINPAL_MERCHANT_ID",
+    "ZARINPAL_SANDBOX",
+    "ZARINPAL_CALLBACK_URL",
+    "PRICE_TO_RIAL_FACTOR",
+    "SMS_IR_API_KEY",
+    "SMS_IR_TEMPLATE_ID",
+    "SMS_IR_LINE_NUMBER",
+    "SMS_IR_OTP_PARAMETER",
+    "KAVENEGAR_API_KEY",
+    "OTP_COOLDOWN_SECONDS",
+    "OTP_DEBUG",
+  ];
+
+  for (const name of requiredVariables) {
+    assert.ok(envExample.includes(`${name}=`), `.env.example must document ${name}`);
+    assert.ok(compose.includes(`${name}:`), `Compose must pass ${name} to Next`);
+  }
+  for (const name of ["SMSIR_API_KEY", "SMSIR_TEMPLATE_ID", "SMSIR_LINE_NUMBER", "SMSIR_OTP_PARAMETER"]) {
+    assert.ok(compose.includes(`${name}:`), `Compose must preserve alias ${name}`);
+  }
+
+  const starter = read("deploy/self-hosted/start.sh");
+  const bootstrap = read("deploy/self-hosted/bootstrap-ubuntu.sh");
+  assert.ok(!envExample.includes("PUBLIC_DOMAINS="));
+  assert.ok(!/^\s*caddy:/mi.test(compose));
+  assert.ok(!compose.includes('"80:80"'));
+  assert.ok(!compose.includes('"443:443"'));
+  assert.ok(compose.includes('"127.0.0.1:8080:80"'));
+  assert.ok(!starter.includes("ENABLE_PUBLIC_TLS"));
+  assert.ok(starter.includes("--env-file \"$ENV_FILE\""));
+  assert.ok(starter.includes("--wait-timeout 300"));
+  assert.ok(starter.includes("http://127.0.0.1:8080"));
+  assert.ok(!bootstrap.includes("ENABLE_PUBLIC_TLS"));
+  assert.ok(bootstrap.includes('VERSION_ID:-}" != 24.04'));
+  assert.ok(bootstrap.includes("docker-compose-plugin"));
+  assert.ok(bootstrap.includes('"$ROOT_DIR/deploy/self-hosted/start.sh"'));
 });

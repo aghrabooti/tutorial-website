@@ -1,127 +1,175 @@
-# اجرای نسخه‌ی فعلی، Next.js و APIهای منتقل‌شده
+# اجرای آزمایشی نسخه‌ی self-hosted
 
-Compose شامل دو سرویس است:
+> **وضعیت فعلی: کد runtime دیگر به Supabase وابسته نیست و launcher یک‌فرمانی آماده شده، اما اجرای واقعی روی VPS هنوز تأیید نشده است.** ۳۱ handler API به PostgreSQL منتقل شده‌اند و Storage محلی است. `start.sh` stack را می‌سازد/بالا می‌آورد و وب را فقط روی `127.0.0.1:8080` در host در دسترس می‌گذارد. reverse proxy عمومی و TLS در این مخزن بسته‌بندی نشده‌اند و برای شروع stack لازم نیستند؛ برای دسترسی عمومی باید از proxy موجود روی VPS/provider استفاده شود. Compose با PostgreSQL/Docker واقعی، پرداخت sandbox، backup/restore و browser flow هنوز در این محیط اجرا نشده‌اند. تا عبور از معیارهای staging، DNS اصلی را تغییر ندهید و Supabase قدیمی را برای rollback روشن نگه دارید.
+>
+> فهرست کامل blockerها و معیار عبور در [`docs/deployment-readiness.md`](../../docs/deployment-readiness.md) است.
 
-- **Nginx** فایل‌های فعلی HTML/CSS/JS را سرو می‌کند و `/api/*` را به Next.js می‌فرستد.
-- **Next.js روی Node.js 22** مسیرهای منتقل‌شده را اجرا می‌کند: `GET /api/courses`، `GET /api/site-content` و routeهای اختصاصی `/api/functions/*` برای داده‌ی عمومی، حساب/نشست، سبد/نشانی/دسترسی و ۱۰ API مدیریت (`admin-get-courses`، `admin-get-sessions`، `admin-users`، `admin-orders`، `admin-create-course`، `admin-update-course`، `admin-save-sessions`، `admin-overview`، `admin-upload-url` و `admin-shipments`). `POST /api/functions/[name]` فقط هفت تابع Edge باقی‌مانده را proxy می‌کند؛ `/api/health` سلامت process را می‌سنجد.
+## سرویس‌های Compose
 
-**این هنوز مهاجرت کامل API یا خروج از Supabase نیست.** صفحه‌ها همچنان HTML هستند و دیتابیس/Storage در Supabase می‌مانند. تنها `get-course-file`، `get-course-sessions`، `otp-verify`، `payment-request`، `payment-verify`، `send-otp` و نوشتن `site-content` هنوز Edge-backed هستند. پل سازگاری فقط درخواست را عبور می‌دهد و منطق این توابع را به Next منتقل نمی‌کند. پرداخت هنوز در Edge اجرا می‌شود؛ پورت ۳۰۰۰ فقط داخل شبکه‌ی Docker در دسترس است.
+- **`db`**: PostgreSQL شاخه‌ی 17، فقط روی شبکه‌ی داخلی Compose؛ 5432 به host منتشر نمی‌شود. داده در volume پایدار `postgres-data` می‌ماند.
+- **`migrate`**: پس از healthy شدن DB، migrationهای نسخه‌بندی‌شده را یک‌بار اجرا می‌کند. فقط این سرویس URL مدیر دیتابیس را می‌گیرد.
+- **`storage-init`**: volume ذخیره‌سازی را برای UID/GID ثابت `1001` آماده می‌کند.
+- **`next-app`**: Next.js روی Node 22؛ به نقش محدود برنامه در PostgreSQL و volume فایل‌ها متصل است. healthcheck آن هم اتصال به جدول‌های پایه و هم امکان نوشتن روی Storage را بررسی می‌کند.
+- **`web`**: Nginx برای HTML/CSS/JS و reverse proxy API. فقط روی `127.0.0.1:8080` در VPS bind می‌شود. عکس‌های `course-images` را از volume محلی سرو می‌کند؛ `course-files` خصوصی است و Nginx آن را سرو نمی‌کند.
+- **ورودی عمومی**: این Compose reverse proxy عمومی یا TLS را بسته‌بندی نمی‌کند. سرویس `web` فقط روی `127.0.0.1:8080` در host منتشر می‌شود؛ برای دسترسی عمومی، reverse proxy موجود روی VPS/provider را جداگانه به همین آدرس وصل کنید.
 
-## پیش‌نیاز و تنظیم secretها
+سرویس `migrate` وابستگی `next-app` است؛ اگر DB بالا نیاید یا migration شکست بخورد، Next به‌عنوان سرویس healthy بالا نمی‌آید. PostgreSQL فقط از داخل Docker یا از طریق SSH tunnel مدیریت شود.
 
-- VPS با Docker Engine و Docker Compose plugin؛
-- دسترسی به `registry.npmjs.org` هنگام build برای نصب dependencyهای Next.js؛
-- reverse proxy محلی برای اتصال به `127.0.0.1:8080`؛
-- برای انتشار عمومی، TLS از Caddy یا reverse proxy موجود هاست.
+## راه‌اندازی یک‌فرمانی روی VPS
 
-از ریشه‌ی مخزن فایل محلی تنظیمات را بسازید:
+پس از بارگذاری **کل مخزن** روی Ubuntu 24.04 x86_64، این دستور را در ترمینال VPS اجرا کنید. روی سرور تازه، Docker Engine/Compose v2 را از مخزن رسمی Docker نصب و سپس stack را build/start می‌کند؛ اگر Docker از قبل نصب باشد، از نصب دوباره صرف‌نظر می‌کند:
 
 ```bash
-cp .env.example .env
+sudo env CREATE_INITIAL_ADMIN=1 bash deploy/self-hosted/bootstrap-ubuntu.sh
+```
+
+این دستور DNS فعلی را تغییر نمی‌دهد و پورت عمومی باز نمی‌کند؛ وب فقط روی `127.0.0.1:8080` گوش می‌دهد. برای smoke test خصوصی از SSH tunnel استفاده کنید. اگر `.env` وجود نداشته باشد، launcher آن را با رمزهای تصادفی می‌سازد، مجوزش را محدود می‌کند، Compose را اعتبارسنجی می‌کند، imageها را می‌سازد و پس از healthy شدن DB/migration/Storage سرویس‌ها را بالا می‌آورد. `CREATE_INITIAL_ADMIN=1` مدیر اولیه را از TTY می‌سازد و رمز را بدون نمایش می‌گیرد. این نصب از `sudo` استفاده می‌کند؛ `.env` را بعداً با دسترسی root ویرایش کنید. راه‌اندازی stack به DNS عمومی یا TLS وابسته نیست.
+
+**فقط پس از عبور از gateهای backup/restore و تصمیم cutover**، DNS دامنه‌های فعلی را به VPS ببرید و reverse proxy موجود روی VPS/provider را برای ارسال درخواست‌های دامنه به `http://127.0.0.1:8080` تنظیم کنید. TLS، اگر در مسیر عمومی استفاده می‌شود، باید همان‌جا مدیریت و جداگانه validate شود؛ این repository آن را نصب یا پیکربندی نمی‌کند و برای اجرای stack لازم نیست. راه‌اندازی مجدد پس از تنظیم `.env` همان فرمان قبلی است:
+
+```bash
+sudo env CREATE_INITIAL_ADMIN=1 bash deploy/self-hosted/bootstrap-ubuntu.sh
+```
+
+اگر مدیر قبلاً روی همین دیتابیس ساخته شده است `CREATE_INITIAL_ADMIN=1` را حذف کنید؛ وگرنه bootstrap تعاملی دوباره اجرا می‌شود. این فرمان DNS و firewall را تغییر نمی‌دهد. کلیدهای SMS/Zarinpal خودکار ساخته نمی‌شوند؛ اگر خالی باشند سایت بالا می‌آید، اما OTP/پرداخت کار نمی‌کند. callback زرین‌پال را برای دامنه‌ی فعلی و محیط sandbox/production تنظیم کنید. می‌توانید `.env` را پیش از اجرا بسازید/ویرایش کنید؛ بعد از ویرایش همین bootstrap را دوباره اجرا کنید.
+
+اگر Docker از قبل نصب است، می‌توانید مستقیماً `./deploy/self-hosted/start.sh` را اجرا کنید. برای public access، reverse proxy موجود روی میزبان/provider را جداگانه طوری تنظیم کنید که دامنه‌های ثابت را به `127.0.0.1:8080` بفرستد؛ این stack مالک پورت‌های 80/443 نیست.
+
+**این راه‌اندازی هنوز روی VPS واقعی آزمایش نشده است.** DNS فعلی را تا تکمیل آزمون، backup و rollback window تغییر ندهید و Supabase قدیمی را خاموش نکنید.
+
+## ساخت فایل محیطی امن
+
+پیش‌نیازهای میزبان: Docker Engine + Docker Compose plugin و OpenSSL. از ریشه‌ی مخزن:
+
+```bash
+./deploy/self-hosted/create-env.sh
 chmod 600 .env
 ```
 
-سپس در `.env` مقدارهای واقعی `SUPABASE_URL`، `SUPABASE_ANON_KEY` و `SUPABASE_SERVICE_ROLE_KEY` را وارد کنید. **فایل `.env` نباید به Git اضافه یا در چت/لاگ عمومی فرستاده شود.** anon key برای proxy سروری به Edge Functionها و queryهای مجاز استفاده می‌شود؛ service-role فقط در routeهای محدود سمت سرور است. هیچ‌کدام را با پیشوند `NEXT_PUBLIC_` تعریف نکنید.
+اسکریپت `.env` موجود را بازنویسی نمی‌کند و سه مقدار تصادفیِ DB admin، کاربر برنامه و امضای Storage می‌سازد. رمزها hex هستند تا در URL دیتابیس نیاز به percent-encoding نداشته باشند. فایل `.env` را commit یا در چت/لاگ عمومی قرار ندهید.
 
-برای کارت وضعیت درگاه در `admin-overview`، متغیرهای `ZARINPAL_MERCHANT_ID`، `ZARINPAL_SANDBOX`، `ZARINPAL_CALLBACK_URL` و `PRICE_TO_RIAL_FACTOR` را نیز در محیط Next بگذارید و دقیقاً با تنظیم فعال در Edge همسان نگه دارید. این متغیرها فقط برای نمایش وضعیت‌اند؛ **پرداخت همچنان در Edge اجرا می‌شود** و تنظیم این متغیرها به‌تنهایی درگاه را فعال یا منتقل نمی‌کند. در staging از سندباکس استفاده کنید.
+در `.env` فقط تنظیم‌های بیرونیِ لازم برای آزمون را اضافه کنید:
 
-- خواندن فهرست دوره‌ها و جزئیات یک دوره از anon key استفاده می‌کند و تابع policyهای فعلی RLS است.
-- مسیر عمومی `GET /api/site-content` از service-role فقط برای یک query ثابتِ `SELECT key, value, updated_at` استفاده می‌کند؛ route هیچ ورودی برای انتخاب جدول، فیلتر یا mutation نمی‌پذیرد.
-- routeهای حساب/نشست (`login-user`، `register-user`، `update-profile`، `change-password`، `check-session`، `logout-user`) و خرید/نشانی (`add-to-cart`، `get-cart`، `remove-from-cart`، `get-my-address`، `save-shipping-address`، `get-my-courses`، `check-course-access`) از service-role فقط سمت سرور استفاده می‌کنند؛ توکن خام یا کلید دیتابیس به مرورگر برگردانده نمی‌شوند.
-- هر ۱۰ route مدیریت ابتدا نشست فعال و نقش مدیر را سمت سرور بررسی می‌کنند. `admin-upload-url` URL امضاشده‌ی Storage می‌دهد و فایل را به هاست مستقل منتقل نمی‌کند.
+- SMS: یکی از `SMS_IR_API_KEY` به‌همراه template/line مناسب یا `KAVENEGAR_API_KEY`. `OTP_DEBUG=false` بماند.
+- پرداخت: فعلاً فقط Zarinpal sandbox؛ مرچنت تست و callback باید متعلق به staging باشد. تا عبور کامل تست‌ها از مرچنت واقعی استفاده نکنید.
+- Runtime self-hosted به Supabase URL/keys نیاز ندارد؛ APIها برای داده از PostgreSQL، فایل‌ها از volume محلی و پرداخت/پیامک از سرویس‌های بیرونی استفاده می‌کنند. نسخه‌ی قدیمی Vercel/Supabase را تا پایان rollback window دست‌نخورده نگه دارید.
 
-## ساخت و اجرا در staging
-
-از ریشه‌ی مخزن اجرا کنید. `--env-file .env` صریح است تا Compose فایل ریشه را بخواند. گزینه‌ی `--quiet` از چاپ مقدار secretها در خروجی `config` جلوگیری می‌کند:
+قبل از استفاده، فایل محیطی را بدون چاپ secretها بررسی کنید:
 
 ```bash
 docker compose --env-file .env -f deploy/self-hosted/compose.yaml config --quiet
+```
+
+## اجرای staging تازه
+
+برای اجرای فقط روی پورت loopback و بدون درخواست TLS عمومی (مثلاً روی staging disposable)، از ریشه‌ی مخزن اجرا کنید:
+
+```bash
+./deploy/self-hosted/start.sh
+```
+
+دستورهای Compose خام زیر برای کنترل دستی build/log نگه داشته شده‌اند؛ با `.env` ساخته‌شده:
+
+```bash
 docker compose --env-file .env -f deploy/self-hosted/compose.yaml build
 docker compose --env-file .env -f deploy/self-hosted/compose.yaml up -d
 docker compose --env-file .env -f deploy/self-hosted/compose.yaml ps
 ```
 
-Compose health سرویس Next.js را بررسی می‌کند و سپس Nginx را بالا می‌آورد. Nginx روی `127.0.0.1:8080` bind می‌شود؛ Next.js پورت عمومی ندارد. DNS دامنه‌ها را فقط هنگام cutover تغییر دهید.
-
-## آزمون مسیرها روی همان VPS
+روی volume تازه، schema پایه ساخته و migrationها اعمال می‌شوند. این DDL هنوز در sandbox با Docker/PostgreSQL واقعی اجرا نشده است؛ اجرای نخست را روی staging disposable انجام دهید و logهای migration را بررسی کنید. برای restart عادی از `down` بدون `-v` استفاده کنید؛ حذف volume دیتابیس یا Storage داده‌های تازه را پاک می‌کند.
 
 ```bash
-curl -sS -o /dev/null -w 'main /: %{http_code}\n' \
+docker compose --env-file .env -f deploy/self-hosted/compose.yaml logs --tail=100 db migrate next-app web
+```
+
+`GET /api/health` فقط liveness است. `GET /api/health/ready` اتصال PostgreSQL، وجود جدول‌های پایه و نوشتن آزمایشی در volume Storage را بررسی می‌کند.
+
+## ساخت مدیر اولیه
+
+بعد از اجرای موفق migration، روی TTY تعاملی VPS:
+
+```bash
+docker compose --env-file .env -f deploy/self-hosted/compose.yaml exec -it next-app \
+  node --conditions=react-server scripts/create-admin.js
+```
+
+اسکریپت شماره و رمز را به‌صورت تعاملی می‌گیرد؛ رمز روی ترمینال نمایش داده نمی‌شود، حداقل ۱۲ نویسه است و فقط اگر هیچ مدیر/شماره‌ی تکراری نباشد یک حساب admin می‌سازد. آن را از طریق shell غیرتعاملی اجرا نکنید. همه‌ی routeهای مدیریت اکنون به PostgreSQL منتقل شده‌اند، اما پنل مرورگر و سناریوی مدیر تا آزمون end-to-end روی staging تأییدشده محسوب نمی‌شوند.
+
+## آزمون smoke محلی روی همان VPS
+
+```bash
+curl -sS -o /dev/null -w 'main: %{http_code}\n' \
   -H 'Host: mahdiazizi.com' http://127.0.0.1:8080/
 
-curl -sS -o /dev/null -w 'clean URL /courses: %{http_code}\n' \
+curl -sS -o /dev/null -w 'courses: %{http_code}\n' \
   -H 'Host: mahdiazizi.com' http://127.0.0.1:8080/courses
 
-curl -sS -o /dev/null -w 'explicit .html component: %{http_code}\n' \
+curl -sS -o /dev/null -w 'component: %{http_code}\n' \
   -H 'Host: mahdiazizi.com' http://127.0.0.1:8080/components/header.html
 
 curl -sS -D - -o /dev/null \
   -H 'Host: admin.mahdiazizi.com' http://127.0.0.1:8080/
 
-curl -fsS -H 'Host: mahdiazizi.com' \
-  http://127.0.0.1:8080/api/health
-
-curl -fsS -H 'Host: mahdiazizi.com' \
-  http://127.0.0.1:8080/api/courses
-
-curl -fsS -H 'Host: mahdiazizi.com' \
-  http://127.0.0.1:8080/api/site-content
-
-curl -sS -o /dev/null -w 'admin login: %{http_code}\n' \
-  -H 'Host: admin.mahdiazizi.com' http://127.0.0.1:8080/admin-login
+curl -fsS -H 'Host: mahdiazizi.com' http://127.0.0.1:8080/api/health
+curl -fsS -H 'Host: mahdiazizi.com' http://127.0.0.1:8080/api/health/ready
 ```
 
-انتظار: صفحه‌ها و assetها `200`، ریشه‌ی `admin.mahdiazizi.com` پاسخ `302` با `Location: /admin-login`، و health پاسخ `{"status":"ok","service":"next-api"}` بدهد. `/api/courses` باید JSON با کلیدهای `data` و `error` بدهد؛ `/api/site-content` نگاشت محتوای قابل‌نمایش عمومی را برمی‌گرداند.
+انتظار: فایل‌های وب `200`، ریشه‌ی زیردامنه‌ی مدیر `302` به `/admin-login`، liveness پاسخ `{"status":"ok","service":"next-api"}` و readiness پاسخ `{"status":"ready",...}`. `/api/courses` از PostgreSQL مستقل می‌خواند، اما دیتابیس تازه عمداً خالی است و تا ساخت دوره از پنل، آرایه‌ی دوره‌ها خالی می‌ماند. این smoke جایگزین flow کامل و آزمون staging نیست.
 
-برای آزمون جزئیات یک دوره، `COURSE_ID` را با شناسه‌ی واقعی یک دوره جایگزین کنید:
+## انتقال فایل در کد
+
+- آپلود با توکن HMAC محدود به bucket/path/حجم و اعتبار پنج‌دقیقه‌ای انجام می‌شود؛ توکن در header `Authorization` است، نه query string.
+- تصاویر فقط JPEG/PNG/WebP/GIF هستند و از مسیر عمومی `/storage/course-images/...` سرو می‌شوند. SVG عمداً مجاز نیست.
+- PDFها با سقف هر فایل 100 MiB در `course-files` خصوصی نوشته می‌شوند و فقط با URL موقت پنج‌دقیقه‌ای از route دانلود stream می‌شوند؛ پیش از صدور URL، نشست و مالکیت سفارش `paid` از PostgreSQL بررسی می‌شود.
+- سقف کل Storage به‌صورت پیش‌فرض 1 GiB است (`STORAGE_MAX_BYTES`). یک نمونه‌ی `next-app` باید اجرا شود تا قفل quota داخل فرایند بین uploadها معتبر بماند.
+- این مسیرها با تست filesystem موقت/mock بررسی شده‌اند، نه با Docker volume، Nginx واقعی یا VPS. پیش از production به آزمون concurrency، فضای دیسک و restore نیاز دارند.
+
+## Reverse proxy و دامنه
+
+Stack پورت عمومی publish نمی‌کند و reverse proxy/TLS را نصب یا مدیریت نمی‌کند؛ `web` فقط روی `127.0.0.1:8080` در host در دسترس است. این برای build، start و smoke test خصوصی کافی است. برای دسترسی عمومی، reverse proxy موجود روی VPS/provider را جداگانه برای دامنه‌های ثابت `mahdiazizi.com`، `www.mahdiazizi.com` و `admin.mahdiazizi.com` به `http://127.0.0.1:8080` وصل کنید؛ نام دامنه‌ها را تغییر ندهید. TLS termination خارج از این repository است و مانع اجرای stack نیست، اما باید پیش از production و callback پرداخت جداگانه بررسی شود. پورت PostgreSQL (`5432`) و پورت داخلی برنامه (`3000`) به host منتشر نمی‌شوند.
+
+تا staging، backup/restore و rollback کامل نشده DNS اصلی را تغییر ندهید. اگر staging عمومی است، در reverse proxy موجود Basic Auth/IP allowlist بگذارید و indexing را ببندید.
+
+Nginx برای آپلود PDF تا 105 MiB body را stream می‌کند و route دانلود را از access log پیش‌فرض پنهان می‌کند چون URL آن token کوتاه‌عمر دارد. مسیر `/storage/course-files/` عمداً 404 می‌دهد.
+
+## Backup، restore و rollback
+
+اسکریپت‌های `backup.sh` و `restore.sh` برای PostgreSQL و volume فایل‌ها اضافه شده‌اند؛ برای encryption از `age` استفاده می‌کنند. `age` را از منبع مورداعتماد روی VPS نصب کنید. کلید خصوصی age را خارج از VPS نگه دارید و فقط public recipient را در اجرای backup بدهید.
 
 ```bash
-curl -sS -X POST \
-  -H 'Host: mahdiazizi.com' \
-  -H 'Content-Type: application/json' \
-  --data '{"course_id":"COURSE_ID"}' \
-  http://127.0.0.1:8080/api/functions/get-course
+BACKUP_DIR=/mnt/offsite/tutorial \\
+BACKUP_AGE_RECIPIENT='age1...' \\
+BACKUP_KEEP_DAYS=30 \\
+  ./deploy/self-hosted/backup.sh
 ```
 
-برای دیدن لاگ‌ها:
+`BACKUP_DIR` باید بیرون repository و ترجیحاً mount/مسیر replicate‌شده به provider یا region جدا از VPS باشد. خود اسکریپت فایل رمزگذاری‌شده و checksum می‌سازد، اما انتقال offsite و schedule را نصب نمی‌کند؛ برای production هنوز باید sync/scheduler و alert راه‌اندازی کنید.
+
+Restore تمام DB و Storage مقصد را **جایگزین** می‌کند؛ ابتدا فایل‌ها و checksum را کنترل کنید، maintenance بگذارید و فقط روی staging تمرین کنید:
 
 ```bash
-docker compose --env-file .env -f deploy/self-hosted/compose.yaml logs --tail=100 next-app web
+RESTORE_CONFIRM=OVERWRITE_CURRENT_DATABASE_AND_STORAGE \\
+BACKUP_DB_FILE=/mnt/offsite/tutorial/tutorial-db-....dump.age \\
+BACKUP_STORAGE_FILE=/mnt/offsite/tutorial/tutorial-storage-....tar.gz.age \\
+BACKUP_MANIFEST=/mnt/offsite/tutorial/tutorial-....sha256 \\
+BACKUP_AGE_IDENTITY=/secure/path/age-identity.txt \\
+  ./deploy/self-hosted/restore.sh
 ```
 
-## توسعه و تست محلی Next.js
+اسکریپت قبل از restore برنامه را متوقف می‌کند؛ کلید private age روی VPS لازم می‌شود، پس آن را پس از restore امن بردارید. DB و Storage در دو archive جدا هستند و restore آن‌ها یک transaction مشترک نیست؛ اگر یکی شکست خورد، ترافیک را باز نکنید و بازیابی را کامل کنید.
 
-تست و build محلی به اتصال زنده به Supabase نیاز ندارند؛ تست‌ها fetchهای Supabase را mock می‌کنند:
+- `docker compose down` کانتینرها را متوقف می‌کند و volumeها را حذف نمی‌کند.
+- از `docker compose down -v`، `docker volume rm` یا reset کردن volume در production استفاده نکنید.
+- backup و restore scriptها در این محیط با Docker/age واقعی اجرا نشده‌اند؛ تا restore drill، offsite copy و rollback DNS/image آزمایش نشده، **هیچ cutover production مجاز نیست**.
+- Supabase و سرویس قبلی باید تا پایان backup/restore/rollback و دوره‌ی پایش روشن بمانند، حتی اگر دیتابیس مقصد از صفر شروع شود.
+
+## تست‌های محلی
 
 ```bash
 cd apps/next-app
 npm ci
 npm test
 NEXT_TELEMETRY_DISABLED=1 npm run build
-npm audit --omit=dev
 ```
 
-برای اجرای endpointهای وابسته به داده در `npm run dev`، فایل `apps/next-app/.env.local` را جداگانه بسازید و همان متغیرها را آن‌جا قرار دهید؛ این فایل هم نباید commit شود.
-
-## TLS و reverse proxy
-
-نمونه‌ی Caddy در `Caddyfile.example` است. Caddy روی خود VPS (یا reverse proxy فعلی هاست) درخواست دامنه را به `127.0.0.1:8080` می‌فرستد. فایل نمونه نام‌های فعلی را دارد؛ اگر یکی از آن‌ها DNS ندارد، حذفش کنید. برای صدور گواهی عمومی DNS باید به VPS اشاره کند و پورت‌های ۸۰ و ۴۴۳ باز باشند. برای staging نام‌های آزمایشی را جایگزین کنید.
-
-**تا تأیید staging، DNS دامنه‌ی اصلی را تغییر ندهید.** staging را با IP allowlist یا Basic Auth محدود و از index شدن آن جلوگیری کنید؛ canonicalها به دامنه‌ی اصلی اشاره دارند.
-
-## توقف/rollback
-
-```bash
-docker compose --env-file .env -f deploy/self-hosted/compose.yaml down
-```
-
-این دستور کانتینرهای staging را متوقف می‌کند و به Vercel، Supabase یا داده‌هایشان دست نمی‌زند. در صورت cutover ناموفق، DNS را به مقصد قبلی برگردانید؛ سرویس‌های قبلی را تا پایان دوره‌ی پایش روشن نگه دارید.
-
-## چه چیزهایی هنوز منتقل نشده‌اند؟
-
-- صفحه‌های سایت هنوز همان HTMLهای فعلی‌اند، نه pageهای Next.js.
-- APIهای عمومی، حساب/نشست، سبد/نشانی/دسترسی و ۱۰ API مدیریت route اختصاصی Next دارند؛ همه‌ی `apiCall`ها از same-origin عبور می‌کنند.
-- فقط هفت تابع هنوز Edge-backed هستند: `get-course-file`، `get-course-sessions`، `otp-verify`، `payment-request`، `payment-verify`، `send-otp` و نوشتن `site-content`. proxy صرفاً درخواست را عبور می‌دهد و backend آن‌ها را منتقل نمی‌کند. ثبت‌نام همچنان اول OTP را verify می‌کند و بعد `register-user` را اجرا می‌کند.
-- query مستقیم فهرست محصولات از `js/admin.js` و Supabase JS SDK از `admin.html` حذف شده‌اند.
-- دیتابیس و Storage هنوز Supabase هستند؛ `admin-upload-url` هم فقط URL امضاشده‌ی Storage فعلی را می‌دهد. انتقال فایل، پیامک و منطق پرداخت انجام نشده و CDN فونت‌ها/کتابخانه‌ها نیز هنوز استفاده می‌شود.
-- Docker/Nginx و اتصال به Supabase زنده در این محیط آزمایش نشده‌اند؛ build و اجرای کانتینر و smoke test روی VPS باید جداگانه انجام شود.
+در این sandbox Docker، Compose و `psql` نصب نیست؛ build image، اجرای DDL واقعی و smoke test روی VPS را نتوانستم اجرا/تأیید کنم. موفقیت unit-test و build جایگزین این بررسی‌ها نیست.

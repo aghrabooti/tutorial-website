@@ -1,6 +1,5 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
-import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
-import { findActiveSessionUser } from "../../../../lib/session-user.js";
+import { query } from "../../../../lib/postgres.js";
+import { findActivePostgresSessionUser, isValidSessionToken, jsonNoStore } from "../../../../lib/session-token.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,31 +18,29 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSessionUser(supabase, token);
+    const sessionResult = await findActivePostgresSessionUser(token);
+    if (sessionResult.error && !sessionResult.expired) throw sessionResult.error;
     if (!sessionResult.session || !sessionResult.user) {
       return jsonNoStore({ error: "نشست معتبر نیست" }, 401);
     }
+    if (sessionResult.userError) throw sessionResult.userError;
 
-    const { data: address, error } = await supabase
-      .from("user_addresses")
-      .select("full_name, phone, province, city, address, postal_code, updated_at")
-      .eq("user_id", String(sessionResult.user.id))
-      .maybeSingle();
+    const { rows } = await query(
+      `SELECT full_name, phone, province, city, address, postal_code, updated_at
+       FROM public.user_addresses
+       WHERE user_id = $1
+       LIMIT 1`,
+      [String(sessionResult.user.id)]
+    );
 
-    if (error) {
-      console.error("[api/functions/get-my-address] Address lookup failed:", error);
-      return jsonNoStore({ error: "خطا در خواندن نشانی" }, 500);
-    }
-
-    return jsonNoStore({ success: true, address: address ?? null });
+    return jsonNoStore({ success: true, address: rows[0] ?? null });
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(
       "Missing server environment variable:"
     );
-    console.error("[api/functions/get-my-address] Request failed:", error);
+    console.error("[api/functions/get-my-address] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
-      { error: missingConfig ? "سرویس نشانی تنظیم نشده است" : error?.message ?? "خطای سرور" },
+      { error: missingConfig ? "سرویس نشانی تنظیم نشده است" : "خطا در خواندن نشانی" },
       missingConfig ? 503 : 500
     );
   }

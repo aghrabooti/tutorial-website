@@ -114,10 +114,16 @@ console.log("\n── Schema دوره‌ها در صفحه‌ی دوره‌ها 
   const graph = ld.flatMap((x) => x["@graph"] ?? []);
   const courses = graph.filter((x) => x["@type"] === "Course");
 
-  check("Schema دوره‌ها هست", courses.length > 5, `${courses.length} دوره`);
+  const snapshot = JSON.parse(read("scripts/seo-courses.json"));
+  const expectedCourses = snapshot.filter((course) => String(course?.title ?? "").trim());
+
+  check("JSON-LD فقط با snapshot محلی ساخته می‌شود", courses.length === expectedCourses.length,
+    `${courses.length} مورد از ${expectedCourses.length} دوره‌ی محلی`);
   check("هر دوره قیمت دارد", courses.every((c) => typeof c.offers?.price === "number"));
   check("هر دوره لینک دارد", courses.every((c) => typeof c.url === "string" && c.url.includes("courses-detail?id=")));
-  check("پایه‌ی تحصیلی ثبت شده", courses.some((c) => c.educationalLevel));
+  check("هیچ داده‌ی آزمایشی/قدیمی به snapshot نشت نکرده", !/تست 1|کتاب تست 1|supabase\.co/i.test(
+    read("scripts/seo-courses.json") + html
+  ));
 }
 
 console.log("\n── فوتر: لینک‌های شبکه‌های اجتماعی با rel=me ──");
@@ -172,6 +178,10 @@ console.log("\n── آماده‌بودن برای تأیید گوگل ──"
   const injector = read("scripts/seo-inject.py");
   check("اسکریپت از تگ تأیید گوگل پشتیبانی می‌کند", injector.includes("GOOGLE_SITE_VERIFICATION"));
   check("راه TXT هم در راهنما هست", read("docs/seo-guide.md").includes("TXT"));
+  check("SEO injector به Supabase runtime وابسته نیست", !/supabase|SUPABASE|ANON_KEY/.test(injector));
+  check("snapshot یا HTML تصویر قدیمی Supabase ندارد", !/supabase\.co|qbsfotperzzhuimnpmto/.test(
+    read("scripts/seo-courses.json") + read("courses.html")
+  ));
 }
 
 console.log("\n── زیردامنه‌ی ادمین (admin.mahdiazizi.com) ──");

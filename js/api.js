@@ -1,5 +1,5 @@
-// endpointهای منتقل‌شده مستقیم در Next.js اجرا می‌شوند؛ بقیه تا زمان انتقال
-// منطقشان از درگاه هم‌مبدأ Next به Edge Function قدیمی proxy می‌شوند.
+// همه‌ی endpointهای فعلیِ استفاده‌شده در مرورگر route اختصاصی Next دارند.
+// نام‌های ناشناخته به درگاه compatibility می‌روند که در حالت فعلی fail-closed است.
 const NEXT_FUNCTIONS = {
     "get-course": "/api/functions/get-course",
     "check-session": "/api/functions/check-session",
@@ -25,6 +25,13 @@ const NEXT_FUNCTIONS = {
     "admin-overview": "/api/functions/admin-overview",
     "admin-upload-url": "/api/functions/admin-upload-url",
     "admin-shipments": "/api/functions/admin-shipments",
+    "get-course-file": "/api/functions/get-course-file",
+    "get-course-sessions": "/api/functions/get-course-sessions",
+    "otp-verify": "/api/functions/otp-verify",
+    "payment-request": "/api/functions/payment-request",
+    "payment-verify": "/api/functions/payment-verify",
+    "send-otp": "/api/functions/send-otp",
+    "site-content": "/api/functions/site-content",
 };
 
 async function apiCall(functionName, data) {
@@ -40,7 +47,7 @@ async function apiCall(functionName, data) {
         return await response.json();
     }
 
-    // endpointهای منتقل‌شده همان بدنه‌ی قبلی را می‌پذیرند، اما same-origin هستند.
+    // endpointهای منتقل‌شده همان بدنه‌ی قبلی را می‌پذیرند و هم‌مبدأ هستند.
     const nextPath = Object.hasOwn(NEXT_FUNCTIONS, functionName)
         ? NEXT_FUNCTIONS[functionName]
         : null;
@@ -53,8 +60,8 @@ async function apiCall(functionName, data) {
         return await response.json();
     }
 
-    // endpointهای منتقل‌نشده از درگاه هم‌مبدأ Next عبور می‌کنند؛ این درگاه
-    // موقتاً به Edge Function قدیمی proxy می‌کند تا مهاجرت منطق مرحله‌ای باشد.
+    // فقط برای endpointهای آینده/ناشناخته؛ پراکسی compatibility فعلاً allowlist
+    // خالی دارد و درخواست را به Edge یا backend دیگری forward نمی‌کند.
     const response = await fetch(`/api/functions/${encodeURIComponent(functionName)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

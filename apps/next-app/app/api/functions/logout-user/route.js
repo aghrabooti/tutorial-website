@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { query } from "../../../../lib/postgres.js";
 import {
   hashSessionToken,
   isValidSessionToken,
@@ -22,40 +22,28 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
     const tokenHash = hashSessionToken(token);
-    const { data: session, error: sessionError } = await supabase
-      .from("user_sessions")
-      .select("id")
-      .eq("token_hash", tokenHash)
-      .eq("is_active", true)
-      .maybeSingle();
+    const { rows } = await query(
+      `SELECT id FROM public.user_sessions
+       WHERE token_hash = $1 AND is_active IS TRUE
+       LIMIT 1`,
+      [tokenHash]
+    );
+    const session = rows[0] ?? null;
+    if (!session) return jsonNoStore({ error: "Session پیدا نشد" }, 401);
 
-    if (sessionError || !session) {
-      if (sessionError) {
-        console.error("[api/functions/logout-user] Session lookup failed:", sessionError);
-      }
-      return jsonNoStore({ error: "Session پیدا نشد" }, 401);
-    }
-
-    const { error: updateError } = await supabase
-      .from("user_sessions")
-      .update({ is_active: false })
-      .eq("id", session.id);
-
-    if (updateError) {
-      console.error("[api/functions/logout-user] Session logout failed:", updateError);
-      return jsonNoStore({ error: "خطا در خروج" }, 500);
-    }
-
+    await query(
+      "UPDATE public.user_sessions SET is_active = false WHERE id = $1",
+      [session.id]
+    );
     return jsonNoStore({ success: true, message: "با موفقیت خارج شدید" });
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(
       "Missing server environment variable:"
     );
-    console.error("[api/functions/logout-user] Request failed:", error);
+    console.error("[api/functions/logout-user] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
-      { error: missingConfig ? "سرویس نشست تنظیم نشده است" : "خطای سرور" },
+      { error: missingConfig ? "سرویس نشست تنظیم نشده است" : "خطا در خروج" },
       missingConfig ? 503 : 500
     );
   }

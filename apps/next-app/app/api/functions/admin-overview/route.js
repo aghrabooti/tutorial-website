@@ -1,6 +1,6 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { query } from "../../../../lib/postgres.js";
+import { findActivePostgresAdmin } from "../../../../lib/admin-auth.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
-import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,26 +49,6 @@ function isPhysicalCourse(course) {
   return type === "book" || type === "lecture";
 }
 
-async function loadPhysicalCourseIds(supabase) {
-  const ids = new Set();
-  const { data, error } = await supabase
-    .from("courses")
-    .select("id, type, requires_shipping");
-
-  if (!error) {
-    for (const course of data ?? []) {
-      if (isPhysicalCourse(course)) ids.add(String(course.id));
-    }
-    return ids;
-  }
-
-  const retry = await supabase.from("courses").select("id, type");
-  for (const course of retry.data ?? []) {
-    if (isPhysicalCourse(course)) ids.add(String(course.id));
-  }
-  return ids;
-}
-
 export async function POST(request) {
   let body;
   try {
@@ -81,59 +61,56 @@ export async function POST(request) {
   if (!isValidSessionToken(token)) return jsonNoStore({ error: "توکن ارسال نشده" }, 401);
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const auth = await findActivePostgresAdmin(token);
+    if (auth.error && !auth.expired) throw auth.error;
+    if (auth.userError) throw auth.userError;
     if (!auth.admin) return jsonNoStore({ error: "دسترسی غیرمجاز — فقط مدیر" }, 403);
 
-    const usersRes = await supabase.from("site_users").select("id", { count: "exact", head: true });
-    const paidRes = await supabase
-      .from("orders")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "paid");
-    const { data: paidOrders } = await supabase
-      .from("orders")
-      .select("id, amount_rial, items, course_ids")
-      .eq("status", "paid")
-      .limit(500);
+    const [usersResult, paidCountResult, paidOrdersResult, pendingResult] = await Promise.all([
+      query("SELECT COUNT(*)::int AS count FROM public.site_users"),
+      query("SELECT COUNT(*)::int AS count FROM public.orders WHERE status = 'paid'"),
+      query(
+        `SELECT id, amount_rial, items, course_ids
+         FROM public.orders
+         WHERE status = 'paid'
+         LIMIT 500`
+      ),
+      query("SELECT COUNT(*)::int AS count FROM public.shipments WHERE status = 'pending'"),
+    ]);
 
-    const revenueRial = (paidOrders ?? []).reduce(
+    const paidOrders = paidOrdersResult.rows;
+    const revenueRial = paidOrders.reduce(
       (sum, order) => sum + Number(order.amount_rial ?? 0),
       0
     );
+    let pendingShipments = Number(pendingResult.rows[0]?.count ?? 0);
+    let missingShipments = 0;
 
-    const shipRes = await supabase
-      .from("shipments")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending");
+    const { rows: courses } = await query("SELECT id, type, requires_shipping FROM public.courses");
+    const physicalCourseIds = new Set(
+      courses.filter(isPhysicalCourse).map((course) => String(course.id))
+    );
+    const paidOrderIds = paidOrders.map((order) => String(order.id));
+    let existingOrderIds = new Set();
+    if (paidOrderIds.length > 0) {
+      const { rows: shipped } = await query(
+        "SELECT order_id FROM public.shipments WHERE order_id = ANY($1::uuid[])",
+        [paidOrderIds]
+      );
+      existingOrderIds = new Set(shipped.map((shipment) => String(shipment.order_id)));
+    }
 
-    let pendingShipments = shipRes.error ? null : shipRes.count ?? 0;
-    let missingShipments = shipRes.error ? null : 0;
+    for (const order of paidOrders) {
+      const items = Array.isArray(order.items) ? order.items : [];
+      const courseIds = Array.isArray(order.course_ids) && order.course_ids.length > 0
+        ? order.course_ids.map(String)
+        : items.map((item) => String(item?.course_id ?? "")).filter(Boolean);
+      const needsShipping = items.some((item) => item?.requires_shipping === true) ||
+        courseIds.some((id) => physicalCourseIds.has(id));
 
-    if (!shipRes.error) {
-      const physicalCourseIds = await loadPhysicalCourseIds(supabase);
-      const paidOrderIds = (paidOrders ?? []).map((order) => String(order.id));
-      let existingOrderIds = new Set();
-      if (paidOrderIds.length > 0) {
-        const { data: shipped } = await supabase
-          .from("shipments")
-          .select("order_id")
-          .in("order_id", paidOrderIds);
-        existingOrderIds = new Set((shipped ?? []).map((shipment) => String(shipment.order_id)));
-      }
-
-      missingShipments = 0;
-      for (const order of paidOrders ?? []) {
-        const items = Array.isArray(order.items) ? order.items : [];
-        const courseIds = Array.isArray(order.course_ids) && order.course_ids.length > 0
-          ? order.course_ids.map(String)
-          : items.map((item) => String(item?.course_id ?? "")).filter(Boolean);
-        const needsShipping = items.some((item) => item?.requires_shipping === true) ||
-          courseIds.some((id) => physicalCourseIds.has(id));
-
-        if (needsShipping && !existingOrderIds.has(String(order.id))) {
-          missingShipments++;
-          pendingShipments = (pendingShipments ?? 0) + 1;
-        }
+      if (needsShipping && !existingOrderIds.has(String(order.id))) {
+        missingShipments++;
+        pendingShipments++;
       }
     }
 
@@ -141,20 +118,18 @@ export async function POST(request) {
       success: true,
       stats: {
         revenue_rial: revenueRial,
-        paid_orders: paidRes.count ?? 0,
-        users: usersRes.count ?? 0,
+        paid_orders: Number(paidCountResult.rows[0]?.count ?? 0),
+        users: Number(usersResult.rows[0]?.count ?? 0),
         pending_shipments: pendingShipments,
         missing_shipments: missingShipments,
       },
       gateway: getGatewayStatus(),
     });
   } catch (error) {
-    const missingConfig = String(error?.message ?? "").startsWith(
-      "Missing server environment variable:"
-    );
-    console.error("[api/functions/admin-overview] Request failed:", error);
+    const missingConfig = String(error?.message ?? "").startsWith("Missing server environment variable:");
+    console.error("[api/functions/admin-overview] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
-      { error: missingConfig ? "سرویس داشبورد تنظیم نشده است" : error?.message ?? "خطای سرور" },
+      { error: missingConfig ? "سرویس داشبورد تنظیم نشده است" : "خطا در دریافت داشبورد" },
       missingConfig ? 503 : 500
     );
   }

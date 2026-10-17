@@ -1,5 +1,8 @@
 node_modules/
+__pycache__/
+*.py[cod]
 .next/
+apps/next-app/.storage/
 .env
 .env.*
 !.env.example

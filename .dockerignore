@@ -5,13 +5,13 @@ node_modules
 **/node_modules
 .next
 **/.next
+**/.storage
 .env
 .env.*
 !.env.example
 *.log
 __pycache__
 docs
-scripts
 supabase
 tests
 tools/serve.py

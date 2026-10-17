@@ -10,11 +10,13 @@
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0 --port 3000",
+    "migrate": "node scripts/migrate.js",
+    "create-admin": "node --conditions=react-server scripts/create-admin.js",
     "test": "node --conditions=react-server --test"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.117.3",
     "next": "16.4.0",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "0.0.1"

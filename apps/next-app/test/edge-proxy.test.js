@@ -2,19 +2,45 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { POST as proxyEdgeFunction } from "../app/api/functions/[name]/route.js";
 
-const envKeys = ["SUPABASE_URL", "SUPABASE_ANON_KEY"];
-const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
+const MIGRATED_FUNCTIONS = [
+  "get-course",
+  "check-session",
+  "logout-user",
+  "login-user",
+  "register-user",
+  "update-profile",
+  "change-password",
+  "add-to-cart",
+  "get-cart",
+  "remove-from-cart",
+  "get-my-address",
+  "save-shipping-address",
+  "get-my-courses",
+  "check-course-access",
+  "admin-get-courses",
+  "admin-get-sessions",
+  "admin-users",
+  "admin-orders",
+  "admin-create-course",
+  "admin-update-course",
+  "admin-save-sessions",
+  "admin-overview",
+  "admin-upload-url",
+  "admin-shipments",
+  "get-course-file",
+  "get-course-sessions",
+  "otp-verify",
+  "payment-request",
+  "payment-verify",
+  "send-otp",
+  "site-content",
+];
 
-function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test/";
-  process.env.SUPABASE_ANON_KEY = "test-anon-key";
-}
-
-function makeRequest(path, body, headers = { "Content-Type": "application/json" }) {
+function makeRequest(path, body = "{}") {
   return new Request(`http://localhost${path}`, {
     method: "POST",
-    headers,
+    headers: { "Content-Type": "application/json" },
     body,
   });
 }
@@ -25,129 +51,50 @@ function routeContext(name) {
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  for (const key of envKeys) {
-    if (previousEnv[key] === undefined) delete process.env[key];
-    else process.env[key] = previousEnv[key];
-  }
 });
 
-test("legacy API calls proxy server-side with the anon key and preserve the Edge response", async () => {
-  setTestEnv();
-  let upstreamUrl;
-  let upstreamInit;
-  globalThis.fetch = async (input, init) => {
-    upstreamUrl = String(input);
-    upstreamInit = init;
-    return new Response(JSON.stringify({ error: "شماره یا رمز اشتباه است" }), {
-      status: 401,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
-  };
-
-  const response = await proxyEdgeFunction(
-    makeRequest("/api/functions/send-otp", JSON.stringify({ phone: "09120000000" })),
-    routeContext("send-otp")
-  );
-
-  assert.equal(upstreamUrl, "https://project.supabase.test/functions/v1/send-otp");
-  assert.equal(upstreamInit.method, "POST");
-  assert.equal(upstreamInit.cache, "no-store");
-  assert.equal(upstreamInit.redirect, "manual");
-  assert.deepEqual(JSON.parse(upstreamInit.body), { phone: "09120000000" });
-  const upstreamHeaders = new Headers(upstreamInit.headers);
-  assert.equal(upstreamHeaders.get("apikey"), "test-anon-key");
-  assert.equal(upstreamHeaders.get("authorization"), "Bearer test-anon-key");
-
-  assert.equal(response.status, 401);
-  assert.equal(response.headers.get("cache-control"), "no-store");
-  assert.equal(response.headers.get("access-control-allow-origin"), null);
-  assert.deepEqual(await response.json(), { error: "شماره یا رمز اشتباه است" });
-});
-
-test("compatibility proxy only exposes explicitly allowlisted browser functions", async () => {
+test("empty compatibility allowlist rejects every migrated API without forwarding", async () => {
   let fetchCount = 0;
   globalThis.fetch = async () => {
     fetchCount++;
-    throw new Error("unapproved functions must not be forwarded");
+    throw new Error("the empty compatibility bridge must not call Edge");
   };
 
-  for (const name of [
-    "sms-hook",
-    "test-add-purchase",
-    "admin-get-sessions-",
-    "add-to-cart",
-    "get-cart",
-    "admin-get-courses",
-    "admin-orders",
-    "admin-create-course",
-    "admin-update-course",
-    "admin-save-sessions",
-    "admin-overview",
-    "admin-upload-url",
-    "admin-shipments",
-    "unknown-function",
-  ]) {
+  for (const name of [...MIGRATED_FUNCTIONS, "sms-hook", "test-add-purchase", "unknown-function"]) {
     const response = await proxyEdgeFunction(
-      makeRequest(`/api/functions/${name}`, "{}"),
+      makeRequest(`/api/functions/${name}`),
       routeContext(name)
     );
     assert.equal(response.status, 404, name);
+    assert.equal(response.headers.get("cache-control"), "no-store");
     assert.deepEqual(await response.json(), { error: "function not found" });
   }
   assert.equal(fetchCount, 0);
 });
 
-test("compatibility proxy rejects oversized, non-JSON, and malformed requests before forwarding", async () => {
-  let fetchCount = 0;
-  globalThis.fetch = async () => {
-    fetchCount++;
-    throw new Error("invalid requests must not be forwarded");
-  };
-
-  const oversized = await proxyEdgeFunction(
-    makeRequest("/api/functions/send-otp", "{}", {
-      "Content-Type": "application/json",
-      "Content-Length": "1048577",
-    }),
-    routeContext("send-otp")
-  );
-  const wrongType = await proxyEdgeFunction(
-    makeRequest("/api/functions/send-otp", "phone=x", {
-      "Content-Type": "application/x-www-form-urlencoded",
-    }),
-    routeContext("send-otp")
-  );
-  const malformed = await proxyEdgeFunction(
-    makeRequest("/api/functions/send-otp", "{"),
-    routeContext("send-otp")
-  );
-
-  assert.equal(oversized.status, 413);
-  assert.equal(wrongType.status, 415);
-  assert.equal(malformed.status, 400);
-  assert.equal(fetchCount, 0);
-});
-
-test("compatibility proxy fails closed if server environment is missing", async () => {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
+test("the compatibility handler fails closed without credentials, even for a migrated name", async () => {
+  const previousUrl = process.env.SUPABASE_URL;
+  const previousKey = process.env.SUPABASE_ANON_KEY;
+  delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_ANON_KEY;
   let fetchCount = 0;
   globalThis.fetch = async () => {
     fetchCount++;
-    throw new Error("fetch must not run without the anon key");
+    throw new Error("no request should leave the Next.js app");
   };
 
-  const response = await proxyEdgeFunction(
-    makeRequest("/api/functions/send-otp", "{}"),
-    routeContext("send-otp")
-  );
-
-  assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), {
-    error: "API compatibility service is not configured",
-  });
-  assert.equal(fetchCount, 0);
+  try {
+    const response = await proxyEdgeFunction(
+      makeRequest("/api/functions/send-otp", "{"),
+      routeContext("send-otp")
+    );
+    assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), { error: "function not found" });
+    assert.equal(fetchCount, 0);
+  } finally {
+    if (previousUrl === undefined) delete process.env.SUPABASE_URL;
+    else process.env.SUPABASE_URL = previousUrl;
+    if (previousKey === undefined) delete process.env.SUPABASE_ANON_KEY;
+    else process.env.SUPABASE_ANON_KEY = previousKey;
+  }
 });

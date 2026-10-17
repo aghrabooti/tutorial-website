@@ -3,44 +3,47 @@ import { afterEach, test } from "node:test";
 import { GET as getCourses } from "../app/api/courses/route.js";
 import { POST as getCourse } from "../app/api/functions/get-course/route.js";
 import { GET as getSiteContent } from "../app/api/site-content/route.js";
+import {
+  installPostgresPoolForTests,
+  resetPostgresPoolForTests,
+} from "../lib/postgres.js";
 
-const envKeys = [
-  "SUPABASE_URL",
-  "SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY",
-];
+const envKeys = ["DATABASE_URL"];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
 
-function setTestEnv({ serviceRole = false } = {}) {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_ANON_KEY = "test-anon-key";
-  if (serviceRole) process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
-  else delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+function setPostgresPool(handler) {
+  const pool = {
+    async query(text, values = []) {
+      return handler(text, values);
+    },
+  };
+  installPostgresPoolForTests(pool);
+  return pool;
 }
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  resetPostgresPoolForTests();
   for (const key of envKeys) {
     if (previousEnv[key] === undefined) delete process.env[key];
     else process.env[key] = previousEnv[key];
   }
 });
 
-test("GET /api/courses reads public rows with the anon key and preserves the client shape", async () => {
-  setTestEnv();
-  let requestedUrl;
-  let requestedKey;
-  globalThis.fetch = async (input, init) => {
-    requestedUrl = String(input);
-    requestedKey = new Headers(init?.headers).get("apikey");
-    return Response.json([{ id: "course-1", title: "آزمون" }]);
-  };
+test("GET /api/courses reads public rows from PostgreSQL and preserves the client shape", async () => {
+  let executedSql;
+  let values;
+  setPostgresPool(async (text, params) => {
+    executedSql = text;
+    values = params;
+    return { rows: [{ id: "course-1", title: "آزمون" }], rowCount: 1 };
+  });
 
   const response = await getCourses();
   assert.equal(response.status, 200);
-  assert.equal(requestedKey, "test-anon-key");
-  assert.match(requestedUrl, /\/rest\/v1\/courses\?select=\*/);
+  assert.match(executedSql, /SELECT \* FROM public\.courses/i);
+  assert.deepEqual(values, []);
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(await response.json(), {
     data: [{ id: "course-1", title: "آزمون" }],
@@ -48,11 +51,11 @@ test("GET /api/courses reads public rows with the anon key and preserves the cli
   });
 });
 
-test("GET /api/courses fails closed when the server is not configured", async () => {
-  delete process.env.SUPABASE_URL;
-  delete process.env.SUPABASE_ANON_KEY;
+test("GET /api/courses fails closed when the database is not configured", async () => {
+  resetPostgresPoolForTests();
+  delete process.env.DATABASE_URL;
   globalThis.fetch = async () => {
-    throw new Error("fetch should not run without configuration");
+    throw new Error("The route must not make an external request");
   };
 
   const response = await getCourses();
@@ -63,22 +66,22 @@ test("GET /api/courses fails closed when the server is not configured", async ()
   });
 });
 
-test("POST /api/functions/get-course keeps the previous response contract", async () => {
-  setTestEnv();
-  let requestedUrl;
-  let requestedKey;
-  globalThis.fetch = async (input, init) => {
-    requestedUrl = String(input);
-    requestedKey = new Headers(init?.headers).get("apikey");
-    return Response.json({
-      id: "course-2",
-      title: "دوره‌ی آزمایشی",
-      description: "توضیح",
-      image_url: "/cover.jpg",
-      price: 100,
-      type: "course",
-    });
+test("POST /api/functions/get-course queries PostgreSQL and keeps the response contract", async () => {
+  let executedSql;
+  let values;
+  const course = {
+    id: "course-2",
+    title: "دوره‌ی آزمایشی",
+    description: "توضیح",
+    image_url: "/cover.jpg",
+    price: 100,
+    type: "course",
   };
+  setPostgresPool(async (text, params) => {
+    executedSql = text;
+    values = params;
+    return { rows: [course], rowCount: 1 };
+  });
 
   const request = new Request("http://localhost/api/functions/get-course", {
     method: "POST",
@@ -88,23 +91,17 @@ test("POST /api/functions/get-course keeps the previous response contract", asyn
   const response = await getCourse(request);
 
   assert.equal(response.status, 200);
-  assert.equal(requestedKey, "test-anon-key");
-  assert.match(requestedUrl, /\/rest\/v1\/courses\?/);
-  assert.match(requestedUrl, /id=eq\.course-2/);
-  assert.deepEqual(await response.json(), {
-    success: true,
-    course: {
-      id: "course-2",
-      title: "دوره‌ی آزمایشی",
-      description: "توضیح",
-      image_url: "/cover.jpg",
-      price: 100,
-      type: "course",
-    },
-  });
+  assert.match(executedSql, /FROM public\.courses\s+WHERE id = \$1/i);
+  assert.deepEqual(values, ["course-2"]);
+  assert.deepEqual(await response.json(), { success: true, course });
 });
 
-test("POST /api/functions/get-course validates input before querying Supabase", async () => {
+test("POST /api/functions/get-course validates input before querying PostgreSQL", async () => {
+  let queryCount = 0;
+  setPostgresPool(async () => {
+    queryCount++;
+    return { rows: [], rowCount: 0 };
+  });
   const request = new Request("http://localhost/api/functions/get-course", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -117,26 +114,27 @@ test("POST /api/functions/get-course validates input before querying Supabase", 
     success: false,
     error: "missing course id",
   });
+  assert.equal(queryCount, 0);
 });
 
-test("GET /api/site-content performs a fixed read and returns only the public content map", async () => {
-  setTestEnv({ serviceRole: true });
-  let requestedKey;
-  let requestedUrl;
-  globalThis.fetch = async (input, init) => {
-    requestedUrl = String(input);
-    requestedKey = new Headers(init?.headers).get("apikey");
-    return Response.json([
-      { key: "home.title", value: "عنوان", updated_at: "2026-01-02T00:00:00.000Z" },
-      { key: "home.empty", value: "", updated_at: "2026-01-03T00:00:00.000Z" },
-      { key: "home.note", value: "یادداشت", updated_at: "2026-01-01T00:00:00.000Z" },
-    ]);
-  };
+test("GET /api/site-content reads public content from PostgreSQL without Supabase credentials", async () => {
+  process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
+  let executedSql;
+  setPostgresPool(async (text) => {
+    executedSql = text;
+    return {
+      rows: [
+        { key: "home.title", value: "عنوان", updated_at: new Date("2026-01-02T00:00:00.000Z") },
+        { key: "home.empty", value: "", updated_at: new Date("2026-01-03T00:00:00.000Z") },
+        { key: "home.note", value: "یادداشت", updated_at: new Date("2026-01-01T00:00:00.000Z") },
+      ],
+      rowCount: 3,
+    };
+  });
 
   const response = await getSiteContent();
   assert.equal(response.status, 200);
-  assert.equal(requestedKey, "test-service-role-key");
-  assert.match(requestedUrl, /\/rest\/v1\/site_content\?select=key%2Cvalue%2Cupdated_at/);
+  assert.match(executedSql, /FROM public\.site_content/);
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(await response.json(), {
     success: true,

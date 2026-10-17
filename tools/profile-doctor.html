@@ -63,36 +63,26 @@
   </div>
 
   <div class="card">
-    <h2>۲) بررسی ستون‌های جدول کاربران</h2>
+    <h2>۲) بررسی schema در PostgreSQL self-hosted</h2>
     <p class="sub" style="margin-bottom:10px">
-      این دستور را در <b>Supabase → SQL Editor</b> اجرا کنید. باید چهار ستون
-      <code>first_name</code>، <code>last_name</code>، <code>grade</code>،
-      <code>major</code> را نشان بدهد.
+      این دستور را در SSH سرور از ریشه‌ی مخزن اجرا کنید؛ خروجی نام/نوع ستون‌های
+      <code>site_users</code> را نشان می‌دهد و secretها را چاپ نمی‌کند.
     </p>
-    <pre>select column_name, data_type
-from information_schema.columns
-where table_schema = 'public'
-  and table_name = 'site_users'
-order by ordinal_position;</pre>
+    <pre>docker compose --env-file .env -f deploy/self-hosted/compose.yaml exec db psql -U postgres -d tutorial_website -c "select column_name, data_type from information_schema.columns where table_schema='public' and table_name='site_users' order by ordinal_position;"</pre>
     <button id="copyCheck" class="ghost">کپی دستور بررسی</button>
-
-    <p class="sub" style="margin:18px 0 10px">
-      اگر <code>grade</code> یا <code>major</code> نبود، این دستور آن‌ها را اضافه می‌کند
-      (بقیه‌ی اطلاعات دست نمی‌خورد):
+    <p class="sub" style="margin:18px 0 0">
+      schema مقصد را با migrationهای versioned مدیریت کنید؛ برای رفع خطا در production
+      دستور <code>ALTER TABLE</code> موردی اجرا نکنید. ابتدا log سرویس <code>migrate</code>
+      و backup را بررسی کنید.
     </p>
-    <pre>alter table public.site_users
-  add column if not exists grade text,
-  add column if not exists major text;</pre>
-    <button id="copyFix" class="ghost">کپی دستور اصلاح</button>
   </div>
 
   <div class="card">
     <h2>۳) اگر باز هم خطا داد</h2>
     <ol>
       <li>پاسخ ۴۰۱ «نشست معتبر نیست» برای توکن آزمایشی طبیعی است؛ یعنی route Next درخواست را پردازش کرده و نشست مطابقی پیدا نشده است.</li>
-      <li>اگر ۵۰۰ یا ۵۰۳ دیدید، تنظیم‌های سرور <code>SUPABASE_URL</code> و
-          <code>SUPABASE_SERVICE_ROLE_KEY</code> و logهای Next.js را بررسی کنید؛ این route دیگر به Edge Function وابسته نیست.</li>
-      <li>اگر پیام مربوط به ستون <code>grade</code> یا <code>major</code> دیدید، دستور اصلاح بخش ۲ را در Supabase SQL Editor اجرا کنید.</li>
+      <li>اگر ۵۰۰ یا ۵۰۳ دیدید، logهای <code>next-app</code> و <code>db</code> را بررسی کنید؛ مقدارهای <code>DATABASE_URL</code> و وضعیت migration را فقط در سرور بررسی کنید.</li>
+      <li>اگر پیام مربوط به ستون <code>grade</code> یا <code>major</code> دیدید، migration و خروجی دستور read-only بخش ۲ را بررسی کنید؛ روی production دستی schema را تغییر ندهید.</li>
       <li>در مرورگر، صفحه‌ی <code>/complete-profile</code> را با Ctrl+Shift+R
           (رفرش سخت) دوباره باز کنید و فرم را ذخیره کنید.</li>
     </ol>
@@ -122,7 +112,7 @@ $("check").addEventListener("click", async () => {
         });
     } catch (e) {
         verdict("v-bad", "❌ API هم‌مبدأ در دسترس نیست",
-            "دسترسی به Next/Nginx را بررسی کنید؛ اگر server log خطای اتصال نشان می‌دهد، تنظیمات Supabase سمت سرور را نیز بررسی کنید." +
+            "دسترسی به Next/Nginx، اتصال داخلی PostgreSQL و وضعیت migration را در logهای VPS بررسی کنید." +
             `<br><span class="muted">${e.message}</span>`);
         $("check").disabled = false;
         return;
@@ -142,8 +132,8 @@ $("check").addEventListener("click", async () => {
         verdict("v-bad", "❌ سرور API در دسترس نیست",
             "پاسخ ۵۰۲/۵۰۴ از Next یا reverse proxy آمده است؛ logهای Next/Nginx و سلامت سرویس را بررسی کنید.");
     } else if (res.status === 503) {
-        verdict("v-bad", "❌ تنظیمات Supabase سمت سرور ناقص است",
-            "مقدارهای <code>SUPABASE_URL</code> و <code>SUPABASE_SERVICE_ROLE_KEY</code> را در environment سرور بررسی کنید.");
+        verdict("v-bad", "❌ یکی از وابستگی‌های server-side آماده نیست",
+            "آمادگی PostgreSQL، migration و (برای OTP) provider پیامک را در health/logهای VPS بررسی کنید.");
     } else if (res.status === 400) {
         verdict("v-warn", "⚠️ داده‌ی آزمایشی توسط route رد شد",
             "درخواست کامل فرستاده شده است؛ نسخه‌ی route و بدنه‌ی پاسخ را در logها بررسی کنید.");
@@ -176,8 +166,6 @@ async function copyText(text, btn, label) {
 $("copyCheck").addEventListener("click", (e) =>
     copyText($("copyCheck").previousElementSibling.textContent, e.target, "کپی شد"));
 
-$("copyFix").addEventListener("click", (e) =>
-    copyText($("copyFix").previousElementSibling.textContent, e.target, "کپی شد"));
 </script>
 </body>
 </html>

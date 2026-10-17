@@ -1,6 +1,5 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
-import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
-import { findActiveSessionUser } from "../../../../lib/session-user.js";
+import { query } from "../../../../lib/postgres.js";
+import { findActivePostgresSessionUser, isValidSessionToken, jsonNoStore } from "../../../../lib/session-token.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,46 +19,42 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSessionUser(
-      supabase,
-      token,
-      "id, phone, first_name, last_name"
-    );
+    const sessionResult = await findActivePostgresSessionUser(token, ["id", "phone", "first_name", "last_name"]);
+    if (sessionResult.error && !sessionResult.expired) throw sessionResult.error;
     if (!sessionResult.session || !sessionResult.user) {
       return jsonNoStore({ error: "نشست معتبر نیست" }, 401);
     }
+    if (sessionResult.userError) throw sessionResult.userError;
 
-    const { data: course } = await supabase
-      .from("courses")
-      .select("*")
-      .eq("id", courseId)
-      .maybeSingle();
+    const { rows: courses } = await query(
+      "SELECT * FROM public.courses WHERE id = $1 LIMIT 1",
+      [courseId]
+    );
+    const course = courses[0];
+    if (!course) return jsonNoStore({ error: "دوره پیدا نشد" }, 404);
 
-    if (!course) {
-      return jsonNoStore({ error: "دوره پیدا نشد" }, 404);
-    }
-
-    const { data: paid } = await supabase
-      .from("orders")
-      .select("id")
-      .eq("user_id", String(sessionResult.user.id))
-      .eq("status", "paid")
-      .overlaps("course_ids", [String(course.id)])
-      .limit(1);
+    const { rows: paid } = await query(
+      `SELECT 1 AS owned
+       FROM public.orders
+       WHERE user_id = $1
+         AND status = 'paid'
+         AND $2 = ANY(course_ids)
+       LIMIT 1`,
+      [String(sessionResult.user.id), String(course.id)]
+    );
 
     return jsonNoStore({
       success: true,
-      purchased: (paid ?? []).length > 0,
+      purchased: paid.length > 0,
       course,
     });
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(
       "Missing server environment variable:"
     );
-    console.error("[api/functions/check-course-access] Request failed:", error);
+    console.error("[api/functions/check-course-access] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
-      { error: missingConfig ? "سرویس دسترسی دوره تنظیم نشده است" : error?.message ?? "خطای سرور" },
+      { error: missingConfig ? "سرویس دسترسی دوره تنظیم نشده است" : "خطا در بررسی دسترسی دوره" },
       missingConfig ? 503 : 500
     );
   }

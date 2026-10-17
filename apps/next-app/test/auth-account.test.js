@@ -7,14 +7,16 @@ import { POST as updateProfile } from "../app/api/functions/update-profile/route
 import { POST as changePassword } from "../app/api/functions/change-password/route.js";
 import { hashPassword, verifyPassword } from "../lib/password-hash.js";
 import { normalizePhone } from "../lib/phone.js";
+import {
+  installPostgresPoolForTests,
+  resetPostgresPoolForTests,
+} from "../lib/postgres.js";
 
-const envKeys = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+const envKeys = ["DATABASE_URL"];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
-const originalFetch = globalThis.fetch;
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
 }
 
 function makeRequest(path, body) {
@@ -29,45 +31,19 @@ function tokenHash(token) {
   return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
-function mockRest({ user, session, existingUser = null, updatedUser = user }) {
+function mockPostgres(handler) {
   const requests = [];
-  globalThis.fetch = async (input, init = {}) => {
-    const url = new URL(String(input));
-    const method = init.method ?? "GET";
-    const record = { url, method, init };
-    requests.push(record);
-
-    if (url.pathname.endsWith("/user_sessions") && method === "GET") {
-      return Response.json(session);
-    }
-    if (url.pathname.endsWith("/user_sessions") && method === "POST") {
-      return new Response(null, { status: 201 });
-    }
-    if (url.pathname.endsWith("/user_sessions") && method === "PATCH") {
-      return new Response(null, { status: 204 });
-    }
-    if (url.pathname.endsWith("/site_users") && method === "GET") {
-      const select = url.searchParams.get("select");
-      if (select === "id" && url.searchParams.has("phone")) {
-        return Response.json(existingUser);
-      }
-      return Response.json(user);
-    }
-    if (url.pathname.endsWith("/site_users") && method === "POST") {
-      return Response.json(updatedUser, { status: 201 });
-    }
-    if (url.pathname.endsWith("/site_users") && method === "PATCH") {
-      return url.searchParams.has("select")
-        ? Response.json(updatedUser)
-        : new Response(null, { status: 204 });
-    }
-    throw new Error(`Unexpected Supabase request: ${method} ${url}`);
-  };
+  installPostgresPoolForTests({
+    async query(text, values = []) {
+      requests.push({ text, values });
+      return handler(text, values);
+    },
+  });
   return requests;
 }
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  resetPostgresPoolForTests();
   for (const key of envKeys) {
     if (previousEnv[key] === undefined) delete process.env[key];
     else process.env[key] = previousEnv[key];
@@ -93,7 +69,7 @@ test("phone helper preserves legacy Iranian mobile normalization", () => {
   assert.equal(normalizePhone(" +98 9120000000 "), "989120000000");
 });
 
-test("POST /api/functions/login-user preserves old password records and creates a 30-day hashed session", async () => {
+test("POST /api/functions/login-user preserves password records and creates a 30-day hashed PostgreSQL session", async () => {
   setTestEnv();
   const passwordHash = await hashPassword("correct-password");
   const user = {
@@ -107,7 +83,12 @@ test("POST /api/functions/login-user preserves old password records and creates 
     major: "تجربی",
     role: "student",
   };
-  const requests = mockRest({ user });
+  const requests = mockPostgres(async (text) => {
+    if (text.includes("SELECT * FROM public.site_users")) return { rows: [user], rowCount: 1 };
+    if (text.includes("INSERT INTO public.user_sessions")) return { rows: [], rowCount: 1 };
+    if (text.includes("UPDATE public.site_users")) return { rows: [], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await loginUser(
     makeRequest("/api/functions/login-user", { phone: "09120000000", password: "correct-password" })
@@ -123,24 +104,35 @@ test("POST /api/functions/login-user preserves old password records and creates 
   assert.equal(typeof body.token, "string");
   assert.equal(body.token.length, 72);
   assert.equal(requests.length, 3);
-  assert.equal(requests[0].url.searchParams.get("phone"), "eq.989120000000");
-  const insertedSession = JSON.parse(requests[1].init.body);
-  assert.equal(insertedSession.user_id, "user-1");
-  assert.equal(insertedSession.token_hash, tokenHash(body.token));
-  assert.ok(new Date(insertedSession.expires_at).getTime() > Date.now() + 29 * 24 * 60 * 60 * 1000);
+  assert.match(requests[0].text, /WHERE phone = \$1/);
+  assert.deepEqual(requests[0].values, ["989120000000"]);
+  assert.match(requests[1].text, /INSERT INTO public\.user_sessions/);
+  assert.equal(requests[1].values[0], "user-1");
+  assert.equal(requests[1].values[1], tokenHash(body.token));
+  assert.ok(new Date(requests[1].values[2]).getTime() > Date.now() + 29 * 24 * 60 * 60 * 1000);
 });
 
-test("POST /api/functions/login-user returns generic credentials errors and blocks inactive users", async () => {
+test("POST /api/functions/login-user returns generic credential errors and blocks inactive users", async () => {
   setTestEnv();
   const passwordHash = await hashPassword("correct-password");
-  mockRest({ user: { id: "user-1", password_hash: passwordHash, is_active: true } });
+  mockPostgres(async (text) => {
+    if (text.includes("SELECT * FROM public.site_users")) {
+      return { rows: [{ id: "user-1", password_hash: passwordHash, is_active: true }], rowCount: 1 };
+    }
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
   const wrongPassword = await loginUser(
     makeRequest("/api/functions/login-user", { phone: "09120000000", password: "wrong-password" })
   );
   assert.equal(wrongPassword.status, 401);
   assert.deepEqual(await wrongPassword.json(), { error: "شماره یا رمز اشتباه است" });
 
-  mockRest({ user: { id: "user-2", password_hash: passwordHash, is_active: false } });
+  mockPostgres(async (text) => {
+    if (text.includes("SELECT * FROM public.site_users")) {
+      return { rows: [{ id: "user-2", password_hash: passwordHash, is_active: false }], rowCount: 1 };
+    }
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
   const inactive = await loginUser(
     makeRequest("/api/functions/login-user", { phone: "09120000000", password: "correct-password" })
   );
@@ -148,14 +140,14 @@ test("POST /api/functions/login-user returns generic credentials errors and bloc
   assert.deepEqual(await inactive.json(), { error: "حساب کاربری غیرفعال است" });
 });
 
-test("POST /api/functions/register-user normalizes the phone and inserts a student with a compatible password hash", async () => {
+test("POST /api/functions/register-user normalizes the phone and stores a compatible password hash", async () => {
   setTestEnv();
-  const user = {
-    id: "new-user",
-    phone: "989120000000",
-    full_name: "سارا رضایی",
-  };
-  const requests = mockRest({ user: null, existingUser: null, updatedUser: user });
+  const user = { id: "new-user", phone: "989120000000", full_name: "سارا رضایی" };
+  const requests = mockPostgres(async (text) => {
+    if (text.includes("SELECT id FROM public.site_users")) return { rows: [], rowCount: 0 };
+    if (text.includes("INSERT INTO public.site_users")) return { rows: [user], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await registerUser(
     makeRequest("/api/functions/register-user", {
@@ -170,17 +162,21 @@ test("POST /api/functions/register-user normalizes the phone and inserts a stude
   assert.equal(response.status, 200);
   assert.deepEqual(body, { success: true, user });
   assert.equal(requests.length, 2);
-  const insert = JSON.parse(requests[1].init.body);
-  assert.equal(insert.phone, "989120000000");
-  assert.equal(insert.first_name, "سارا");
-  assert.equal(insert.last_name, "رضایی");
-  assert.equal(insert.role, "student");
-  assert.equal(await verifyPassword("new-password", insert.password_hash), true);
+  assert.match(requests[1].text, /INSERT INTO public\.site_users/);
+  assert.equal(requests[1].values[0], "989120000000");
+  assert.equal(requests[1].values[2], "سارا");
+  assert.equal(requests[1].values[3], "رضایی");
+  assert.equal(await verifyPassword("new-password", requests[1].values[1]), true);
 });
 
 test("POST /api/functions/register-user rejects an existing phone before inserting", async () => {
   setTestEnv();
-  const requests = mockRest({ user: null, existingUser: { id: "existing-user" } });
+  const requests = mockPostgres(async (text) => {
+    if (text.includes("SELECT id FROM public.site_users")) {
+      return { rows: [{ id: "existing-user" }], rowCount: 1 };
+    }
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await registerUser(
     makeRequest("/api/functions/register-user", { phone: "09120000000", password: "valid-password" })
@@ -191,14 +187,9 @@ test("POST /api/functions/register-user rejects an existing phone before inserti
   assert.equal(requests.length, 1);
 });
 
-test("POST /api/functions/update-profile requires a valid active session and preserves ninth-grade rules", async () => {
+test("POST /api/functions/update-profile requires an active PostgreSQL session and preserves ninth-grade rules", async () => {
   setTestEnv();
   const token = "valid-profile-token";
-  const session = {
-    id: "session-1",
-    user_id: "user-1",
-    expires_at: "2099-01-01T00:00:00.000Z",
-  };
   const updatedUser = {
     id: "user-1",
     phone: "989120000000",
@@ -207,7 +198,13 @@ test("POST /api/functions/update-profile requires a valid active session and pre
     grade: "9",
     major: "",
   };
-  const requests = mockRest({ session, updatedUser });
+  const requests = mockPostgres(async (text) => {
+    if (text.includes("FROM public.user_sessions")) {
+      return { rows: [{ id: "session-1", user_id: "user-1", expired: false }], rowCount: 1 };
+    }
+    if (text.includes("UPDATE public.site_users")) return { rows: [updatedUser], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await updateProfile(
     makeRequest("/api/functions/update-profile", {
@@ -221,22 +218,25 @@ test("POST /api/functions/update-profile requires a valid active session and pre
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { success: true, user: updatedUser });
-  assert.equal(requests[0].url.searchParams.get("token_hash"), `eq.${tokenHash(token)}`);
-  assert.deepEqual(JSON.parse(requests[1].init.body), {
-    first_name: "علی",
-    last_name: "رضایی",
-    grade: "9",
-    major: "",
-  });
+  assert.equal(requests[0].values[0], tokenHash(token));
+  assert.deepEqual(requests[1].values, ["user-1", "علی", "رضایی", "9", ""]);
 });
 
 test("POST /api/functions/change-password verifies PBKDF2, stores a compatible hash, and revokes other sessions", async () => {
   setTestEnv();
   const token = "valid-password-token";
   const currentHash = await hashPassword("current-password");
-  const session = { id: "session-2", user_id: "user-2", expires_at: "2099-01-01T00:00:00.000Z" };
-  const user = { id: "user-2", password_hash: currentHash };
-  const requests = mockRest({ session, user });
+  const requests = mockPostgres(async (text) => {
+    if (text.includes("FROM public.user_sessions")) {
+      return { rows: [{ id: "session-2", user_id: "user-2", expired: false }], rowCount: 1 };
+    }
+    if (text.includes("SELECT id, password_hash FROM public.site_users")) {
+      return { rows: [{ id: "user-2", password_hash: currentHash }], rowCount: 1 };
+    }
+    if (text.includes("UPDATE public.site_users")) return { rows: [], rowCount: 1 };
+    if (text.includes("UPDATE public.user_sessions")) return { rows: [], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await changePassword(
     makeRequest("/api/functions/change-password", {
@@ -248,10 +248,10 @@ test("POST /api/functions/change-password verifies PBKDF2, stores a compatible h
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { success: true });
-  const passwordUpdate = requests.find((request) => request.url.pathname.endsWith("/site_users") && request.method === "PATCH");
-  const newHash = JSON.parse(passwordUpdate.init.body).password_hash;
+  const passwordUpdate = requests.find((request) => request.text.includes("UPDATE public.site_users"));
+  const newHash = passwordUpdate.values[1];
   assert.equal(await verifyPassword("replacement-password", newHash), true);
   assert.equal(await verifyPassword("current-password", newHash), false);
-  const sessionUpdate = requests.find((request) => request.url.pathname.endsWith("/user_sessions") && request.method === "PATCH");
-  assert.equal(sessionUpdate.url.searchParams.get("id"), "neq.session-2");
+  const sessionUpdate = requests.find((request) => request.text.includes("UPDATE public.user_sessions"));
+  assert.deepEqual(sessionUpdate.values, ["user-2", "session-2"]);
 });

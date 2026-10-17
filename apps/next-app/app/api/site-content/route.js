@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../lib/supabase-server.js";
+import { readSiteContent } from "../../../lib/site-content.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,46 +12,17 @@ function json(body, status = 200) {
 
 export async function GET() {
   try {
-    // This is intentionally a fixed, read-only query. The service-role client
-    // is never returned to the browser and accepts no caller-controlled filters.
-    const supabase = createServiceSupabaseClient();
-    const { data, error } = await supabase
-      .from("site_content")
-      .select("key, value, updated_at");
-
-    if (error) {
-      console.error("[api/site-content] Supabase read failed:", error);
-      const tableMissing = /relation|does not exist|schema cache/i.test(
-        String(error.message ?? "")
-      );
-      return json({
-        success: false,
-        content: {},
-        table_missing: tableMissing,
-        error: tableMissing ? "site_content table is not available" : "content unavailable",
-      });
-    }
-
-    const content = {};
-    let updatedAt = "";
-
-    for (const row of data ?? []) {
-      if (!row.value) continue;
-      content[row.key] = row.value;
-      if (row.updated_at > updatedAt) updatedAt = row.updated_at;
-    }
-
-    return json({ success: true, content, updated_at: updatedAt });
+    return json(await readSiteContent());
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(
       "Missing server environment variable:"
     );
-    console.error("[api/site-content] Request failed:", error);
+    console.error("[api/site-content] Request failed:", error?.message ?? error);
     return json(
       {
         success: false,
         content: {},
-        error: missingConfig ? "content service is not configured" : "content unavailable",
+        error: missingConfig ? "سرویس محتوا موقتاً تنظیم نشده است" : "خطا در خواندن محتوا",
       },
       missingConfig ? 503 : 502
     );

@@ -1,6 +1,6 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { query } from "../../../../lib/postgres.js";
+import { findActivePostgresAdmin } from "../../../../lib/admin-auth.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
-import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,28 +17,22 @@ export async function POST(request) {
   if (!isValidSessionToken(token)) return jsonNoStore({ error: "توکن ارسال نشده" }, 401);
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const auth = await findActivePostgresAdmin(token);
+    if (auth.error && !auth.expired) throw auth.error;
+    if (auth.userError) throw auth.userError;
     if (!auth.admin) return jsonNoStore({ error: "دسترسی غیرمجاز — فقط مدیر" }, 403);
 
-    const { data: users, error } = await supabase
-      .from("site_users")
-      .select("id, phone, first_name, last_name, role")
-      .limit(300);
-
-    if (error) {
-      console.error("[api/functions/admin-users] User lookup failed:", error);
-      return jsonNoStore({ error: "خطا در خواندن کاربران" }, 500);
-    }
-
-    return jsonNoStore({ success: true, users: users ?? [] });
-  } catch (error) {
-    const missingConfig = String(error?.message ?? "").startsWith(
-      "Missing server environment variable:"
+    const { rows: users } = await query(
+      `SELECT id, phone, first_name, last_name, role
+       FROM public.site_users
+       LIMIT 300`
     );
-    console.error("[api/functions/admin-users] Request failed:", error);
+    return jsonNoStore({ success: true, users });
+  } catch (error) {
+    const missingConfig = String(error?.message ?? "").startsWith("Missing server environment variable:");
+    console.error("[api/functions/admin-users] PostgreSQL request failed:", error?.message ?? error);
     return jsonNoStore(
-      { error: missingConfig ? "سرویس کاربران تنظیم نشده است" : error?.message ?? "خطای سرور" },
+      { error: missingConfig ? "سرویس کاربران تنظیم نشده است" : "خطا در خواندن کاربران" },
       missingConfig ? 503 : 500
     );
   }

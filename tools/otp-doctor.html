@@ -69,19 +69,19 @@
   <div class="card">
     <h1>دکتر پیامک</h1>
     <p class="sub">
-      این صفحه دقیقاً همان درخواستی را می‌فرستد که فرم ثبت‌نام سایت می‌فرستد، و
-      پاسخ خام سرور را نشان می‌دهد. با این کار معلوم می‌شود مشکل کجاست:
+      این صفحه همان route هم‌مبدأ Next.js را که فرم ثبت‌نام استفاده می‌کند صدا می‌زند
+      و پاسخ خام سرور را نشان می‌دهد. با این کار معلوم می‌شود مشکل کجاست:
       «سامانه‌ی پیامک تنظیم نشده»، «فاصله‌ی ۶۰ ثانیه‌ای»، یا «خطای پنل پیامکی».
       <br>
-      هیچ چیزی روی سایت شما تغییر نمی‌کند و کد ارسالی فقط برای همان شماره است.
+      این دکمه واقعاً یک درخواست OTP می‌فرستد؛ ممکن است ردیف کوتاه‌عمر در PostgreSQL بسازد
+      و پیامک واقعی ارسال کند/هزینه داشته باشد. فقط برای شماره‌ای که اجازه‌ی تستش را دارید استفاده کنید؛ حساب یا پروفایل ساخته نمی‌شود.
     </p>
 
     <label for="phone">شماره موبایل برای تست</label>
     <input id="phone" class="ltr" value="09121351047" inputmode="numeric">
     <div class="muted" style="margin-top:6px">همان شماره‌ای که می‌خواهید کاربر جدید با آن ثبت‌نام کند.</div>
 
-    <button id="send">۱) ارسال کد تایید (تست)</button>
-    <button id="clearSql" class="ghost">۲) ساخت SQL برای پاک‌کردن قفل ۶۰ ثانیه</button>
+    <button id="send">۱) ارسال کد تایید (درخواست واقعی)</button>
 
     <div id="verdict"></div>
     <pre id="raw" style="display:none"></pre>
@@ -97,16 +97,6 @@
     <input id="code" class="ltr" placeholder="123456" maxlength="6" inputmode="numeric">
     <button id="verify">بررسی کد</button>
     <div id="verifyResult"></div>
-  </div>
-
-  <div class="card" id="sqlCard" style="display:none">
-    <h2>پاک‌کردن قفل ۶۰ ثانیه</h2>
-    <p class="sub" style="margin-bottom:10px">
-      اگر پیام «تا N ثانیه‌ی دیگر صبر کنید» می‌گیرید، این دستور را در
-      Supabase → SQL Editor اجرا کنید تا فوراً بتوانید دوباره کد بگیرید.
-    </p>
-    <pre id="sql"></pre>
-    <button id="copySql" class="ghost">کپی دستور</button>
   </div>
 
   <div class="card">
@@ -133,32 +123,24 @@
           در پنل فعال کنید یا با پشتیبانی sms.ir تماس بگیرید.</li>
     </ol>
 
-    <h3 style="margin:14px 0 6px">۲) در Supabase</h3>
+    <h3 style="margin:14px 0 6px">۲) در محیط سرور Next.js</h3>
     <ol>
-      <li>وارد <code>supabase.com/dashboard</code> شوید و پروژه را باز کنید.</li>
-      <li>منوی چپ: <b>Project Settings</b> → بخش <b>Edge Functions</b> → <b>Secrets</b>
-          (یا در نسخه‌های جدید: <b>Edge Functions</b> → تب <b>Secrets</b>).</li>
-      <li>روی <b>Add new secret</b> بزنید و این دو سکرت را بسازید
-          (هر دو نام‌گذاری قبول است؛ همان که دارید را نگه دارید):
+      <li>مقادیر provider را در environment سرویس Next.js تنظیم کنید؛ برای Compose، فایل `.env` کنار دستور Compose خوانده می‌شود و `compose.yaml` آن‌ها را به کانتینر می‌دهد.</li>
+      <li>برای sms.ir این دو متغیر را بسازید (نام‌های بدون underscore هم پشتیبانی می‌شوند):
         <ul style="margin:8px 0">
-          <li><code>SMS_IR_API_KEY</code> یا <code>SMSIR_API_KEY</code> = کلیدی که
-              از پنل sms.ir کپی کردید</li>
-          <li><code>SMS_IR_TEMPLATE_ID</code> یا <code>SMSIR_TEMPLATE_ID</code> =
-              شناسه‌ی عددی قالب کد تأیید</li>
+          <li><code>SMS_IR_API_KEY</code> یا <code>SMSIR_API_KEY</code> = کلیدی که از پنل sms.ir کپی کردید</li>
+          <li><code>SMS_IR_TEMPLATE_ID</code> یا <code>SMSIR_TEMPLATE_ID</code> = شناسه‌ی عددی قالب کد تأیید</li>
         </ul>
       </li>
-      <li><b>Save</b>. بعد از ذخیره‌ی سکرت، فانکشن <code>send-otp</code> را یک‌بار
-          <b>دوباره Deploy</b> کنید (Supabase → Edge Functions → send-otp →
-          Deploy) تا کد جدید و سکرت‌ها با هم فعال شوند.</li>
-      <li>دوباره دکمه‌ی «ارسال کد تایید» همین صفحه را بزنید — باید بنویسد
-          «پیامک ارسال شد».</li>
+      <li>اگر قالب Verify ندارید، به‌جای template ID می‌توانید <code>SMS_IR_LINE_NUMBER</code> یا <code>SMSIR_LINE_NUMBER</code> تنظیم کنید. برای کاوه‌نگار، <code>KAVENEGAR_API_KEY</code> را وارد کنید.</li>
+      <li>بعد از تغییر environment، سرویس Next.js را restart/redeploy کنید؛ deploy کردن Edge Function لازم نیست. سپس دوباره دکمه‌ی «ارسال کد تایید» را بزنید — باید بنویسد «پیامک ارسال شد».</li>
     </ol>
 
     <p class="muted" style="margin-top:14px">
       سکرت‌های اختیاری: <code>SMS_IR_OTP_PARAMETER</code> اگر نام متغیر قالب شما
       <code>CODE</code> نیست · <code>SMS_IR_LINE_NUMBER</code> برای ارسال با خط
       اختصاصی (روش Bulk، بدون قالب) · <code>OTP_DEBUG=true</code> برای دیدن کد در
-      پاسخ هنگام تست (بعد از تست حتماً حذفش کنید) ·
+      پاسخ فقط در محیط development (در production هرگز کد را افشا نمی‌کند) ·
       <code>KAVENEGAR_API_KEY</code> فقط اگر خواستید به کاوه‌نگار برگردید.
     </p>
   </div>
@@ -167,7 +149,7 @@
 
 <script>
 /* ─────────────────────────────────────────────────────────────
-   Dr (این ابزار فقط با فانکشن زنده‌ی سایت حرف می‌زند)
+   Dr (این ابزار فقط routeهای OTP هم‌مبدأ Next.js را صدا می‌زند)
    ───────────────────────────────────────────────────────────── */
 const $ = (id) => document.getElementById(id);
 
@@ -180,8 +162,15 @@ function normalizePhone(p) {
     return x;
 }
 
+const OTP_ROUTES = {
+    "send-otp": "/api/functions/send-otp",
+    "otp-verify": "/api/functions/otp-verify",
+};
+
 async function callFunction(name, payload) {
-    const res = await fetch(`/api/functions/${encodeURIComponent(name)}`, {
+    const route = OTP_ROUTES[name];
+    if (!route) throw new Error("OTP route ناشناخته است");
+    const res = await fetch(route, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -259,7 +248,7 @@ $("send").addEventListener("click", async () => {
     else if (b.success && (b.dev_mode || b.sms_configured === false)) {
         verdict("v-warn", "⚠️ سامانه‌ی پیامک تنظیم نشده — پیامکی ارسال نمی‌شود",
             "سرور کد را ساخته، ولی چون نه <b>SMS_IR_API_KEY</b> و نه " +
-            "<b>KAVENEGAR_API_KEY</b> در Secrets تنظیم نشده، پیامکی فرستاده نشده و " +
+            "<b>KAVENEGAR_API_KEY</b> در environment سرور تنظیم نشده، پیامکی فرستاده نشده و " +
             "کد فقط در پاسخ API برگشته است.");
 
         $("codeBox").innerHTML =
@@ -270,13 +259,18 @@ $("send").addEventListener("click", async () => {
         $("verifyCard").style.display = "";
     }
 
-    /* ۳) قفل ۶۰ ثانیه‌ای */
+    /* ۳) محیط production بدون provider پیامک: route عمداً fail-closed است */
+    else if (out.status === 503 && b.sms_config_missing) {
+        verdict("v-bad", "❌ سامانه‌ی پیامک روی سرور تنظیم نشده",
+            "در production کد در پاسخ API افشا نمی‌شود. یکی از providerهای SMS را در environment سرویس Next.js تنظیم و سرویس را restart کنید.");
+    }
+
+    /* ۴) قفل ۶۰ ثانیه‌ای */
     else if (out.status === 429) {
         const wait = b.retry_after ? `${b.retry_after} ثانیه` : "حدود ۶۰ ثانیه";
         verdict("v-warn", "⏳ فاصله‌ی مجاز بین دو درخواست",
-            `برای هر شماره، هر ۶۰ ثانیه یک کد مجاز است. ${wait} دیگر دوباره تلاش کنید،
-             یا دستور SQL پایین را اجرا کنید تا فوراً آزاد شود.`);
-        $("sqlCard").style.display = "";
+            `برای هر شماره، هر ۶۰ ثانیه یک کد مجاز است. ${wait} صبر کنید و دوباره تلاش کنید؛
+             برای دور زدن cooldown ردیف OTP را دستی حذف نکنید.`);
     }
 
     /* ۴) خطای پنل پیامکی */
@@ -292,7 +286,7 @@ $("send").addEventListener("click", async () => {
                   (b.sms_message ? ` — «${escapeHtml(b.sms_message)}»` : "")
                 : "",
             b.sms_config_missing
-                ? "<br>یعنی سکرت‌های sms.ir روی Supabase کامل نیستند" +
+                ? "<br>یعنی متغیرهای sms.ir روی سرور Next.js کامل نیستند" +
                   (b.missing_secret ? ` (سکرت <b>${escapeHtml(b.missing_secret)}</b> تنظیم نشده)` : "") + "."
                 : "",
             "<br>شماره قفل نشد؛ بعد از رفع مشکل می‌توانید فوراً دوباره تلاش کنید.",
@@ -307,39 +301,6 @@ $("send").addEventListener("click", async () => {
     }
 
     $("send").disabled = false;
-});
-
-/* ── ساخت دستور SQL برای پاک‌کردن قفل ── */
-function buildSql() {
-    const phone = normalizePhone($("phone").value);
-    const local = "0" + phone.slice(2);
-
-    return [
-        "-- پاک‌کردن کدهای قبلی این شماره → قفل ۶۰ ثانیه فوراً برداشته می‌شود",
-        "delete from public.otp_codes",
-        `where phone in ('${phone}', '${local}', '+${phone}');`,
-        "",
-        "-- بررسی: باید صفر ردیف بمانَد",
-        "select phone, purpose, created_at",
-        "from public.otp_codes",
-        `where phone in ('${phone}', '${local}', '+${phone}');`,
-    ].join("\n");
-}
-
-$("clearSql").addEventListener("click", () => {
-    $("sql").textContent = buildSql();
-    $("sqlCard").style.display = "";
-    $("sqlCard").scrollIntoView({ behavior: "smooth", block: "start" });
-});
-
-$("copySql").addEventListener("click", async () => {
-    try {
-        await navigator.clipboard.writeText($("sql").textContent);
-        $("copySql").textContent = "کپی شد ✅";
-        setTimeout(() => { $("copySql").textContent = "کپی دستور"; }, 2000);
-    } catch (e) {
-        verdict("v-bad", "مرورگر اجازه‌ی کپی نداد", "دستی انتخاب و کپی کنید.");
-    }
 });
 
 /* ── بررسی کد ── */

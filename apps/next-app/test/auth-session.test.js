@@ -3,14 +3,17 @@ import { createHash } from "node:crypto";
 import { afterEach, test } from "node:test";
 import { POST as checkSession } from "../app/api/functions/check-session/route.js";
 import { POST as logoutUser } from "../app/api/functions/logout-user/route.js";
+import {
+  installPostgresPoolForTests,
+  resetPostgresPoolForTests,
+} from "../lib/postgres.js";
 
-const envKeys = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+const envKeys = ["DATABASE_URL"];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
 }
 
 function makeRequest(path, body) {
@@ -25,41 +28,55 @@ function sha256(value) {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
+function installMockPool(handler) {
+  const queries = [];
+  installPostgresPoolForTests({
+    async query(text, values = []) {
+      queries.push({ text, values });
+      return handler(text, values);
+    },
+  });
+  return queries;
+}
+
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  resetPostgresPoolForTests();
   for (const key of envKeys) {
     if (previousEnv[key] === undefined) delete process.env[key];
     else process.env[key] = previousEnv[key];
   }
 });
 
-test("POST /api/functions/check-session hashes the token, returns the safe user fields, and disables caching", async () => {
+test("POST /api/functions/check-session hashes the token, returns safe user fields, and disables caching", async () => {
   setTestEnv();
   const token = "legacy-session-token";
-  const requests = [];
-  globalThis.fetch = async (input, init) => {
-    const url = new URL(String(input));
-    const method = init?.method ?? "GET";
-    requests.push({ url, method, init });
-
-    if (url.pathname.endsWith("/user_sessions")) {
-      return Response.json({
-        id: "session-1",
-        user_id: "user-1",
-        expires_at: "2099-01-01T00:00:00.000Z",
-      });
+  const queries = installMockPool(async (text) => {
+    if (text.includes("FROM public.user_sessions")) {
+      return {
+        rows: [{
+          id: "session-1",
+          user_id: "user-1",
+          expires_at: new Date("2099-01-01T00:00:00.000Z"),
+          expired: false,
+        }],
+        rowCount: 1,
+      };
     }
-    if (url.pathname.endsWith("/site_users")) {
-      return Response.json({
-        id: "user-1",
-        phone: "989120000000",
-        first_name: "سارا",
-        last_name: "رضایی",
-        role: "student",
-      });
+    if (text.includes("FROM public.site_users")) {
+      return {
+        rows: [{
+          id: "user-1",
+          phone: "989120000000",
+          first_name: "سارا",
+          last_name: "رضایی",
+          role: "student",
+        }],
+        rowCount: 1,
+      };
     }
-    throw new Error(`Unexpected Supabase request: ${url}`);
-  };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await checkSession(
     makeRequest("/api/functions/check-session", { token })
@@ -77,36 +94,26 @@ test("POST /api/functions/check-session hashes the token, returns the safe user 
       role: "student",
     },
   });
-  assert.equal(requests.length, 2);
-  assert.equal(requests[0].url.searchParams.get("token_hash"), `eq.${sha256(token)}`);
-  assert.equal(requests[0].url.searchParams.get("is_active"), "eq.true");
-  assert.equal(requests[0].url.searchParams.get("select"), "id,user_id,expires_at");
-  assert.equal(requests[1].url.searchParams.get("select"), "id,phone,first_name,last_name,role");
-  for (const { init } of requests) {
-    const headers = new Headers(init?.headers);
-    assert.equal(headers.get("apikey"), "test-service-role-key");
-    assert.equal(headers.get("authorization"), "Bearer test-service-role-key");
-  }
+  assert.equal(queries.length, 2);
+  assert.match(queries[0].text, /token_hash = \$1/);
+  assert.match(queries[0].text, /is_active IS TRUE/);
+  assert.deepEqual(queries[0].values, [sha256(token)]);
+  assert.match(queries[1].text, /SELECT id, phone, first_name, last_name, role/);
+  assert.deepEqual(queries[1].values, ["user-1"]);
 });
 
 test("POST /api/functions/check-session deactivates an expired session and does not fetch the user", async () => {
   setTestEnv();
-  const requests = [];
-  globalThis.fetch = async (input, init) => {
-    const url = new URL(String(input));
-    requests.push({ url, init, method: init?.method ?? "GET" });
-    if (url.pathname.endsWith("/user_sessions") && (init?.method ?? "GET") === "GET") {
-      return Response.json({
-        id: "expired-session",
-        user_id: "user-1",
-        expires_at: "2000-01-01T00:00:00.000Z",
-      });
+  const queries = installMockPool(async (text) => {
+    if (text.includes("FROM public.user_sessions")) {
+      return {
+        rows: [{ id: "expired-session", user_id: "user-1", expired: true }],
+        rowCount: 1,
+      };
     }
-    if (url.pathname.endsWith("/user_sessions") && init?.method === "PATCH") {
-      return new Response(null, { status: 204 });
-    }
-    throw new Error(`Unexpected Supabase request: ${url}`);
-  };
+    if (text.includes("UPDATE public.user_sessions")) return { rows: [], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await checkSession(
     makeRequest("/api/functions/check-session", { token: "expired-token" })
@@ -114,17 +121,16 @@ test("POST /api/functions/check-session deactivates an expired session and does 
 
   assert.equal(response.status, 401);
   assert.deepEqual(await response.json(), { error: "نشست منقضی شده" });
-  assert.equal(requests.length, 2);
-  assert.equal(requests[1].method, "PATCH");
-  assert.equal(requests[1].url.searchParams.get("id"), "eq.expired-session");
-  assert.deepEqual(JSON.parse(requests[1].init.body), { is_active: false });
+  assert.equal(queries.length, 2);
+  assert.match(queries[1].text, /SET is_active = false WHERE id = \$1/);
+  assert.deepEqual(queries[1].values, ["expired-session"]);
 });
 
 test("POST /api/functions/check-session rejects malformed or missing tokens before querying", async () => {
   let fetchCount = 0;
   globalThis.fetch = async () => {
     fetchCount++;
-    throw new Error("Supabase must not be queried for an invalid token");
+    throw new Error("No external request should be made");
   };
 
   const malformed = await checkSession(
@@ -151,39 +157,27 @@ test("POST /api/functions/check-session rejects malformed or missing tokens befo
   assert.equal(fetchCount, 0);
 });
 
-test("session routes fail closed when server credentials are missing", async () => {
-  delete process.env.SUPABASE_URL;
-  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-  let fetchCount = 0;
-  globalThis.fetch = async () => {
-    fetchCount++;
-    throw new Error("Supabase must not be queried without server credentials");
-  };
-
+test("session routes fail closed when the database is not configured", async () => {
+  delete process.env.DATABASE_URL;
+  resetPostgresPoolForTests();
   const response = await checkSession(
     makeRequest("/api/functions/check-session", { token: "test-session-token" })
   );
 
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { error: "سرویس نشست تنظیم نشده است" });
-  assert.equal(fetchCount, 0);
 });
 
-test("POST /api/functions/logout-user marks the active session inactive", async () => {
+test("POST /api/functions/logout-user marks the active PostgreSQL session inactive", async () => {
   setTestEnv();
   const token = "legacy-session-token";
-  const requests = [];
-  globalThis.fetch = async (input, init) => {
-    const url = new URL(String(input));
-    requests.push({ url, init, method: init?.method ?? "GET" });
-    if (url.pathname.endsWith("/user_sessions") && (init?.method ?? "GET") === "GET") {
-      return Response.json({ id: "session-2" });
+  const queries = installMockPool(async (text) => {
+    if (text.includes("SELECT id FROM public.user_sessions")) {
+      return { rows: [{ id: "session-2" }], rowCount: 1 };
     }
-    if (url.pathname.endsWith("/user_sessions") && init?.method === "PATCH") {
-      return new Response(null, { status: 204 });
-    }
-    throw new Error(`Unexpected Supabase request: ${url}`);
-  };
+    if (text.includes("UPDATE public.user_sessions")) return { rows: [], rowCount: 1 };
+    throw new Error(`Unexpected SQL: ${text}`);
+  });
 
   const response = await logoutUser(
     makeRequest("/api/functions/logout-user", { token })
@@ -195,16 +189,15 @@ test("POST /api/functions/logout-user marks the active session inactive", async 
     success: true,
     message: "با موفقیت خارج شدید",
   });
-  assert.equal(requests.length, 2);
-  assert.equal(requests[0].url.searchParams.get("token_hash"), `eq.${sha256(token)}`);
-  assert.equal(requests[1].method, "PATCH");
-  assert.equal(requests[1].url.searchParams.get("id"), "eq.session-2");
-  assert.deepEqual(JSON.parse(requests[1].init.body), { is_active: false });
+  assert.equal(queries.length, 2);
+  assert.deepEqual(queries[0].values, [sha256(token)]);
+  assert.match(queries[1].text, /SET is_active = false WHERE id = \$1/);
+  assert.deepEqual(queries[1].values, ["session-2"]);
 });
 
 test("POST /api/functions/logout-user rejects a token without a matching session", async () => {
   setTestEnv();
-  globalThis.fetch = async () => Response.json(null);
+  installMockPool(async () => ({ rows: [], rowCount: 0 }));
 
   const response = await logoutUser(
     makeRequest("/api/functions/logout-user", { token: "unknown-token" })
