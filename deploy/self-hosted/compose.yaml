@@ -33,6 +33,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/self-hosted/next.Dockerfile
+      target: runner
     restart: unless-stopped
     init: true
     depends_on:

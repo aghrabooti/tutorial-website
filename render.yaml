@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: tutorial-website-staging
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: independent-hosting
+    dockerContext: .
+    dockerfilePath: ./deploy/self-hosted/next.Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tutorial-website-staging-db
+          property: connectionString
+      - key: DATABASE_USER
+        fromDatabase:
+          name: tutorial-website-staging-db
+          property: user
+      - key: FILE_SIGNING_SECRET
+        generateValue: true
+      - key: ZARINPAL_SANDBOX
+        value: "true"
+
+databases:
+  - name: tutorial-website-staging-db
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: "17"
+    ipAllowList: []
