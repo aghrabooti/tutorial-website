@@ -316,7 +316,7 @@ async()=>{
             "register-user",
             {
                 phone,
-                password
+                password, registration_grant: verify.registration_grant
             }
         );
 

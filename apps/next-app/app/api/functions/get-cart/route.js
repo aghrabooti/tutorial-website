@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveSessionUser } from "../../../../lib/session-user.js";
 
@@ -19,8 +19,8 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSessionUser(supabase, token);
+    const database = createDatabase();
+    const sessionResult = await findActiveSessionUser(database, token);
     if (!sessionResult.session) {
       return jsonNoStore(
         { success: false, error: sessionResult.expired ? "session expired" : "invalid session" },
@@ -31,7 +31,7 @@ export async function POST(request) {
       return jsonNoStore({ success: false, error: "user not found" }, 404);
     }
 
-    const { data: items, error } = await supabase
+    const { data: items, error } = await database
       .from("cart_items")
       .select(`
         id,

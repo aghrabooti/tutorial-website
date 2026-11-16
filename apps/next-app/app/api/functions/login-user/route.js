@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { hashSessionToken, jsonNoStore } from "../../../../lib/session-token.js";
 import { verifyPassword } from "../../../../lib/password-hash.js";
 import { normalizePhone } from "../../../../lib/phone.js";
@@ -21,9 +21,9 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
+    const database = createDatabase();
     const normalizedPhone = normalizePhone(phone);
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await database
       .from("site_users")
       .select("*")
       .eq("phone", normalizedPhone)
@@ -43,7 +43,7 @@ export async function POST(request) {
 
     const token = randomUUID() + randomUUID();
     const tokenHash = hashSessionToken(token);
-    const { error: sessionError } = await supabase.from("user_sessions").insert({
+    const { error: sessionError } = await database.from("user_sessions").insert({
       user_id: user.id,
       token_hash: tokenHash,
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -55,7 +55,7 @@ export async function POST(request) {
     }
 
     // Preserve the old behavior: a failed last_login update does not fail login.
-    await supabase
+    await database
       .from("site_users")
       .update({ last_login: new Date() })
       .eq("id", user.id);

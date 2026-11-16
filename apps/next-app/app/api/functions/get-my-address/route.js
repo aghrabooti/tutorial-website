@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveSessionUser } from "../../../../lib/session-user.js";
 
@@ -19,13 +19,13 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSessionUser(supabase, token);
+    const database = createDatabase();
+    const sessionResult = await findActiveSessionUser(database, token);
     if (!sessionResult.session || !sessionResult.user) {
       return jsonNoStore({ error: "نشست معتبر نیست" }, 401);
     }
 
-    const { data: address, error } = await supabase
+    const { data: address, error } = await database
       .from("user_addresses")
       .select("full_name, phone, province, city, address, postal_code, updated_at")
       .eq("user_id", String(sessionResult.user.id))

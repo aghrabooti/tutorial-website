@@ -1,4 +1,4 @@
-import { createPublicSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,8 +28,8 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createPublicSupabaseClient();
-    const { data: course, error } = await supabase
+    const database = createDatabase();
+    const { data: course, error } = await database
       .from("courses")
       .select("id, title, description, image_url, price, type")
       .eq("id", String(rawId).trim())

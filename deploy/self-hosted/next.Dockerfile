@@ -17,7 +17,8 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
+RUN addgroup -S nodejs && adduser -S nextjs -G nodejs \
+    && mkdir -p /app/var/files && chown nextjs:nodejs /app/var/files
 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

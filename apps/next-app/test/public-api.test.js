@@ -5,18 +5,13 @@ import { POST as getCourse } from "../app/api/functions/get-course/route.js";
 import { GET as getSiteContent } from "../app/api/site-content/route.js";
 
 const envKeys = [
-  "SUPABASE_URL",
-  "SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY",
+  "DATABASE_API_URL",
 ];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
 
-function setTestEnv({ serviceRole = false } = {}) {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_ANON_KEY = "test-anon-key";
-  if (serviceRole) process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
-  else delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+function setTestEnv() {
+  process.env.DATABASE_API_URL = "http://db-api.test";
 }
 
 afterEach(() => {
@@ -27,20 +22,17 @@ afterEach(() => {
   }
 });
 
-test("GET /api/courses reads public rows with the anon key and preserves the client shape", async () => {
+test("GET /api/courses reads public rows from the internal database and preserves the client shape", async () => {
   setTestEnv();
   let requestedUrl;
-  let requestedKey;
   globalThis.fetch = async (input, init) => {
     requestedUrl = String(input);
-    requestedKey = new Headers(init?.headers).get("apikey");
     return Response.json([{ id: "course-1", title: "آزمون" }]);
   };
 
   const response = await getCourses();
   assert.equal(response.status, 200);
-  assert.equal(requestedKey, "test-anon-key");
-  assert.match(requestedUrl, /\/rest\/v1\/courses\?select=\*/);
+  assert.match(requestedUrl, /\/courses\?select=\*/);
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(await response.json(), {
     data: [{ id: "course-1", title: "آزمون" }],
@@ -49,8 +41,7 @@ test("GET /api/courses reads public rows with the anon key and preserves the cli
 });
 
 test("GET /api/courses fails closed when the server is not configured", async () => {
-  delete process.env.SUPABASE_URL;
-  delete process.env.SUPABASE_ANON_KEY;
+  delete process.env.DATABASE_API_URL;
   globalThis.fetch = async () => {
     throw new Error("fetch should not run without configuration");
   };
@@ -66,18 +57,16 @@ test("GET /api/courses fails closed when the server is not configured", async ()
 test("POST /api/functions/get-course keeps the previous response contract", async () => {
   setTestEnv();
   let requestedUrl;
-  let requestedKey;
   globalThis.fetch = async (input, init) => {
     requestedUrl = String(input);
-    requestedKey = new Headers(init?.headers).get("apikey");
-    return Response.json({
+    return Response.json([{
       id: "course-2",
       title: "دوره‌ی آزمایشی",
       description: "توضیح",
       image_url: "/cover.jpg",
       price: 100,
       type: "course",
-    });
+    }]);
   };
 
   const request = new Request("http://localhost/api/functions/get-course", {
@@ -88,8 +77,7 @@ test("POST /api/functions/get-course keeps the previous response contract", asyn
   const response = await getCourse(request);
 
   assert.equal(response.status, 200);
-  assert.equal(requestedKey, "test-anon-key");
-  assert.match(requestedUrl, /\/rest\/v1\/courses\?/);
+  assert.match(requestedUrl, /\/courses\?/);
   assert.match(requestedUrl, /id=eq\.course-2/);
   assert.deepEqual(await response.json(), {
     success: true,
@@ -104,7 +92,7 @@ test("POST /api/functions/get-course keeps the previous response contract", asyn
   });
 });
 
-test("POST /api/functions/get-course validates input before querying Supabase", async () => {
+test("POST /api/functions/get-course validates input before querying database", async () => {
   const request = new Request("http://localhost/api/functions/get-course", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -120,12 +108,10 @@ test("POST /api/functions/get-course validates input before querying Supabase", 
 });
 
 test("GET /api/site-content performs a fixed read and returns only the public content map", async () => {
-  setTestEnv({ serviceRole: true });
-  let requestedKey;
+  setTestEnv();
   let requestedUrl;
   globalThis.fetch = async (input, init) => {
     requestedUrl = String(input);
-    requestedKey = new Headers(init?.headers).get("apikey");
     return Response.json([
       { key: "home.title", value: "عنوان", updated_at: "2026-01-02T00:00:00.000Z" },
       { key: "home.empty", value: "", updated_at: "2026-01-03T00:00:00.000Z" },
@@ -135,8 +121,7 @@ test("GET /api/site-content performs a fixed read and returns only the public co
 
   const response = await getSiteContent();
   assert.equal(response.status, 200);
-  assert.equal(requestedKey, "test-service-role-key");
-  assert.match(requestedUrl, /\/rest\/v1\/site_content\?select=key%2Cvalue%2Cupdated_at/);
+  assert.match(requestedUrl, /\/site_content\?select=key%2Cvalue%2Cupdated_at/);
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(await response.json(), {
     success: true,

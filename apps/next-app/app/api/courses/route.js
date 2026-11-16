@@ -1,4 +1,4 @@
-import { createPublicSupabaseClient } from "../../../lib/supabase-server.js";
+import { createDatabase } from "../../../lib/database.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,11 +12,11 @@ function json(body, status = 200) {
 
 export async function GET() {
   try {
-    const supabase = createPublicSupabaseClient();
-    const { data, error } = await supabase.from("courses").select("*");
+    const database = createDatabase();
+    const { data, error } = await database.from("courses").select("*");
 
     if (error) {
-      console.error("[api/courses] Supabase read failed:", error);
+      console.error("[api/courses] Database read failed:", error);
       return json(
         { data: null, error: { message: "خطا در دریافت محصولات" } },
         502

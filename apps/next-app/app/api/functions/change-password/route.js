@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { hashPassword, verifyPassword } from "../../../../lib/password-hash.js";
 import {
   findActiveSession,
@@ -29,8 +29,8 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSession(supabase, token);
+    const database = createDatabase();
+    const sessionResult = await findActiveSession(database, token);
     if (!sessionResult.session) {
       if (sessionResult.error && !sessionResult.expired) {
         console.error("[api/functions/change-password] Session lookup failed:", sessionResult.error);
@@ -45,7 +45,7 @@ export async function POST(request) {
       );
     }
 
-    const { data: user } = await supabase
+    const { data: user } = await database
       .from("site_users")
       .select("id,password_hash")
       .eq("id", sessionResult.session.user_id)
@@ -60,7 +60,7 @@ export async function POST(request) {
     }
 
     const newHash = await hashPassword(newPassword);
-    const { error: updateError } = await supabase
+    const { error: updateError } = await database
       .from("site_users")
       .update({ password_hash: newHash })
       .eq("id", user.id);
@@ -71,7 +71,7 @@ export async function POST(request) {
     }
 
     // Preserve old behavior: a failure while revoking other sessions does not undo the password change.
-    await supabase
+    await database
       .from("user_sessions")
       .update({ is_active: false })
       .eq("user_id", user.id)

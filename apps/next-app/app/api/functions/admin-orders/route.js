@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
@@ -12,9 +12,9 @@ function isPhysicalCourse(course) {
   return type === "book" || type === "lecture";
 }
 
-async function loadPhysicalCourseIds(supabase) {
+async function loadPhysicalCourseIds(database) {
   const ids = new Set();
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("courses")
     .select("id, type, requires_shipping");
 
@@ -25,7 +25,7 @@ async function loadPhysicalCourseIds(supabase) {
     return ids;
   }
 
-  const retry = await supabase.from("courses").select("id, type");
+  const retry = await database.from("courses").select("id, type");
   for (const course of retry.data ?? []) {
     if (isPhysicalCourse(course)) ids.add(String(course.id));
   }
@@ -44,11 +44,11 @@ export async function POST(request) {
   if (!isValidSessionToken(token)) return jsonNoStore({ error: "توکن ارسال نشده" }, 401);
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const database = createDatabase();
+    const auth = await findActiveAdmin(database, token);
     if (!auth.admin) return jsonNoStore({ error: "دسترسی غیرمجاز — فقط مدیر" }, 403);
 
-    const { data: orders, error } = await supabase
+    const { data: orders, error } = await database
       .from("orders")
       .select("id, user_id, amount_rial, status, source, items, course_ids, ref_id, created_at")
       .order("created_at", { ascending: false })
@@ -59,12 +59,12 @@ export async function POST(request) {
       return jsonNoStore({ error: "خطا در خواندن سفارش‌ها" }, 500);
     }
 
-    const physicalCourseIds = await loadPhysicalCourseIds(supabase);
+    const physicalCourseIds = await loadPhysicalCourseIds(database);
     const orderIds = (orders ?? []).map((order) => String(order.id));
 
     let shipmentsByOrder = {};
     if (orderIds.length > 0) {
-      const { data: shipments } = await supabase
+      const { data: shipments } = await database
         .from("shipments")
         .select("order_id, status, tracking_code")
         .in("order_id", orderIds);
@@ -76,7 +76,7 @@ export async function POST(request) {
     const userIds = [...new Set((orders ?? []).map((order) => order.user_id))];
     let usersById = {};
     if (userIds.length > 0) {
-      const { data: users } = await supabase
+      const { data: users } = await database
         .from("site_users")
         .select("id, first_name, last_name, phone")
         .in("id", userIds);

@@ -8,7 +8,7 @@ import { POST as saveShippingAddress } from "../app/api/functions/save-shipping-
 import { POST as getMyCourses } from "../app/api/functions/get-my-courses/route.js";
 import { POST as checkCourseAccess } from "../app/api/functions/check-course-access/route.js";
 
-const envKeys = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+const envKeys = ["DATABASE_API_URL"];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
 
@@ -32,8 +32,7 @@ const course = {
 };
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_API_URL = "http://db-api.test";
 }
 
 function makeRequest(path, body) {
@@ -57,10 +56,10 @@ function mockCommerce(respond) {
     requests.push(request);
 
     if (url.pathname.endsWith("/user_sessions") && request.method === "GET") {
-      return Response.json(session);
+      return Response.json(session ? [session] : []);
     }
     if (url.pathname.endsWith("/site_users") && request.method === "GET") {
-      return Response.json(user);
+      return Response.json(user ? [user] : []);
     }
 
     return respond(request);
@@ -80,11 +79,11 @@ test("POST /api/functions/add-to-cart checks ownership and adds an unpurchased c
   setTestEnv();
   const requests = mockCommerce((request) => {
     if (request.url.pathname.endsWith("/courses") && request.method === "GET") {
-      return Response.json({ id: "course-1" });
+      return Response.json([{ id: "course-1" }]);
     }
-    if (request.url.pathname.endsWith("/user_purchases")) return Response.json(null);
+    if (request.url.pathname.endsWith("/user_purchases")) return Response.json([]);
     if (request.url.pathname.endsWith("/cart_items") && request.method === "GET") {
-      return Response.json(null);
+      return Response.json([]);
     }
     if (request.url.pathname.endsWith("/cart_items") && request.method === "POST") {
       return new Response(null, { status: 201 });
@@ -106,8 +105,8 @@ test("POST /api/functions/add-to-cart checks ownership and adds an unpurchased c
 test("POST /api/functions/add-to-cart refuses a course already purchased", async () => {
   setTestEnv();
   const requests = mockCommerce((request) => {
-    if (request.url.pathname.endsWith("/courses")) return Response.json({ id: "course-1" });
-    if (request.url.pathname.endsWith("/user_purchases")) return Response.json({ id: "purchase-1" });
+    if (request.url.pathname.endsWith("/courses")) return Response.json([{ id: "course-1" }]);
+    if (request.url.pathname.endsWith("/user_purchases")) return Response.json([{ id: "purchase-1" }]);
     throw new Error(`Unexpected request: ${request.method} ${request.url}`);
   });
 
@@ -181,8 +180,8 @@ test("shipping address routes convert Persian digits and save/retrieve the user'
   const requests = mockCommerce((request) => {
     if (request.url.pathname.endsWith("/user_addresses") && request.method === "GET") {
       return request.url.searchParams.get("select") === "user_id"
-        ? Response.json({ user_id: "user-1" })
-        : Response.json(address);
+        ? Response.json([{ user_id: "user-1" }])
+        : Response.json([address]);
     }
     if (request.url.pathname.endsWith("/user_addresses") && request.method === "PATCH") {
       return new Response(null, { status: 204 });
@@ -237,13 +236,13 @@ test("POST /api/functions/get-my-courses returns unique paid courses in the lega
   assert.equal(response.status, 200);
   assert.deepEqual(body.courses, [{ courses: course }, { courses: course2 }]);
   const courseQuery = requests.find((request) => request.url.pathname.endsWith("/courses"));
-  assert.equal(courseQuery.url.searchParams.get("id"), "in.(course-1,course-2)");
+  assert.equal(courseQuery.url.searchParams.get("id"), `in.("course-1","course-2")`);
 });
 
 test("POST /api/functions/check-course-access reports paid ownership from orders", async () => {
   setTestEnv();
   const requests = mockCommerce((request) => {
-    if (request.url.pathname.endsWith("/courses")) return Response.json(course);
+    if (request.url.pathname.endsWith("/courses")) return Response.json(course ? [course] : []);
     if (request.url.pathname.endsWith("/orders")) return Response.json([{ id: "order-1" }]);
     throw new Error(`Unexpected request: ${request.method} ${request.url}`);
   });
@@ -261,5 +260,5 @@ test("POST /api/functions/check-course-access reports paid ownership from orders
   assert.equal(body.purchased, true);
   assert.deepEqual(body.course, course);
   const orderQuery = requests.find((request) => request.url.pathname.endsWith("/orders"));
-  assert.equal(orderQuery.url.searchParams.get("course_ids"), "ov.{course-1}");
+  assert.equal(orderQuery.url.searchParams.get("course_ids"), `ov.{"course-1"}`);
 });

@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import {
   hashSessionToken,
   isValidSessionToken,
@@ -22,9 +22,9 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
+    const database = createDatabase();
     const tokenHash = hashSessionToken(token);
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await database
       .from("user_sessions")
       .select("id")
       .eq("token_hash", tokenHash)
@@ -38,7 +38,7 @@ export async function POST(request) {
       return jsonNoStore({ error: "Session پیدا نشد" }, 401);
     }
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await database
       .from("user_sessions")
       .update({ is_active: false })
       .eq("id", session.id);

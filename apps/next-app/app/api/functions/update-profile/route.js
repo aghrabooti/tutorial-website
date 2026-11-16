@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import {
   findActiveSession,
   isValidSessionToken,
@@ -30,8 +30,8 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSession(supabase, token);
+    const database = createDatabase();
+    const sessionResult = await findActiveSession(database, token);
     if (!sessionResult.session) {
       if (sessionResult.error && !sessionResult.expired) {
         console.error("[api/functions/update-profile] Session lookup failed:", sessionResult.error);
@@ -49,7 +49,7 @@ export async function POST(request) {
       );
     }
 
-    const { data: user, error } = await supabase
+    const { data: user, error } = await database
       .from("site_users")
       .update({
         first_name: firstName,

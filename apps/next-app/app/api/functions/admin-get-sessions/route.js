@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
@@ -18,13 +18,13 @@ export async function POST(request) {
   if (!isValidSessionToken(token)) return jsonNoStore({ error: "توکن ارسال نشده" }, 401);
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const database = createDatabase();
+    const auth = await findActiveAdmin(database, token);
     if (!auth.session) return jsonNoStore({ error: "دسترسی غیرمجاز — فقط مدیر" }, 403);
     if (!auth.admin) return jsonNoStore({ error: "دسترسی غیرمجاز — فقط مدیر" }, 403);
     if (!courseId) return jsonNoStore({ error: "شناسه‌ی دوره ارسال نشده" }, 400);
 
-    const { data: sessions, error } = await supabase
+    const { data: sessions, error } = await database
       .from("course_sessions")
       .select("*")
       .eq("course_id", courseId)

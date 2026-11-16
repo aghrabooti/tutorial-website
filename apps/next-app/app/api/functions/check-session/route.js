@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import {
   findActiveSession,
   isValidSessionToken,
@@ -22,8 +22,8 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const sessionResult = await findActiveSession(supabase, token);
+    const database = createDatabase();
+    const sessionResult = await findActiveSession(database, token);
     const { session } = sessionResult;
 
     if (!session) {
@@ -36,7 +36,7 @@ export async function POST(request) {
       );
     }
 
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await database
       .from("site_users")
       .select("id,phone,first_name,last_name,role")
       .eq("id", session.user_id)

@@ -15,8 +15,8 @@ export function hashSessionToken(token) {
   return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
-export async function findActiveSession(supabase, token) {
-  const { data: session, error } = await supabase
+export async function findActiveSession(database, token) {
+  const { data: session, error } = await database
     .from("user_sessions")
     .select("id,user_id,expires_at")
     .eq("token_hash", hashSessionToken(token))
@@ -28,7 +28,7 @@ export async function findActiveSession(supabase, token) {
   }
 
   if (new Date(session.expires_at) < new Date()) {
-    const { error: deactivateError } = await supabase
+    const { error: deactivateError } = await database
       .from("user_sessions")
       .update({ is_active: false })
       .eq("id", session.id);

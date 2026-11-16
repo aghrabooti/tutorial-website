@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveSessionUser } from "../../../../lib/session-user.js";
 import { toLatinDigits } from "../../../../lib/phone.js";
@@ -27,9 +27,9 @@ export async function POST(request) {
   const postalCode = toLatinDigits(String(body?.postal_code ?? "").trim()).replace(/\s/g, "");
 
   try {
-    const supabase = createServiceSupabaseClient();
+    const database = createDatabase();
     const sessionResult = await findActiveSessionUser(
-      supabase,
+      database,
       token,
       "id,phone,first_name,last_name"
     );
@@ -59,7 +59,7 @@ export async function POST(request) {
       updated_at: new Date().toISOString(),
     };
 
-    const { data: existing, error: readError } = await supabase
+    const { data: existing, error: readError } = await database
       .from("user_addresses")
       .select("user_id")
       .eq("user_id", userId)
@@ -68,12 +68,12 @@ export async function POST(request) {
     if (readError) console.error("[api/functions/save-shipping-address] Address lookup failed:", readError);
 
     const writeResult = existing
-      ? await supabase.from("user_addresses").update(payload).eq("user_id", userId)
-      : await supabase.from("user_addresses").insert(payload);
+      ? await database.from("user_addresses").update(payload).eq("user_id", userId)
+      : await database.from("user_addresses").insert(payload);
 
     if (writeResult.error) {
       if (writeResult.error.code === "23505") {
-        const retry = await supabase
+        const retry = await database
           .from("user_addresses")
           .update(payload)
           .eq("user_id", userId);

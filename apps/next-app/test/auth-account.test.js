@@ -8,13 +8,12 @@ import { POST as changePassword } from "../app/api/functions/change-password/rou
 import { hashPassword, verifyPassword } from "../lib/password-hash.js";
 import { normalizePhone } from "../lib/phone.js";
 
-const envKeys = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+const envKeys = ["DATABASE_API_URL"];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_API_URL = "http://db-api.test";
 }
 
 function makeRequest(path, body) {
@@ -38,7 +37,7 @@ function mockRest({ user, session, existingUser = null, updatedUser = user }) {
     requests.push(record);
 
     if (url.pathname.endsWith("/user_sessions") && method === "GET") {
-      return Response.json(session);
+      return Response.json(session ? [session] : []);
     }
     if (url.pathname.endsWith("/user_sessions") && method === "POST") {
       return new Response(null, { status: 201 });
@@ -49,19 +48,19 @@ function mockRest({ user, session, existingUser = null, updatedUser = user }) {
     if (url.pathname.endsWith("/site_users") && method === "GET") {
       const select = url.searchParams.get("select");
       if (select === "id" && url.searchParams.has("phone")) {
-        return Response.json(existingUser);
+        return Response.json(existingUser ? [existingUser] : []);
       }
-      return Response.json(user);
+      return Response.json(user ? [user] : []);
     }
     if (url.pathname.endsWith("/site_users") && method === "POST") {
-      return Response.json(updatedUser, { status: 201 });
+      return Response.json(updatedUser ? [updatedUser] : [], { status: 201 });
     }
     if (url.pathname.endsWith("/site_users") && method === "PATCH") {
       return url.searchParams.has("select")
-        ? Response.json(updatedUser)
+        ? Response.json(updatedUser ? [updatedUser] : [])
         : new Response(null, { status: 204 });
     }
-    throw new Error(`Unexpected Supabase request: ${method} ${url}`);
+    throw new Error(`Unexpected database request: ${method} ${url}`);
   };
   return requests;
 }
@@ -148,47 +147,34 @@ test("POST /api/functions/login-user returns generic credentials errors and bloc
   assert.deepEqual(await inactive.json(), { error: "حساب کاربری غیرفعال است" });
 });
 
-test("POST /api/functions/register-user normalizes the phone and inserts a student with a compatible password hash", async () => {
+
+test("register-user verifies a one-time grant with the atomic registration function", async () => {
   setTestEnv();
-  const user = {
-    id: "new-user",
-    phone: "989120000000",
-    full_name: "سارا رضایی",
+  const grant = "a".repeat(64);
+  const user = { id: "new-user", phone: "989120000000", full_name: "سارا رضایی" };
+  globalThis.fetch = async (input, init) => {
+    assert.equal(new URL(input).pathname, "/rpc/register_verified_user");
+    const args = JSON.parse(init.body);
+    assert.equal(args.p_phone, user.phone);
+    assert.equal(args.p_grant_hash, tokenHash(grant));
+    assert.equal(args.p_first_name, "سارا");
+    assert.equal(args.p_last_name, "رضایی");
+    assert.equal(await verifyPassword("new-password", args.p_password_hash), true);
+    return Response.json([user]);
   };
-  const requests = mockRest({ user: null, existingUser: null, updatedUser: user });
-
-  const response = await registerUser(
-    makeRequest("/api/functions/register-user", {
-      phone: " 09 120000000 ",
-      password: "new-password",
-      first_name: " سارا ",
-      last_name: " رضایی ",
-    })
-  );
-  const body = await response.json();
-
+  const response = await registerUser(makeRequest("/api/functions/register-user", {
+    phone: " 09 120000000 ", password: "new-password", first_name: " سارا ",
+    last_name: " رضایی ", registration_grant: grant,
+  }));
   assert.equal(response.status, 200);
-  assert.deepEqual(body, { success: true, user });
-  assert.equal(requests.length, 2);
-  const insert = JSON.parse(requests[1].init.body);
-  assert.equal(insert.phone, "989120000000");
-  assert.equal(insert.first_name, "سارا");
-  assert.equal(insert.last_name, "رضایی");
-  assert.equal(insert.role, "student");
-  assert.equal(await verifyPassword("new-password", insert.password_hash), true);
+  assert.deepEqual(await response.json(), { success: true, user });
 });
 
-test("POST /api/functions/register-user rejects an existing phone before inserting", async () => {
-  setTestEnv();
-  const requests = mockRest({ user: null, existingUser: { id: "existing-user" } });
-
-  const response = await registerUser(
-    makeRequest("/api/functions/register-user", { phone: "09120000000", password: "valid-password" })
-  );
-
-  assert.equal(response.status, 409);
-  assert.deepEqual(await response.json(), { error: "این شماره قبلاً ثبت شده است" });
-  assert.equal(requests.length, 1);
+test("register-user refuses requests without an OTP grant", async () => {
+  const response = await registerUser(makeRequest("/api/functions/register-user", {
+    phone: "09120000000", password: "valid-password",
+  }));
+  assert.equal(response.status, 403);
 });
 
 test("POST /api/functions/update-profile requires a valid active session and preserves ninth-grade rules", async () => {

@@ -2,13 +2,13 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { test } from "node:test";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (rel) => readFileSync(path.join(root, rel), "utf8");
 const apiSource = read("js/api.js");
-const proxySource = read("apps/next-app/app/api/functions/[name]/route.js");
 
 function listJavaScriptFiles(directory) {
   return readdirSync(path.join(root, directory), { withFileTypes: true }).flatMap((entry) => {
@@ -72,7 +72,7 @@ test("session validation and logout use same-origin Next routes and retain the t
   assert.ok(!apiSource.includes("SUPABASE_SERVICE_ROLE_KEY"));
 });
 
-test("public site-content reads use Next and writes use the same-origin Edge compatibility route", async () => {
+test("public site-content reads use Next and writes use a local Next route", async () => {
   const { sandbox, calls } = makeApiContext();
   await sandbox.apiCall("site-content", { action: "get" });
   await sandbox.apiCall("site-content", { action: null });
@@ -115,8 +115,7 @@ test("login, registration, and account changes use their same-origin Next routes
 
   const registrationSource = read("js/register.js");
   assert.ok(
-    registrationSource.indexOf('apiCall(\n            "otp-verify"') <
-      registrationSource.indexOf('apiCall(\n            "register-user"'),
+    registrationSource.indexOf('"otp-verify"') < registrationSource.indexOf('"register-user"'),
     "OTP must still be verified before register-user is called"
   );
 });
@@ -195,7 +194,7 @@ test("admin upload URLs use the dedicated same-origin Next route", async () => {
   assert.equal(calls[0].options.headers.Authorization, undefined);
 });
 
-test("unmigrated Edge-backed functions use the same-origin compatibility route", async () => {
+test("formerly Edge-backed functions use local Next routes", async () => {
   const { sandbox, calls } = makeApiContext();
   await sandbox.apiCall("send-otp", { phone: "09120000000" });
 
@@ -231,7 +230,7 @@ test("public site-content client no longer hardcodes the Supabase endpoint/key",
   assert.ok(!siteContent.includes("SUPABASE_ANON_KEY"));
 });
 
-test("every browser apiCall function is handled locally or by the explicit Edge proxy allowlist", () => {
+test("every browser apiCall function is handled locally", () => {
   const calledFunctions = new Set();
   for (const file of listJavaScriptFiles("js")) {
     const source = read(file);
@@ -240,40 +239,10 @@ test("every browser apiCall function is handled locally or by the explicit Edge 
     }
   }
 
-  const localRoutes = new Set([
-    "get-course",
-    "check-session",
-    "logout-user",
-    "login-user",
-    "register-user",
-    "update-profile",
-    "change-password",
-    "add-to-cart",
-    "get-cart",
-    "remove-from-cart",
-    "get-my-address",
-    "save-shipping-address",
-    "get-my-courses",
-    "check-course-access",
-    "admin-get-courses",
-    "admin-get-sessions",
-    "admin-users",
-    "admin-orders",
-    "admin-create-course",
-    "admin-update-course",
-    "admin-save-sessions",
-    "admin-overview",
-    "admin-upload-url",
-    "admin-shipments",
-  ]);
-  const allowlistSource = proxySource.match(/const EDGE_FUNCTIONS = new Set\(\[([\s\S]*?)\]\);/);
-  assert.ok(allowlistSource, "proxy allowlist should exist");
-  const proxiedFunctions = new Set(
-    [...allowlistSource[1].matchAll(/["']([a-z0-9-]+)["']/g)].map((match) => match[1])
-  );
-  const browserProxyFunctions = new Set([...calledFunctions].filter((name) => !localRoutes.has(name)));
-
-  assert.deepEqual([...browserProxyFunctions].sort(), [...proxiedFunctions].sort());
+  const localRoutes = readdirSync(path.join(root, "apps/next-app/app/api/functions"), { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name);
+  assert.deepEqual([...calledFunctions].filter(name => !localRoutes.includes(name)), []);
   assert.ok(!read("js/api.js").includes("supabase.co/functions/v1"));
   assert.ok(!read("js/api.js").includes("SUPABASE_ANON_KEY"));
   assert.ok(!read("js/admin.js").includes('.from("courses")'));

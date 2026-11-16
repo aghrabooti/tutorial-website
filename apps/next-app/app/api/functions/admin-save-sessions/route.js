@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
@@ -17,8 +17,8 @@ export async function POST(request) {
   if (!isValidSessionToken(token)) return jsonNoStore({ error: "توکن ارسال نشده" }, 401);
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const database = createDatabase();
+    const auth = await findActiveAdmin(database, token);
     if (!auth.admin) return jsonNoStore({ error: "دسترسی غیرمجاز — فقط مدیر" }, 403);
     if (!courseId) return jsonNoStore({ error: "شناسه‌ی دوره ارسال نشده" }, 400);
     if (!Array.isArray(sessions)) return jsonNoStore({ error: "فهرست جلسات نامعتبر است" }, 400);
@@ -35,37 +35,19 @@ export async function POST(request) {
     }));
 
     for (const row of rows) {
-      if (!Number.isFinite(row.session_number) || !row.title) {
+      if (!Number.isSafeInteger(row.session_number) || !row.title) {
         return jsonNoStore({ error: "هر جلسه باید شماره و عنوان داشته باشد" }, 400);
       }
     }
 
-    const { data: existing } = await supabase
-      .from("course_sessions")
-      .select("id")
-      .eq("course_id", courseId);
-
-    const keepIds = new Set(rows.filter((row) => row.id).map((row) => String(row.id)));
-    const toDelete = (existing ?? [])
-      .map((row) => String(row.id))
-      .filter((id) => !keepIds.has(id));
-
-    if (toDelete.length > 0) {
-      const { error } = await supabase.from("course_sessions").delete().in("id", toDelete);
-      if (error) {
-        console.error("[api/functions/admin-save-sessions] Delete failed:", error);
-        return jsonNoStore({ error: "خطا در حذف جلسات قدیمی" }, 500);
-      }
+    const { error } = await database.rpc("replace_course_sessions", {
+      p_course: courseId,
+      p_sessions: rows,
+    });
+    if (error) {
+      console.error("[api/functions/admin-save-sessions] Save failed:", error);
+      return jsonNoStore({ error: "خطا در ذخیره‌ی جلسات" }, 500);
     }
-
-    if (rows.length > 0) {
-      const { error } = await supabase.from("course_sessions").upsert(rows);
-      if (error) {
-        console.error("[api/functions/admin-save-sessions] Upsert failed:", error);
-        return jsonNoStore({ error: "خطا در ذخیره‌ی جلسات" }, 500);
-      }
-    }
-
     return jsonNoStore({ success: true });
   } catch (error) {
     const missingConfig = String(error?.message ?? "").startsWith(

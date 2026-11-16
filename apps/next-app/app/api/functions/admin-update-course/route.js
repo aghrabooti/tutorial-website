@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
@@ -32,8 +32,8 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const database = createDatabase();
+    const auth = await findActiveAdmin(database, token);
     if (!auth.session) return jsonNoStore({ success: false, error: "جلسه معتبر نیست" }, 401);
     if (!auth.admin) return jsonNoStore({ success: false, error: "دسترسی غیر مجاز" }, 403);
 
@@ -48,7 +48,7 @@ export async function POST(request) {
       return jsonNoStore({ success: false, error: "هیچ تغییری ارسال نشده" }, 400);
     }
 
-    const { error } = await supabase.from("courses").update(updateData).eq("id", courseId);
+    const { error } = await database.from("courses").update(updateData).eq("id", courseId);
     if (error) {
       console.error("[api/functions/admin-update-course] Course update failed:", error);
       return jsonNoStore({ success: false, error: error.message }, 500);

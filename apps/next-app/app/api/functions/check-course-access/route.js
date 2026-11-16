@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveSessionUser } from "../../../../lib/session-user.js";
 
@@ -20,9 +20,9 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
+    const database = createDatabase();
     const sessionResult = await findActiveSessionUser(
-      supabase,
+      database,
       token,
       "id, phone, first_name, last_name"
     );
@@ -30,7 +30,7 @@ export async function POST(request) {
       return jsonNoStore({ error: "نشست معتبر نیست" }, 401);
     }
 
-    const { data: course } = await supabase
+    const { data: course } = await database
       .from("courses")
       .select("*")
       .eq("id", courseId)
@@ -40,7 +40,7 @@ export async function POST(request) {
       return jsonNoStore({ error: "دوره پیدا نشد" }, 404);
     }
 
-    const { data: paid } = await supabase
+    const { data: paid } = await database
       .from("orders")
       .select("id")
       .eq("user_id", String(sessionResult.user.id))

@@ -1,6 +1,7 @@
 # tutorial-website
-a website for selling tutorial packages
+
+سایت فروش بسته‌های آموزشی.
 
 ## میزبانی مستقل
 
-ارزیابی خروج از Vercel و Supabase، وضعیت مرحله‌های مهاجرت، اسکلت Nginx/Docker و Next.js در [راهنمای مهاجرت](docs/migration-to-self-hosted.md) آمده است. دستور اجرا و آزمون staging: [deploy/self-hosted](deploy/self-hosted/README.md).
+[راهنمای استقرار روی هاست داخلی](deploy/self-hosted/README.md) شامل ساخت ایمیج‌ها، اجرای آفلاین و انتقال دیتابیس و فایل‌هاست. نسخهٔ قابل‌استقرار با Next.js، PostgreSQL و فایل‌های محلی اجرا می‌شود. پوشهٔ Supabase و [طرح قدیمی مهاجرت](docs/migration-to-self-hosted.md) برای ارجاع به استقرار قبلی در مخزن هستند.

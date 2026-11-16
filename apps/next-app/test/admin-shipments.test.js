@@ -2,15 +2,14 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { POST as adminShipments } from "../app/api/functions/admin-shipments/route.js";
 
-const envKeys = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+const envKeys = ["DATABASE_API_URL"];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
 const session = { id: "session-1", user_id: "admin-1", expires_at: "2099-01-01T00:00:00.000Z" };
 const admin = { id: "admin-1", role: "admin" };
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_API_URL = "http://db-api.test";
 }
 
 function makeRequest(body) {
@@ -40,8 +39,8 @@ test("POST /api/functions/admin-shipments marks a shipment sent with a normalize
     const url = new URL(String(input));
     const request = { url, method: init.method ?? "GET", init };
     requests.push(request);
-    if (url.pathname.endsWith("/user_sessions")) return Response.json(session);
-    if (url.pathname.endsWith("/site_users") && isAdminSelect(url)) return Response.json(admin);
+    if (url.pathname.endsWith("/user_sessions")) return Response.json(session ? [session] : []);
+    if (url.pathname.endsWith("/site_users") && isAdminSelect(url)) return Response.json(admin ? [admin] : []);
     if (url.pathname.endsWith("/shipments") && request.method === "PATCH") return new Response(null, { status: 204 });
     throw new Error(`Unexpected request: ${request.method} ${url}`);
   };
@@ -110,19 +109,19 @@ test("POST /api/functions/admin-shipments self-heals paid physical orders and re
     requests.push(request);
     const table = url.pathname.split("/").at(-1);
 
-    if (table === "user_sessions") return Response.json(session);
-    if (table === "site_users" && isAdminSelect(url)) return Response.json(admin);
+    if (table === "user_sessions") return Response.json(session ? [session] : []);
+    if (table === "site_users" && isAdminSelect(url)) return Response.json(admin ? [admin] : []);
     if (table === "courses") return Response.json([{ id: "book-1", type: "book", requires_shipping: true }]);
     if (table === "orders") return Response.json(paidOrders);
     if (table === "user_addresses") {
       return url.searchParams.get("user_id") === "eq.user-with-address"
-        ? Response.json(address)
-        : Response.json(null);
+        ? Response.json([address])
+        : Response.json([]);
     }
     if (table === "shipments" && request.method === "POST") {
       const inserted = { id: "shipment-1", ...request.body };
       shipments = [inserted, ...shipments];
-      return Response.json({ id: inserted.id }, { status: 201 });
+      return Response.json([{ id: inserted.id }], { status: 201 });
     }
     if (table === "shipments" && request.method === "GET" && url.searchParams.get("select") === "order_id") {
       return Response.json(shipments.map(({ order_id }) => ({ order_id })));

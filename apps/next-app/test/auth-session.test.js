@@ -4,13 +4,12 @@ import { afterEach, test } from "node:test";
 import { POST as checkSession } from "../app/api/functions/check-session/route.js";
 import { POST as logoutUser } from "../app/api/functions/logout-user/route.js";
 
-const envKeys = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+const envKeys = ["DATABASE_API_URL"];
 const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_API_URL = "http://db-api.test";
 }
 
 function makeRequest(path, body) {
@@ -43,22 +42,22 @@ test("POST /api/functions/check-session hashes the token, returns the safe user 
     requests.push({ url, method, init });
 
     if (url.pathname.endsWith("/user_sessions")) {
-      return Response.json({
+      return Response.json([{
         id: "session-1",
         user_id: "user-1",
         expires_at: "2099-01-01T00:00:00.000Z",
-      });
+      }]);
     }
     if (url.pathname.endsWith("/site_users")) {
-      return Response.json({
+      return Response.json([{
         id: "user-1",
         phone: "989120000000",
         first_name: "سارا",
         last_name: "رضایی",
         role: "student",
-      });
+      }]);
     }
-    throw new Error(`Unexpected Supabase request: ${url}`);
+    throw new Error(`Unexpected database request: ${url}`);
   };
 
   const response = await checkSession(
@@ -84,8 +83,8 @@ test("POST /api/functions/check-session hashes the token, returns the safe user 
   assert.equal(requests[1].url.searchParams.get("select"), "id,phone,first_name,last_name,role");
   for (const { init } of requests) {
     const headers = new Headers(init?.headers);
-    assert.equal(headers.get("apikey"), "test-service-role-key");
-    assert.equal(headers.get("authorization"), "Bearer test-service-role-key");
+    assert.equal(headers.get("apikey"), null);
+    assert.equal(headers.get("authorization"), null);
   }
 });
 
@@ -96,16 +95,16 @@ test("POST /api/functions/check-session deactivates an expired session and does 
     const url = new URL(String(input));
     requests.push({ url, init, method: init?.method ?? "GET" });
     if (url.pathname.endsWith("/user_sessions") && (init?.method ?? "GET") === "GET") {
-      return Response.json({
+      return Response.json([{
         id: "expired-session",
         user_id: "user-1",
         expires_at: "2000-01-01T00:00:00.000Z",
-      });
+      }]);
     }
     if (url.pathname.endsWith("/user_sessions") && init?.method === "PATCH") {
       return new Response(null, { status: 204 });
     }
-    throw new Error(`Unexpected Supabase request: ${url}`);
+    throw new Error(`Unexpected database request: ${url}`);
   };
 
   const response = await checkSession(
@@ -124,7 +123,7 @@ test("POST /api/functions/check-session rejects malformed or missing tokens befo
   let fetchCount = 0;
   globalThis.fetch = async () => {
     fetchCount++;
-    throw new Error("Supabase must not be queried for an invalid token");
+    throw new Error("database must not be queried for an invalid token");
   };
 
   const malformed = await checkSession(
@@ -152,12 +151,11 @@ test("POST /api/functions/check-session rejects malformed or missing tokens befo
 });
 
 test("session routes fail closed when server credentials are missing", async () => {
-  delete process.env.SUPABASE_URL;
-  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.DATABASE_API_URL;
   let fetchCount = 0;
   globalThis.fetch = async () => {
     fetchCount++;
-    throw new Error("Supabase must not be queried without server credentials");
+    throw new Error("database must not be queried without server credentials");
   };
 
   const response = await checkSession(
@@ -177,12 +175,12 @@ test("POST /api/functions/logout-user marks the active session inactive", async 
     const url = new URL(String(input));
     requests.push({ url, init, method: init?.method ?? "GET" });
     if (url.pathname.endsWith("/user_sessions") && (init?.method ?? "GET") === "GET") {
-      return Response.json({ id: "session-2" });
+      return Response.json([{ id: "session-2" }]);
     }
     if (url.pathname.endsWith("/user_sessions") && init?.method === "PATCH") {
       return new Response(null, { status: 204 });
     }
-    throw new Error(`Unexpected Supabase request: ${url}`);
+    throw new Error(`Unexpected database request: ${url}`);
   };
 
   const response = await logoutUser(
@@ -204,7 +202,7 @@ test("POST /api/functions/logout-user marks the active session inactive", async 
 
 test("POST /api/functions/logout-user rejects a token without a matching session", async () => {
   setTestEnv();
-  globalThis.fetch = async () => Response.json(null);
+  globalThis.fetch = async () => Response.json([]);
 
   const response = await logoutUser(
     makeRequest("/api/functions/logout-user", { token: "unknown-token" })

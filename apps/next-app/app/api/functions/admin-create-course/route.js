@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../../lib/supabase-server.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
@@ -22,12 +22,12 @@ export async function POST(request) {
   }
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const database = createDatabase();
+    const auth = await findActiveAdmin(database, token);
     if (!auth.session) return jsonNoStore({ success: false, error: "جلسه معتبر نیست" }, 401);
     if (!auth.admin) return jsonNoStore({ success: false, error: "دسترسی غیرمجاز" }, 403);
 
-    const { data: course, error } = await supabase
+    const { data: course, error } = await database
       .from("courses")
       .insert({
         title,

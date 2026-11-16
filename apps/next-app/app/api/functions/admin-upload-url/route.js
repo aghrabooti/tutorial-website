@@ -1,4 +1,6 @@
-import { createServiceSupabaseClient, requiredEnv } from "../../../../lib/supabase-server.js";
+import { randomUUID } from "node:crypto";
+import { fileInfo, fileUrl } from "../../../../lib/file-store.js";
+import { createDatabase } from "../../../../lib/database.js";
 import { jsonNoStore, isValidSessionToken } from "../../../../lib/session-token.js";
 import { findActiveAdmin } from "../../../../lib/admin-auth.js";
 
@@ -28,8 +30,8 @@ export async function POST(request) {
   if (!isValidSessionToken(token)) return jsonNoStore({ error: "توکن ارسال نشده" }, 401);
 
   try {
-    const supabase = createServiceSupabaseClient();
-    const auth = await findActiveAdmin(supabase, token);
+    const database = createDatabase();
+    const auth = await findActiveAdmin(database, token);
     if (!auth.admin) return jsonNoStore({ error: "دسترسی غیرمجاز — فقط مدیر" }, 403);
 
     if (kind === "pdf") {
@@ -37,7 +39,8 @@ export async function POST(request) {
       if (!courseId) return jsonNoStore({ error: "دوره انتخاب نشده است" }, 400);
 
       const path = `${courseId}.pdf`;
-      const { data, error } = await supabase.storage
+      if (!fileInfo(FILES_BUCKET, path)) return jsonNoStore({ error: "شناسهٔ دوره نامعتبر است" }, 400);
+      const { data, error } = await database.storage
         .from(FILES_BUCKET)
         .createSignedUploadUrl(path, { upsert: true });
       if (error || !data?.signedUrl) {
@@ -50,14 +53,15 @@ export async function POST(request) {
     if (kind === "site" || kind === "image") {
       const bucket = IMAGES_BUCKET;
       const folder = kind === "site" ? "site" : "courses";
-      const path = `${folder}/${Date.now()}-${safeFilename(body?.filename)}`;
-      const { data, error } = await supabase.storage.from(bucket).createSignedUploadUrl(path);
+      const path = `${folder}/${randomUUID()}-${safeFilename(body?.filename)}`;
+      if (!fileInfo(bucket, path)) return jsonNoStore({ error: "فرمت تصویر پشتیبانی نمی‌شود" }, 400);
+      const { data, error } = await database.storage.from(bucket).createSignedUploadUrl(path);
       if (error || !data?.signedUrl) {
         console.error("[api/functions/admin-upload-url] Image signed URL failed:", error);
         return jsonNoStore({ error: "خطا در ساخت لینک آپلود" }, 500);
       }
 
-      const publicUrl = `${requiredEnv("SUPABASE_URL").replace(/\/+$/, "")}/storage/v1/object/public/${bucket}/${path}`;
+      const publicUrl = fileUrl(bucket, path);
       return jsonNoStore({ success: true, upload_url: data.signedUrl, path, public_url: publicUrl });
     }
 

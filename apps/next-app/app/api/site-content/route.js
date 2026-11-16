@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "../../../lib/supabase-server.js";
+import { createDatabase } from "../../../lib/database.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,13 +14,13 @@ export async function GET() {
   try {
     // This is intentionally a fixed, read-only query. The service-role client
     // is never returned to the browser and accepts no caller-controlled filters.
-    const supabase = createServiceSupabaseClient();
-    const { data, error } = await supabase
+    const database = createDatabase();
+    const { data, error } = await database
       .from("site_content")
       .select("key, value, updated_at");
 
     if (error) {
-      console.error("[api/site-content] Supabase read failed:", error);
+      console.error("[api/site-content] Database read failed:", error);
       const tableMissing = /relation|does not exist|schema cache/i.test(
         String(error.message ?? "")
       );

@@ -11,8 +11,8 @@ import { POST as getAdminOverview } from "../app/api/functions/admin-overview/ro
 import { POST as getAdminUploadUrl } from "../app/api/functions/admin-upload-url/route.js";
 
 const envKeys = [
-  "SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
+  "DATABASE_API_URL",
+  "FILE_SIGNING_SECRET",
   "ZARINPAL_MERCHANT_ID",
   "ZARINPAL_SANDBOX",
   "ZARINPAL_CALLBACK_URL",
@@ -24,8 +24,7 @@ const session = { id: "session-1", user_id: "admin-1", expires_at: "2099-01-01T0
 const admin = { id: "admin-1", role: "admin" };
 
 function setTestEnv() {
-  process.env.SUPABASE_URL = "https://project.supabase.test";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+  process.env.DATABASE_API_URL = "http://db-api.test";
 }
 
 function makeRequest(path, body) {
@@ -43,13 +42,13 @@ function mockAdmin(respond, { role = "admin" } = {}) {
     const request = { url, method: init.method ?? "GET", init };
     requests.push(request);
 
-    if (url.pathname.endsWith("/user_sessions")) return Response.json(session);
+    if (url.pathname.endsWith("/user_sessions")) return Response.json(session ? [session] : []);
     if (
       url.pathname.endsWith("/site_users") &&
       url.searchParams.get("select")?.replace(/\s/g, "") === "id,role" &&
       request.method === "GET"
     ) {
-      return Response.json(role ? { ...admin, role } : null);
+      return Response.json(role ? [{ ...admin, role }] : []);
     }
     return respond(request);
   };
@@ -186,7 +185,7 @@ test("POST /api/functions/admin-create-course stores normalized optional fields 
   const course = { id: "course-new", title: "ریاضی", type: "course", price: 120 };
   const requests = mockAdmin((request) => {
     if (request.url.pathname.endsWith("/courses") && request.method === "POST") {
-      return Response.json(course, { status: 201 });
+      return Response.json(course ? [course] : [], { status: 201 });
     }
     throw new Error(`Unexpected request: ${request.method} ${request.url}`);
   });
@@ -251,17 +250,11 @@ test("POST /api/functions/admin-update-course only updates editable fields and c
   assert.equal(update.url.searchParams.get("id"), "eq.course-1");
 });
 
-test("POST /api/functions/admin-save-sessions deletes removed rows and upserts the validated list", async () => {
+test("POST /api/functions/admin-save-sessions atomically replaces the validated list", async () => {
   setTestEnv();
   const requests = mockAdmin((request) => {
-    if (request.url.pathname.endsWith("/course_sessions") && request.method === "GET") {
-      return Response.json([{ id: "session-1" }, { id: "session-deleted" }]);
-    }
-    if (request.url.pathname.endsWith("/course_sessions") && request.method === "DELETE") {
+    if (request.url.pathname === "/rpc/replace_course_sessions" && request.method === "POST") {
       return new Response(null, { status: 204 });
-    }
-    if (request.url.pathname.endsWith("/course_sessions") && request.method === "POST") {
-      return new Response(null, { status: 201 });
     }
     throw new Error(`Unexpected request: ${request.method} ${request.url}`);
   });
@@ -279,10 +272,10 @@ test("POST /api/functions/admin-save-sessions deletes removed rows and upserts t
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { success: true });
-  const deletion = requests.find((request) => request.method === "DELETE");
-  assert.equal(deletion.url.searchParams.get("id"), "in.(session-deleted)");
-  const upsert = requests.find((request) => request.method === "POST");
-  assert.deepEqual(JSON.parse(upsert.init.body), [
+  const replacement = requests.find(request => request.method === "POST");
+  const payload = JSON.parse(replacement.init.body);
+  assert.equal(payload.p_course, "course-1");
+  assert.deepEqual(payload.p_sessions, [
     {
       id: "session-1",
       course_id: "course-1",
@@ -362,31 +355,16 @@ test("POST /api/functions/admin-overview reports sales, shipping gaps, and mirro
   assert.ok(requests.length >= 8);
 });
 
-test("POST /api/functions/admin-upload-url signs an image upload and returns its public URL", async () => {
+test("admin-upload-url signs a local image upload", async () => {
   setTestEnv();
-  const requests = mockAdmin((request) => {
-    if (request.url.pathname.includes("/storage/v1/object/upload/sign/")) {
-      return Response.json({
-        url: `${request.url.pathname.replace("/storage/v1", "")}?token=signed-upload-token`,
-      });
-    }
-    throw new Error(`Unexpected request: ${request.method} ${request.url}`);
-  });
-
-  const response = await getAdminUploadUrl(
-    makeRequest("/api/functions/admin-upload-url", {
-      token: "admin-token",
-      kind: "image",
-      filename: "Cover Photo.JPG",
-    })
-  );
+  process.env.FILE_SIGNING_SECRET = "x".repeat(64);
+  const requests = mockAdmin(request => { throw new Error(`Unexpected request ${request.url}`); });
+  const response = await getAdminUploadUrl(makeRequest("/api/functions/admin-upload-url", {
+    token: "admin-token", kind: "image", filename: "cover.jpg",
+  }));
   const body = await response.json();
-
   assert.equal(response.status, 200);
-  assert.equal(body.success, true);
-  assert.match(body.path, /^courses\/\d+-cover-photo.jpg$/);
-  assert.equal(body.upload_url, `https://project.supabase.test/storage/v1/object/upload/sign/course-images/${body.path}?token=signed-upload-token`);
-  assert.equal(body.public_url, `https://project.supabase.test/storage/v1/object/public/course-images/${body.path}`);
-  const storageRequest = requests.find((request) => request.url.pathname.includes("/storage/v1/object/upload/sign/"));
-  assert.equal(storageRequest.method, "POST");
+  assert.equal(body.public_url, "/api/files/course-images/" + body.path);
+  assert.ok(body.upload_url.startsWith(body.public_url + "?expires="));
+  assert.equal(requests.length, 2);
 });
